@@ -1,0 +1,346 @@
+---
+title: "Why use ggtime?"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{why-ggtime}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+#| message: false
+#| code-fold: true
+library(ggtime)
+library(ggplot2)
+library(dplyr)
+library(tsibble)
+library(lubridate)
+library(patchwork)
+
+theme_set(theme_bw())
+
+pedestrian <- tsibble::pedestrian |>
+  tsibble::fill_gaps() |>
+  mutate(Date = as.Date(strftime(Date_Time, "%Y-%m-%d"))) |>
+  arrange(Sensor, Date_Time)
+
+# Fudge the data to correctly handle DST changes
+# Since the data was provided in civil time, the 2AM counts before/after DST are combined.
+pedestrian[53763, "Count"] <- 9
+pedestrian[53764, "Count"] <- 5
+```
+
+This vignette provides an unordered collection of demonstrations for how ggtime helps you explore time series patterns. The ggtime package is a principled (and opinionated) ggplot2 extension for visualizing time series data. The plot defaults differ from other visualisation libraries to encourage best practices for exploring temporal patterns.
+
+## Timezones
+
+Time series plotted with ggplot2 are typically shown in absolute time, but ggtime defaults to plotting in civil time (also known as local or clock time). Human activities are usually scheduled in local time, so seasonality and other calendar patterns are more evident in local time.
+
+Timezones are usually only associated with `POSIXt` date-times, however timezones are also relevant `Date` dates and all other temporal granularities. Time series plotted with ggplot2 are shown in absolute time, however since `Date` types don't store timezone information, they are effectively plotted in civil time*.
+
+The ggtime package instead defaults to plotting in civil time (also known as local or clock time). Human activities are usually scheduled in local time, so seasonality and other calendar patterns are more evident in local time. With mixtime, timezones can be specified with all temporal granularities (dates, yearmonth, ...), allowing for more precise positioning of time in different timezones.
+
+|                  | ggplot2         | ggtime (default) `position_civil()` | ggtime `position_absolute()` |
+|------------------|:---------------:|:-----------------:|:-----------------:|
+| **POSIXt**       | Absolute        | Civil             | Absolute          |
+| **Date**         | Civil*          | Civil             | Absolute          |
+| **Other times**  | Not-supported   | Civil             | Absolute          |
+
+<!-- DST -->
+
+When plotting time series in civil time, changes in time zone (e.g., daylight saving time) are automatically handled by ggtime. Consider the number of pedestrians passing through Southern Cross Station (timezone Australia/Melbourne) in 2015. On April 5th at 3am, clocks were set back one hour to 2am (and so 2am-3am occurs twice in civil time). The clocks then moved forward again on October 4th at 2am, effectively skipping the hour from 2am-3am.
+
+In ggplot2, the time values are shown in absolute time so that the spacing between points is consistently 1 hour apart.
+
+```{r}
+#| fig-height: 4
+pedestrian |>
+  filter(
+    Sensor == "Southern Cross Station",
+    Date %in% as.Date(c("2015-04-05", "2015-10-04"))
+  ) |>
+  ggplot(aes(x = Date_Time, y = Count)) +
+  geom_line() +
+  geom_point() +
+  facet_grid(
+    cols = vars(Date),
+    scales = "free_x",
+    labeller = labeller(
+      Date = c(
+        "2015-04-05" = "2015-04-05\n(DST ends)",
+        "2015-10-04" = "2015-10-04\n(DST begins)"
+      )
+    )
+  ) +
+  scale_x_datetime(date_labels = "%H:%M") +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax),
+    ymin = -Inf,
+    ymax = Inf,
+    fill = "grey20",
+    alpha = 0.2,
+    data = data.frame(
+      Date_Time = as.POSIXct(NA),
+      Count = Inf,
+      xmin = as.POSIXct(
+        c("2015-04-05 01:59.999", "2015-10-04 02:00"),
+        tz = "Australia/Melbourne"
+      ),
+      xmax = as.POSIXct(
+        c("2015-04-05 03:00", "2015-10-04 04:00"),
+        tz = "Australia/Melbourne"
+      ),
+      Date = as.Date(c("2015-04-05", "2015-10-04"))
+    )
+  )
+```
+
+<!-- TODO: Iterate on the shaded region with CH to make it clearer -->
+
+In ggtime, the time values are shown in civil time so that the 2am-3am hour occurs twice in April, and is skipped in October.
+
+```{r}
+#| fig-height: 4
+pedestrian |>
+  filter(
+    Sensor == "Southern Cross Station",
+    Date %in% as.Date(c("2015-04-05", "2015-10-04"))
+  ) |>
+  ggplot(aes(x = Date_Time, y = Count)) +
+  geom_time_line() +
+  geom_point(position = position_time_civil()) +
+  facet_grid(
+    cols = vars(Date),
+    scales = "free_x",
+    labeller = labeller(
+      Date = c(
+        "2015-04-05" = "2015-04-05\n(DST ends)",
+        "2015-10-04" = "2015-10-04\n(DST begins)"
+      )
+    )
+  ) +
+  scale_x_datetime(date_labels = "%H:%M") +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax),
+    ymin = -Inf,
+    ymax = Inf,
+    fill = "grey20",
+    alpha = 0.2,
+    data = data.frame(
+      Date_Time = as.POSIXct(NA),
+      Count = Inf,
+      xmin = as.POSIXct(
+        c("2015-04-05 02:00", "2015-10-04 02:00"),
+        tz = "UTC"
+      ),
+      xmax = as.POSIXct(
+        c("2015-04-05 03:00", "2015-10-04 04:00"),
+        tz = "UTC"
+      ),
+      Date = as.Date(c("2015-04-05", "2015-10-04"))
+    )
+  )
+```
+
+If you want to see the absolute time values instead, you can use `position_time_absolute()`.
+```{r}
+pedestrian |>
+  filter(
+    Sensor == "Southern Cross Station",
+    Date %in% as.Date(c("2015-04-05", "2015-10-04"))
+  ) |>
+  ggplot(aes(x = Date_Time, y = Count)) +
+  geom_time_line(position = position_time_absolute()) +
+  geom_point(position = position_time_absolute()) +
+  facet_grid(
+    cols = vars(Date),
+    scales = "free_x",
+    labeller = labeller(
+      Date = c(
+        "2015-04-05" = "2015-04-05\n(DST ends)",
+        "2015-10-04" = "2015-10-04\n(DST begins)"
+      )
+    )
+  ) +
+  scale_x_datetime(date_labels = "%H:%M")
+```
+
+<!-- Daily -->
+
+Differences in timezones are also relevant for precisely positioning daily data. Consider pedestrian counts in Melbourne (timezone Australia/Melbourne) and in London (timezone Europe/London). The data is collected over the same dates, but the local time of day is different due to the timezone difference. The ggtime package positions dates in civil time by default (matching ggplot2), but the relative position of dates in different timezones can be shown with `position_time_absolute()`.
+
+Note: storing timezone information with dates requires the mixtime package, which is currently in development. The example below uses a helper function `force_tzs()` to add timezone information to `Date` dates for demonstration purposes.
+
+```{r}
+#| fig-height: 8
+#| code-fold: true
+MEL_LDN_mockdata <- pedestrian |>
+  filter(
+    between(Date, ymd("2015-03-05"), ymd("2015-03-11")),
+    Sensor %in% c("Bourke Street Mall (North)", "QV Market-Elizabeth St (West)")
+  ) |>
+  index_by(Date) |>
+  group_by(Sensor) |>
+  summarise(Count = sum(Count)) |>
+  as_tibble() |>
+  mutate(
+    Sensor = factor(
+      Sensor,
+      levels = c("Bourke Street Mall (North)", "QV Market-Elizabeth St (West)"),
+      labels = c("Melbourne", "London")
+    ),
+    Count = case_when(Sensor == "London" ~ Count * 1.75, TRUE ~ Count),
+    Date = as.POSIXct(Date, tz = "UTC")
+  ) |>
+  as_tsibble(index = Date, key = Sensor, regular = FALSE)
+daily_civil <- MEL_LDN_mockdata |>
+  ggplot(aes(x = Date, y = Count, colour = Sensor, shape = Sensor)) +
+  geom_line() +
+  geom_point(size = 3) +
+  labs(title = "Civil time")
+daily_absolute <- MEL_LDN_mockdata |>
+  mutate(
+    Date = force_tzs(
+      Date,
+      tzones = case_match(
+        Sensor,
+        "Melbourne" ~ "Australia/Melbourne",
+        "London" ~ "Europe/London"
+      )
+    )
+  ) |>
+  ggplot(aes(x = Date, y = Count, colour = Sensor, shape = Sensor)) +
+  geom_line() +
+  geom_point(size = 3) +
+  labs(title = "Absolute time (UTC)")
+
+
+((daily_civil + guides(colour = "none", shape = "none")) / daily_absolute) &
+  plot_layout(guides = "collect", axes = "collect") &
+  scale_x_datetime(date_breaks = "1 day", date_labels = "%b %d") &
+  geom_vline(
+    xintercept = as.POSIXct("2015-03-08", tz = "UTC"),
+    linetype = "dashed"
+  ) &
+  labs(y = NULL) &
+  theme(legend.position = "bottom")
+```
+
+<!-- TODO: Why aren't the x-axis scales aligned in patchwork? -->
+
+## Seasonality (looping)
+
+Seasonal patterns are presented in ggplot2 by 'looping' the time axis using `coord_loop()`. This is a safer alternative to using data pre-processing (e.g. `aes(x = month(Date))`), which loses the temporal context of the data and cyclical structure of the time axis.
+
+The loop points can be specified with `coord_loop(time_loop = <duration>)`, which accepts a variety of time durations (e.g., "1 year", "1 month", "1 week", "1 day", "1 hour"). Specific time points for looping can also be provided with `coord_loop(loop = ...)`.
+
+```{r}
+uad <- as_tsibble(USAccDeaths) |>
+  as_tibble() |>
+  mutate(index = as.Date(index))
+```
+
+
+```{r}
+#| include: false
+#| label: before-ggtime-trash
+uad |>
+  ggplot(aes(x = month(index), y = value)) +
+  geom_line() +
+  geom_point(aes(colour = year(index))) +
+  labs(x = "Month", y = "Deaths")
+uad |>
+  ggplot(aes(x = month(index), y = value, group = year(index))) +
+  geom_line() +
+  geom_point(aes(colour = year(index))) +
+  geom_vline(
+    xintercept = c(1, 12),
+    linetype = "dashed",
+    colour = "grey50"
+  ) +
+  labs(x = "Month", y = "Deaths")
+as_tsibble(USAccDeaths) |>
+  ggplot(aes(x = month(index), y = value, group = year(index))) +
+  geom_line() +
+  coord_polar() +
+  labs(x = "Month", y = "Deaths")
+as_tsibble(USAccDeaths) |>
+  ggplot(aes(x = month(index, label = TRUE), y = value, group = year(index))) +
+  geom_line() +
+  coord_polar() +
+  labs(x = "Month", y = "Deaths")
+```
+
+```{r}
+uad |>
+  ggplot(aes(x = index, y = value)) +
+  geom_line() +
+  geom_vline(
+    xintercept = as.Date(c(1, 365 - 30)),
+    linetype = "dashed",
+    colour = "grey50"
+  ) +
+  coord_loop(time_loop = "1 year", expand = FALSE, ljust = 14)
+```
+
+Seasonality can also be shown using `coord_loop()` in polar coordinates using `polar = TRUE`. This is not currently implemented in ggtime, but can currently be accomplished with `coord_polar()` and `coord_radial()` by using carefully selected axis limits.
+
+```{r}
+#| eval: false
+# @mjskay: WIP
+as_tsibble(USAccDeaths) |>
+  ggplot(aes(x = index, y = value)) +
+  geom_line() +
+  coord_loop(time_loop = "1 year", coord = coord_polar()) +
+  labs(x = "Month", y = "Deaths")
+```
+
+```{r}
+month0 = min(uad$index)
+uad |>
+  ggplot(aes(x = index, y = value)) +
+  geom_line() +
+  coord_polar() +
+  labs(x = "Month", y = "Deaths") +
+  geom_vline(
+    xintercept = as.Date(c(1, 365 - 30)),
+    linetype = "dashed",
+    colour = "grey50"
+  ) +
+  scale_x_date(
+    limits = month0 + months(c(0, 12)),
+    oob = scales::oob_keep,
+    breaks = month0 + months(0:11),
+    date_labels = "%b"
+  )
+
+uad |>
+  ggplot(aes(x = index, y = value)) +
+  geom_line() +
+  coord_radial(thetalim = month0 + c(0, 332)) +
+  labs(x = "Month", y = "Deaths") +
+  geom_vline(
+    xintercept = as.Date(c(1, 365 - 30)),
+    linetype = "dashed",
+    colour = "grey50"
+  ) +
+  scale_x_date(
+    breaks = month0 + months(0:11),
+    date_labels = "%b"
+  )
+```
+
+## Cycles (warping)
+
+## Missing values
+
+## Granularities
+
+## Resolution
