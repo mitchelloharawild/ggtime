@@ -1,0 +1,24 @@
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/LICENSE.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/authors.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/index.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/news/index.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/PositionTime.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/autoplot.dcmp_ts.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/autoplot.tbl_ts.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/coord_calendar.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/coord_loop.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/facet-calendar.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_arma.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_irf.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_lag.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_season.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_subseries.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_tsdisplay.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_tsresiduals.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/ggtime-package.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/index.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/reexports.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/scale_mixtime.html</loc></url>
+</urlset>
+
