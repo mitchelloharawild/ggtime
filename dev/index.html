@@ -85,6 +85,7 @@
 </h1></div>
 <!-- badges: start -->
 
+<!-- badges: end -->
 <p>The ggtime package extends the capabilities of ‘ggplot2’ by providing grammatical elements and plot helpers designed for visualizing time series patterns. These functions use calendar structures implemented in the mixtime package to help explore common time series patterns including trend, seasonality, cycles, and holidays.</p>
 <p>The plot helper functions make use of the tsibble data format in order to quickly and easily produce common time series plots. These plots can also be constructed with the underlying grammar elements, which allows greater flexibility in producing custom time series visualisations.</p>
 <div class="section level2">
@@ -112,7 +113,7 @@
 <p><img src="reference/figures/README-timeplot-1.png" style="width:100.0%"></p>
 <p>To view the shape of the annual seasonal pattern, it is useful to use a seasonal plot which shows time cyclically on the x-axis. This makes it easier to identify the peaks, troughs, and overall shape of the seasonality. A seasonal plot is created from a tsibble with the <code><a href="reference/gg_season.html">gg_season()</a></code> plot helper function.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">tsibbledata</span><span class="fu">::</span><span class="va"><a href="https://tsibbledata.tidyverts.org/reference/aus_production.html" class="external-link">aus_production</a></span> <span class="op">|&gt;</span> </span>
+<code class="sourceCode R"><span><span class="fu">tsibbledata</span><span class="fu">::</span><span class="va"><a href="https://tsibbledata.tidyverts.org/reference/aus_production.html" class="external-link">aus_production</a></span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/gg_season.html">gg_season</a></span><span class="op">(</span><span class="va">Beer</span><span class="op">)</span></span></code></pre></div>
 <p><img src="reference/figures/README-seasonplot-1.png" style="width:100.0%"></p>
 </div>
@@ -160,7 +161,7 @@
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
-<li><a href="https://CRAN.R-project.org/package=ggtime" class="external-link"><img src="https://www.r-pkg.org/badges/version/ggtime.png" alt="CRAN status"></a></li>
+<li><a href="https://CRAN.R-project.org/package=ggtime" class="external-link"><img src="https://www.r-pkg.org/badges/version/ggtime" alt="CRAN status"></a></li>
 <li><a href="https://github.com/mitchelloharawild/ggtime/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/mitchelloharawild/ggtime/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 </ul>
 </div>
