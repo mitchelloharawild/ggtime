@@ -71,6 +71,7 @@ on top of each other.</p>
 <span>  loops <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  time_loops <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  time <span class="op">=</span> <span class="st">"x"</span>,</span>
+<span>  ljust <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  xlim <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ylim <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  expand <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -100,6 +101,12 @@ specified, <code>time_loops</code> wins.</p></dd>
 <dt id="arg-time">time<a class="anchor" aria-label="anchor" href="#arg-time"></a></dt>
 <dd><p>A string specifying which aesthetic contains the time variable that
 should be looped over. Default is <code>"x"</code>.</p></dd>
+
+
+<dt id="arg-ljust">ljust<a class="anchor" aria-label="anchor" href="#arg-ljust"></a></dt>
+<dd><p>Loop justification, a number between 0 and 1
+indicating where the lines between looped positions are drawn
+(0 indicates left, 1 indicates right, 0.5 indicates center).</p></dd>
 
 
 <dt id="arg-xlim-ylim">xlim, ylim<a class="anchor" aria-label="anchor" href="#arg-xlim-ylim"></a></dt>
@@ -137,7 +144,7 @@ cyclic patterns in time series data. It works by:</p>
 <li><p>Translating each segment to overlay on the first segment</p></li>
 <li><p>Creating a visualization where multiple time periods are superimposed</p></li>
 </ol><p>The coordinate system requires R version 4.2.0 or higher due to its use of
-clipping paths.</p>
+usage of clipping paths.</p>
     </div>
 
     <div id="ref-examples">
@@ -158,7 +165,7 @@ clipping paths.</p>
 <span class="r-plt img"><img src="coord_loop-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With yearly looping to show seasonal patterns</span></span></span>
-<span class="r-in"><span><span class="va">p</span> <span class="op">+</span> <span class="fu">coord_loop</span><span class="op">(</span>time_loop <span class="op">=</span> <span class="st">"year"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">p</span> <span class="op">+</span> <span class="fu">coord_loop</span><span class="op">(</span>time_loop <span class="op">=</span> <span class="st">"1 year"</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="coord_loop-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
