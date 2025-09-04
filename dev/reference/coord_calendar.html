@@ -159,16 +159,48 @@ with events that occur over short intervals (such as holidays).</p>
 </ol><p>The coordinate system requires R version 4.2.0 or higher due to its use of
 usage of clipping paths.</p>
     </div>
+    <div id="practical-usage">
+    <h2>Practical usage</h2>
+
+
+
+<p>The calendar coordinate system arranges a cartesian coordinate system into a
+dense calendar-like layout. Calendar layouts are particularly useful for
+identifying specific dates or events that occur over short intervals in long
+series. For example, the daily pedestrian counts at Melbourne's Birrarung
+Marr park is nearby to several major sporting venues, and the calendar layout
+makes obvious the spikes in pedestrian activity that occur during annual
+sporting events (such as the Australian Open tennis tournament). Calendar
+layouts are also useful to identify the effect of holidays, especially when
+their dates change each year (such as Easter).</p>
+<p>Similarly to <code><a href="coord_loop.html">coord_loop()</a></code>, the calendar coordinate system draws geometries
+that cross the boundaries of calendar rows or columns. The justification of
+these geometries can be controlled with the <code>ljust</code> parameter, as described
+in <code><a href="coord_loop.html">coord_loop()</a></code>.</p>
+<p>The calendar coordinate system works well in conjunction with facetting to
+give more space between months and/or years of the calendar.</p>
+    </div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Visualise several months of Melbourne pedestrian counts across weekly rows</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A weekly calendar arrangement of pedestrian counts in Melbourne</span></span></span>
+<span class="r-in"><span><span class="co"># Notice the periods of high activity days for the Birrarung Marr sensor</span></span></span>
+<span class="r-in"><span><span class="co"># during the Australian Open tennis tournament in late January.</span></span></span>
 <span class="r-in"><span><span class="fu">tsibble</span><span class="fu">::</span><span class="va"><a href="https://tsibble.tidyverts.org/reference/pedestrian.html" class="external-link">pedestrian</a></span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">Date</span> <span class="op">&lt;</span> <span class="st">"2015-04-01"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">Date</span> <span class="op">&lt;</span> <span class="st">"2015-02-01"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Date_Time</span>, y <span class="op">=</span> <span class="va">Count</span>, color <span class="op">=</span> <span class="va">Sensor</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">coord_calendar</span><span class="op">(</span>time_rows <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in ggplot(dplyr::filter(tsibble::pedestrian, Date &lt; "2015-04-01"),     aes(x = Date_Time, y = Count, color = Sensor)):</span> could not find function "ggplot"</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in ggplot(dplyr::filter(tsibble::pedestrian, Date &lt; "2015-02-01"),     aes(x = Date_Time, y = Count, color = Sensor)):</span> could not find function "ggplot"</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Monthly facets can be used to create a complete calendar for 2015.</span></span></span>
+<span class="r-in"><span><span class="fu">tsibble</span><span class="fu">::</span><span class="va"><a href="https://tsibble.tidyverts.org/reference/pedestrian.html" class="external-link">pedestrian</a></span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu">year</span><span class="op">(</span><span class="va">Date</span><span class="op">)</span> <span class="op">==</span> <span class="fl">2015</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Date_Time</span>, y <span class="op">=</span> <span class="va">Count</span>, color <span class="op">=</span> <span class="va">Sensor</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu">coord_calendar</span><span class="op">(</span>time_rows <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/month.html" class="external-link">month</a></span><span class="op">(</span><span class="va">Date</span>, label <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in ggplot(dplyr::filter(tsibble::pedestrian, year(Date) == 2015),     aes(x = Date_Time, y = Count, color = Sensor)):</span> could not find function "ggplot"</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
