@@ -155,6 +155,70 @@ cyclic patterns in time series data. It works by:</p>
 </ol><p>The coordinate system requires R version 4.2.0 or higher due to its use of
 usage of clipping paths.</p>
     </div>
+    <div id="practical-usage">
+    <h2>Practical usage</h2>
+
+
+
+<p>The looped coordinate system reveals patterns that repeat over regular time
+periods, such as annual seasonality in monthly data, or weekly patterns in
+daily data. It allows the <code>[x/y]</code> time aesthetic to be specified
+continuously, and loops the time axis around specified time intervals. This
+allows time within seasonal periods to be compared directly, and highlights
+the shape of seasonal patterns. This is commonly used in time series analysis
+to identify the peaks and troughs of seasonal patterns.</p>
+<p>A key advantage of time being specified continuously is that the connection
+between the end of one seasonal period and the start of the next is
+preserved. This is otherwise lost when time is discretised into ordered
+factors (e.g. months of the year, or days of week). This allows lines and
+other geometries to be drawn across seasonal boundaries, such as a line that
+connects December to January when plotting annual seasonality.
+The justification parameter <code>ljust</code> controls the side of the panel where
+these connections are made, left justificiation (<code>ljust = 0</code>) gives space
+for inter-seasonal time on the left of the panel, right justification
+(<code>ljust = 1</code>) uses the right side of the panel, and center justification
+(<code>ljust = 0.5</code>, the default) uses equal spacing on both ends of the season.</p>
+    </div>
+    <div id="why-not-use-seasonal-factors-">
+    <h2>Why not use seasonal factors?</h2>
+
+
+
+<p>Using factors to represent seasonal periods is common, but prone to errors
+and is very limiting. Suppose you want to visualize weekly seasonality in
+daily data. You could convert the date into a day of week factor (e.g. with
+<code>lubridate::wday(date, label = TRUE)</code>), but this loses information about the
+year and week of the observation. In order to correctly draw lines connecting
+each day of the week (avoiding sawtooth patterns), you would additionally
+need to group by year and week to separately identify each line segment. The
+aesthetic mapping for plotting this pattern would look something like:</p>
+<p></p><div class="sourceCode"><pre><code><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">aes</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  <span class="at">x =</span> lubridate<span class="sc">::</span><span class="fu">wday</span>(date, <span class="at">label =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="at">group =</span> <span class="fu">interaction</span>(lubridate<span class="sc">::</span><span class="fu">year</span>(date), lubridate<span class="sc">::</span><span class="fu">week</span>(date)),</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">y =</span> value</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>)</span></code></pre><p></p></div>
+<p>These operations are error-prone, cumbersome, and are complicated to update
+to show different seasonal patterns. For example, if you wanted to instead
+show the annual seasonal pattern, both the <code>x</code> and <code>group</code> aesthetics would
+need to be changed (to day of year and year respectively). Any errors in this
+process would produce sawtooth patterns or other artifacts in the plot.</p>
+<p>Another common error in discretizing time into seasonal factors is
+incorrect ordering of the factor levels. For example, if you instead used
+<code>strftime(date, "%a")</code> to get the day of week, the levels would be sorted
+alphabetically rather than in time order ("Fri", "Mon", "Sat", ...). No-one
+wants to Monday to follow Friday!</p>
+<p>Discretizing time into seasonal factors also prevents plotting the seasonal
+pattern across multiple granularities. For example when visualizing weekly
+seasonality across data at daily and hourly frequencies, both day of week
+and hour of week are needed. Since these factors have different levels, they
+cannot be plotted on the same axis. In contrast, it is possible to plot both
+daily and hourly data on the same axis using <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code>, which can
+then be looped over weekly periods with <code>coord_loop(time_loops = "1 week")</code>.</p>
+<p>Another subtle issue of using factors instead of continuous time is that
+spacing between time points is regularized. For example, when plotting the
+annual seasonal pattern with months as a factor, each month is given equal
+width on the x-axis despite the fact that months have different lengths.</p>
+    </div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
