@@ -67,7 +67,7 @@ mixtime::mixtime() format."><meta property="og:image" content="https://pkg.mitch
 geometry while adjusting its horizontal position display the time in
 either civil or absolute time. It requires the time variables to be mapped to
 either the x or y aesthetic to be represented in either a <code><a href="https://rdrr.io/r/base/DateTimeClasses.html" class="external-link">base::POSIXt</a></code> or
-<code>mixtime::mixtime()</code> format.</p>
+<code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/mixtime-package.html" class="external-link">mixtime::mixtime()</a></code> format.</p>
     </div>
 
     <div id="ref-usage">
@@ -111,13 +111,12 @@ conference calls.</p>
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">df_tz_mixed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  time <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu">mixtime</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  time <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/mixtime-package.html" class="external-link">mixtime</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2023-10-01"</span>, tz <span class="op">=</span> <span class="st">"Australia/Melbourne"</span><span class="op">)</span> <span class="op">+</span> <span class="fl">0</span><span class="op">:</span><span class="fl">23</span> <span class="op">*</span> <span class="fl">3600</span>,</span></span>
 <span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2023-10-01"</span>, tz <span class="op">=</span> <span class="st">"America/New_York"</span><span class="op">)</span> <span class="op">+</span> <span class="fl">0</span><span class="op">:</span><span class="fl">23</span> <span class="op">*</span> <span class="fl">3600</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">12</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">12</span>, <span class="op">-</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(x):</span> there is no package called ‘mixtime’</span>
 <span class="r-in"><span><span class="co"># Civil time positioning aligns times in the same local timezone</span></span></span>
 <span class="r-in"><span><span class="co">#ggplot(df_tz_mixed, aes(time, value)) +</span></span></span>
 <span class="r-in"><span><span class="co">#  geom_time_line(position = position_time_civil())</span></span></span>
