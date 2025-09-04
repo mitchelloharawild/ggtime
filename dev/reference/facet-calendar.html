@@ -145,6 +145,24 @@ either of the four sides by setting <code>strip.position = c("top",
 extend over six weeks but in these months is to wrap the last few days up
 to the top row of the block.</p>
     </div>
+    <div id="practical-usage">
+    <h2>Practical usage</h2>
+
+
+
+<p>Calendar facetting allows time to be plotted into separate panels, arranged
+across rows and columns in a calendar-like layout. This is particularly
+useful when facetting by time units within a seasonal period, as this shows
+changes in the seasonal pattern over time (commonly referred to as a
+seasonal subseries plot). For example, changes in the annual seasonal
+pattern of quarterly beer production in Australia can be seen by facetting by
+month of the year. More advanced calendar layouts are possible by facetting
+across multiple seasonal periods, such as arranging hour of the day across
+columns and day of the week across rows to show changes in the daily and
+weekly seasonal patterns.</p>
+<p>If you wish to simply plot time series data in the style of a calendar, you
+should instead use the <code><a href="coord_calendar.html">coord_calendar()</a></code> coordinate system.</p>
+    </div>
     <div id="author">
     <h2>Author</h2>
     <p>Earo Wang</p>
