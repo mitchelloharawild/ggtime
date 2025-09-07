@@ -379,12 +379,13 @@ ScaleContinuousMixtime <- ggproto(
     if (inherits(x, "mixtime")) {
       # Obtain chronons from mixtime vector
       x <- vctrs::vec_data(vecvec::unvecvec(x))
-    }
 
-    if (!is_waiver(self$warps)) {
-      warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
-      # TODO: warping should be have warp points before and after limits
-      x <- approx(warps, seq_along(warps), xout = x, rule = 2)$y
+      # Unsafe code:
+      # Only apply warping if mixtime is provided, otherwise it is a pre-warped position
+      if (!is_waiver(self$warps)) {
+        warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
+        x <- approx(warps, seq_along(warps), xout = x, rule = 2)$y
+      }
     }
 
     as.numeric(x)
@@ -403,15 +404,7 @@ ScaleContinuousMixtime <- ggproto(
     } else {
       self$secondary.axis$name
     }
-  },
-  # make_sec_title = function(self, title) {
-  #   browser()
-  #   if (!is_waiver(self$secondary.axis)) {
-  #     self$secondary.axis$make_title(title)
-  #   } else {
-  #     ggproto_parent(ScaleContinuous, self)$make_sec_title(title)
-  #   }
-  # }
+  }
 )
 
 # Inversion requires recollection of offset and regularity
@@ -426,8 +419,6 @@ transform_mixtime <- function() {
       return(x)
     }
 
-    attributes(x) <- common_attr
-
     # Less than perfect ('hack')
     #
     # The default coord limits are
@@ -440,6 +431,7 @@ transform_mixtime <- function() {
     #
     # This is also required for other aspects of ggplot2, such as for `pretty()`
     # to work in computing the default breaks.
+    attributes(x) <- common_attr
     return(x)
   }
   # To common granularity (possibly with alignment?)
