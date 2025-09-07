@@ -41,9 +41,9 @@
 #' be used to manually adjust the scaling behaviour, such as adjusting the
 #' breaks and labels or using a different common time scale.
 #'
-#' Similarly to the temporal scales in ggplot2 ([scale_x_date()] and
-#' [scale_x_datetime()]), these scales can adjust the breaks and labels using
-#' duration-based intervals and strftime-like formatting. These time aware
+#' Similarly to the temporal scales in ggplot2 ([ggplot2::scale_x_date()] and
+#' [ggplot2::scale_x_datetime()]), these scales can adjust the breaks and labels
+#' using duration-based intervals and strftime-like formatting. These time aware
 #' options are prefixed with `time_` (e.g. `time_breaks` and `time_labels`),
 #' and take precedence over the non-time aware options (e.g. `breaks` and
 #' `labels`). The scale's breaks can be specified with `mixtime::duration``

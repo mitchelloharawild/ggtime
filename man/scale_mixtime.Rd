@@ -8,10 +8,10 @@ scale_x_mixtime(
   name = waiver(),
   breaks = waiver(),
   time_breaks = waiver(),
-  labels = waiver(),
-  time_labels = waiver(),
   minor_breaks = waiver(),
   time_minor_breaks = waiver(),
+  labels = waiver(),
+  time_labels = waiver(),
   common_time = waiver(),
   time_align = 0.5,
   warps = waiver(),
@@ -42,6 +42,19 @@ omitted.}
 "2 weeks", or "10 years". If both \code{breaks} and \code{time_breaks} are specified,
 \code{time_breaks} wins.}
 
+\item{minor_breaks}{One of:
+\itemize{
+\item \code{NULL} for no breaks
+\item \code{waiver()} for the breaks specified by \code{date_minor_breaks}
+\item A \code{Date}/\code{POSIXct} vector giving positions of minor breaks
+\item A function that takes the limits as input and returns minor breaks as
+output
+}}
+
+\item{time_minor_breaks}{A duration giving the distance between minor breaks like
+"2 weeks", or "10 years". If both \code{minor_breaks} and \code{time_minor_breaks} are
+specified, \code{time_minor_breaks} wins.}
+
 \item{labels}{One of the options below. Please note that when \code{labels} is a
 vector, it is highly recommended to also set the \code{breaks} argument as a
 vector to protect against unintended mismatches.
@@ -58,19 +71,6 @@ notation.
 
 \item{time_labels}{Uses strftime strings or similar to format the labels from
 the time points.}
-
-\item{minor_breaks}{One of:
-\itemize{
-\item \code{NULL} for no breaks
-\item \code{waiver()} for the breaks specified by \code{date_minor_breaks}
-\item A \code{Date}/\code{POSIXct} vector giving positions of minor breaks
-\item A function that takes the limits as input and returns minor breaks as
-output
-}}
-
-\item{time_minor_breaks}{A duration giving the distance between minor breaks like
-"2 weeks", or "10 years". If both \code{minor_breaks} and \code{time_minor_breaks} are
-specified, \code{time_minor_breaks} wins.}
 
 \item{common_time}{Acts like a vctrs \code{ptype} defining the common chronon to
 use for mixed granularity. The default automatically selects it.}
@@ -150,9 +150,9 @@ be sufficient for scaling time points into plot aesthetics. These scales can
 be used to manually adjust the scaling behaviour, such as adjusting the
 breaks and labels or using a different common time scale.
 
-Similarly to the temporal scales in ggplot2 (\code{\link[=scale_x_date]{scale_x_date()}} and
-\code{\link[=scale_x_datetime]{scale_x_datetime()}}), these scales can adjust the breaks and labels using
-duration-based intervals and strftime-like formatting. These time aware
+Similarly to the temporal scales in ggplot2 (\code{\link[ggplot2:scale_date]{ggplot2::scale_x_date()}} and
+\code{\link[ggplot2:scale_date]{ggplot2::scale_x_datetime()}}), these scales can adjust the breaks and labels
+using duration-based intervals and strftime-like formatting. These time aware
 options are prefixed with \code{time_} (e.g. \code{time_breaks} and \code{time_labels}),
 and take precedence over the non-time aware options (e.g. \code{breaks} and
 \code{labels}). The scale's breaks can be specified with \verb{mixtime::duration`` objects (e.g. }time_breaks = mixtime::months(1L)\verb{), or with strings that can be parsed into durations (e.g. `time_breaks = "1 month"`). Labels for time points in Gregorian calendars can be specified using [base::strftime()] formats (e.g. `time_labels = "\%b \%Y"} for "Jan 2020"). Concise strings for

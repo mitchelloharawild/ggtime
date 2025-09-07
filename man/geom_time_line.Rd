@@ -188,7 +188,7 @@ df_ts <- data.frame(
   time = as.POSIXct("2023-03-11", tz = "Australia/Melbourne") + 0:11 * 3600,
   value = cumsum(rnorm(12, 2))
 )
-ggplot(df_rw, aes(time, value)) +
+ggplot(df_ts, aes(time, value)) +
   geom_time_line()
 
 # Random walk with a backward timezone change (DST ends)
