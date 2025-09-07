@@ -147,10 +147,10 @@ scale_x_mixtime <- function(
   name = waiver(),
   breaks = waiver(),
   time_breaks = waiver(),
-  labels = waiver(),
-  time_labels = waiver(),
   minor_breaks = waiver(),
   time_minor_breaks = waiver(),
+  labels = waiver(),
+  time_labels = waiver(),
   common_time = waiver(),
   time_align = 0.5,
   warps = waiver(),
@@ -169,10 +169,12 @@ scale_x_mixtime <- function(
     palette = identity,
     breaks = breaks,
     time_breaks = time_breaks,
-    labels = labels,
-    time_labels = time_labels,
     minor_breaks = minor_breaks,
     time_minor_breaks = time_minor_breaks,
+    labels = labels,
+    time_labels = time_labels,
+    warps = warps,
+    time_warps = time_warps,
     timezone = NULL,
     guide = guide,
     limits = limits,
@@ -232,11 +234,13 @@ mixtime_scale <- function(
   trans = deprecated(),
   palette,
   breaks = scales::breaks_pretty(),
-  minor_breaks = waiver(),
-  labels = waiver(),
   time_breaks = waiver(),
-  time_labels = waiver(),
+  minor_breaks = waiver(),
   time_minor_breaks = waiver(),
+  labels = waiver(),
+  time_labels = waiver(),
+  warps = waiver(),
+  time_warps = waiver(),
   timezone = NULL,
   guide = "legend",
   call = caller_call(),
@@ -266,6 +270,9 @@ mixtime_scale <- function(
       scales::label_date(time_labels, timezone)(x)
     }
   }
+  if (!is_waiver(time_warps)) {
+    warps <- breaks_width(time_warps)
+  }
 
   # x/y position aesthetics should use ScaleContinuousMixtime; others use ScaleContinuous
   if (all(aesthetics %in% c(ggplot_global$x_aes, ggplot_global$y_aes))) {
@@ -285,7 +292,7 @@ mixtime_scale <- function(
     trans = trans,
     call = call,
     ...,
-    super = scale_class
+    super = ggproto(NULL, scale_class, warps = warps)
   )
 
   # Range is hard-coded and not inherited by `super` in
@@ -323,8 +330,14 @@ ScaleContinuousMixtime <- ggproto(
     # currently working in ggplot2
     missing_aes <- setdiff(names(PositionTimeCivil$default_aes), names(df))
 
-    # TODO: Add gap filling for implicit missing values here?
-    # Or should that be in position? Position may be too late to have access to enough data.
+    # Add gap filling for implicit missing values
+    # DESIGN: should this be in position? Position may be too late to have access to enough data.
+    # df <- as_tibble(tsibble::fill_gaps(as_tsibble(
+    #   df,
+    #   index = x,
+    #   key = c(PANEL, group)
+    # )))
+
     df <- ggproto_parent(ScaleContinuous, self)$transform_df(df)
 
     # Match missing_aes offset positions to transformed scales
@@ -356,7 +369,7 @@ ScaleContinuousMixtime <- ggproto(
         call = self$call
       )
     }
-    # ggtime:::calendar_wrap(x)
+
     ggproto_parent(ScaleContinuous, self)$transform(x)
   },
   map = function(self, x, limits = self$get_limits()) {
@@ -364,8 +377,16 @@ ScaleContinuousMixtime <- ggproto(
     # self$oob(x, limits)
 
     if (inherits(x, "mixtime")) {
-      x <- vecvec::unvecvec(x)
+      # Obtain chronons from mixtime vector
+      x <- vctrs::vec_data(vecvec::unvecvec(x))
     }
+
+    if (!is_waiver(self$warps)) {
+      warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
+      # TODO: warping should be have warp points before and after limits
+      x <- approx(warps, seq_along(warps), xout = x, rule = 2)$y
+    }
+
     as.numeric(x)
   },
   break_info = function(self, range = NULL) {
