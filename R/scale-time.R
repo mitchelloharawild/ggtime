@@ -376,34 +376,45 @@ ScaleContinuousMixtime <- ggproto(
     # TODO: Check functionality of self$oob
     # self$oob(x, limits)
 
-    if (inherits(x, "mixtime")) {
-      # Obtain chronons from mixtime vector
-      x <- vctrs::vec_data(vecvec::unvecvec(x))
+    as.numeric(self$warp_time(x))
+  },
+  warp_time = function(self, x, unwarp = FALSE) {
+    if (!is_waiver(self$warps)) {
+      warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
+      if (inherits(x, "mixtime")) {
+        # Obtain chronons from mixtime vector
+        x <- vctrs::vec_data(vecvec::unvecvec(x))
 
-      # Unsafe code:
-      # Only apply warping if mixtime is provided, otherwise it is a pre-warped position
-      if (!is_waiver(self$warps)) {
-        warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
+        # Unsafe code:
+        # Only apply warping if mixtime is provided, otherwise it is a pre-warped position
         x <- stats::approx(warps, seq_along(warps), xout = x)$y
+      } else if (unwarp) {
+        x <- stats::approx(seq_along(warps), warps, xout = x, rule = 2L)$y
       }
     }
+    x
+  },
+  get_breaks = function(self, limits = self$get_limits()) {
+    # if (!is_waiver(self$warps)) {
+    #   warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
+    #   limits <- stats::approx(
+    #     seq_along(warps),
+    #     warps,
+    #     xout = limits,
+    #     rule = 2L
+    #   )$y
+    #   attributes(limits) <- attributes(attr(self$warps, "v")[[1L]])
+    # }
 
-    as.numeric(x)
+    breaks <- ggproto_parent(ScaleContinuous, self)$get_breaks(limits)
+    self$warp_time(breaks)
   },
-  break_info = function(self, range = NULL) {
-    breaks <- ggproto_parent(ScaleContinuous, self)$break_info(range)
-    if (!(is_waiver(self$secondary.axis) || self$secondary.axis$empty())) {
-      self$secondary.axis$init(self)
-      breaks <- c(breaks, self$secondary.axis$break_info(breaks$range, self))
-    }
-    breaks
-  },
-  sec_name = function(self) {
-    if (is_waiver(self$secondary.axis)) {
-      waiver()
-    } else {
-      self$secondary.axis$name
-    }
+
+  get_labels = function(self, breaks = self$get_breaks()) {
+    # Convert back to original time points for labelling
+    breaks <- self$warp_time(breaks, unwarp = TRUE)
+
+    ggproto_parent(ScaleContinuous, self)$get_labels(breaks)
   }
 )
 
