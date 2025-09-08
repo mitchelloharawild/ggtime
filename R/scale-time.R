@@ -384,7 +384,7 @@ ScaleContinuousMixtime <- ggproto(
       # Only apply warping if mixtime is provided, otherwise it is a pre-warped position
       if (!is_waiver(self$warps)) {
         warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
-        x <- approx(warps, seq_along(warps), xout = x, rule = 2)$y
+        x <- stats::approx(warps, seq_along(warps), xout = x)$y
       }
     }
 
