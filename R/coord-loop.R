@@ -253,7 +253,7 @@ CoordLoop <- function(coord) {
 #' @param ... unused.
 #' @details
 #' Implement this method on a coord's class to provide support for that coord in
-#' [coord_loop()] by returning.
+#' [coord_loop()]. Should return an object that inherits from the input `coord`.
 #'
 #' Specializations *must* implement:
 #'
@@ -271,7 +271,7 @@ CoordLoop <- function(coord) {
 #'
 #' We use a separate specialization function rather than making `CoordLoop()`
 #' generic so that the default method of this generic can be an error
-#' (representing an attempt to use an unsupported base coord).
+#' (representing an attempt to use an unsupported coord type).
 #' @returns A [`ggproto`] object that inherits from `coord`. Raises an error
 #' if no parent classes of `coord` are supported by [coord_loop()].
 #' @noRd
@@ -369,9 +369,20 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
       range <- diff(params$theta.range)
       prev_upper_limits <- origin + (seq_along(rest) - 1) * range + widths
       next_lower_limits <- origin + seq_along(rest) * range
-      # NOTE: I think this needs to be half the smallest granularity, so this
-      # currently only works if the input scale is transforming to a numeric
-      # where the smallest granularity is 1
+
+      # NOTE: This is a hack that should be better. Basically the problem is
+      # that we're trying to move points at the upper limit of a cut region to
+      # the beginning of the next region, but to draw lines in between we need
+      # to also move some munched points (from coord_munch()) that are between
+      # the upper limit and the upper limit - eps where eps < 1 granularity
+      # (cannot be == 1 or we'll move points that are before the upper limit).
+      # Without something like this you just get an ugly straight line from
+      # the end of one loop to the beginning of the next (instead of a curve).
+      # A better solution would be if coord_munch were generic and we could
+      # implement a method for it to insert the needed points to make a curve.
+      #
+      # The upshot is this currently only works properly (ish) if the input
+      # scale transforms to a numeric where the smallest granularity is 1.
       eps <- 0.99
 
       time_unaligned <- c(
@@ -397,7 +408,10 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
       # with is to make data in the gaps between loops transparent --- so we
       # need a function to identify if a value is in the gap
       in_gap_indicator <- stats::stepfun(
-        vctrs::vec_interleave(prev_upper_limits - self$ljust * eps, next_lower_limits - self$ljust * eps),
+        vctrs::vec_interleave(
+          prev_upper_limits - self$ljust * eps,
+          next_lower_limits - self$ljust * eps
+        ),
         c(0, rep(c(1, 0), length(rest))),
         ties = "min"
       )
@@ -434,8 +448,7 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
 #' @param context string giving the context (e.g. function, arguments, etc)
 #' to use in message in case of failure
 #' @param check if not `TRUE` no check is made
-#' @returns `invisible(NULL)` if clipping is supported and or raises an error
-#' if not.
+#' @returns `invisible(NULL)` if clipping is supported or raises an error if not.
 check_can_clip <- function(context, check) {
   if (check && !ggplot2::check_device("clippingPaths")) {
     stop(context, " requires R v4.2.0 or higher.")
