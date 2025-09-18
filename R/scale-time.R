@@ -17,14 +17,16 @@
 #' @param time_minor_breaks A duration giving the distance between minor breaks like
 #' "2 weeks", or "10 years". If both `minor_breaks` and `time_minor_breaks` are
 #' specified, `time_minor_breaks` wins.
-#' @param common_time Acts like a vctrs `ptype` defining the common chronon to
-#' use for mixed granularity. The default automatically selects it.
-#' @param time_align A number between 0 and 1 defining how to align coarser
+#' @param chronon_common A time unit that defines the common chronon to use for
+#' mixed granularity (e.g. `mixtime::tu_day(1L)`). The default automatically
+#' selects it as the finest chronon that all time points can be represented in.
+#' @param align_mixed A number between 0 and 1 defining how to align coarser
 #' granularities onto the common time scale. 0 means start alignment,
 #' 1 means end alignment, and 0.5 means center alignment (the default).
 #' @param time_labels Uses strftime strings or similar to format the labels from
 #' the time points.
-#' @param warps Warp the time scale to have a consistent length, one of:
+#' @param warps Normalises the time scale to have a consistent length between
+#' specified time points, one of:
 #'   - `NULL` or `waiver()` for no warping (the default)
 #'   - A `mixtime` vector giving positions of warping points
 #'   - A function that takes the limits as input and returns warping points as
@@ -110,36 +112,24 @@
 #' using the `time_warps` argument, which accepts a duration like "1 month".
 #'
 #' @examples
+#' library(ggplot2)
+#' library(dplyr)
+#' uad_month <- tibble(
+#'   time = mixtime::yearmonth(36L + 0:71),
+#'   value = USAccDeaths
+#' )
+#' uad_year <- uad_month |>
+#'   group_by(time = mixtime::year(time)) |>
+#'   summarise(value = mean(value), .groups = "drop")
 #'
-#' ## The common timezone for mixed timezone data is UTC.
-#' #df_tz_mixed <- data.frame(
-#' #  time = mixtime::mixtime(
-#' #    as.POSIXct("2023-10-01", tz = "Australia/Melbourne") + 0:23 * 3600,
-#' #    as.POSIXct("2023-10-01", tz = "America/New_York") + 0:23 * 3600
-#' #  ),
-#' #  value = c(cumsum(rnorm(12, 2)), cumsum(rnorm(12, -2)))
-#' #)
-#' #ggplot(df_tz_mixed, aes(time, value)) +
-#' #  geom_time_line()
-#
-#' ## Alternative breaks and labels apply to the common time scale.
-#' #ggplot(df_tz_mixed, aes(time, value)) +
-#' #  geom_time_line() +
-#' #  scale_x_mixtime(time_breaks = "6 hours", time_labels = "%H:%M")
-#
-#' ## Plotting monthly and daily data together will align months to the middle day of the month.
-#' #df_chronon_mixed <- data.frame(
-#' #  time = c(
-#' #    mixtime::yearmonth("2023-01") + 0:11,
-#' #    as.Date("2023-01-01") + 0:364
-#' #  ),
-#' #  value = c(cumsum(rnorm(12, 30)), cumsum(rnorm(365, 1)))
-#' #)
-#
-#' ## Warping the x-axis
-#' #ggplot(df_chronon_mixed, aes(time, value)) +
-#' #  geom_time_line(time_warps = "1 month")
-#'
+#' bind_rows(
+#'   month = uad_month,
+#'   year = uad_year,
+#'   .id = "grain"
+#' ) |>
+#'   ggplot(aes(time, value, color = grain)) +
+#'   geom_line() +
+#'   scale_x_mixtime(align_mixed = 1)
 #'
 #' @export
 #' @rdname scale_mixtime
@@ -151,8 +141,8 @@ scale_x_mixtime <- function(
   time_minor_breaks = waiver(),
   labels = waiver(),
   time_labels = waiver(),
-  common_time = waiver(),
-  time_align = 0.5,
+  chronon_common = waiver(),
+  align_mixed = 0.5,
   warps = waiver(),
   time_warps = waiver(),
   limits = NULL,
@@ -173,6 +163,8 @@ scale_x_mixtime <- function(
     time_minor_breaks = time_minor_breaks,
     labels = labels,
     time_labels = time_labels,
+    chronon_common = chronon_common,
+    align_mixed = align_mixed,
     warps = warps,
     time_warps = time_warps,
     timezone = NULL,
@@ -239,6 +231,8 @@ mixtime_scale <- function(
   time_minor_breaks = waiver(),
   labels = waiver(),
   time_labels = waiver(),
+  chronon_common = waiver(),
+  align_mixed = 0.5,
   warps = waiver(),
   time_warps = waiver(),
   timezone = NULL,
@@ -292,7 +286,14 @@ mixtime_scale <- function(
     trans = trans,
     call = call,
     ...,
-    super = ggproto(NULL, scale_class, warps = warps)
+    super = ggproto(
+      NULL,
+      scale_class,
+      warps = warps,
+      chronon_common = chronon_common,
+      align_mixed = align_mixed,
+      timezone = timezone
+    )
   )
 
   # Range is hard-coded and not inherited by `super` in
@@ -349,17 +350,6 @@ ScaleContinuousMixtime <- ggproto(
     df
   },
   transform = function(self, x) {
-    # Store common time type for default backtransformation, labels, and more.
-    if (length(attr(x, "v")) != 1L) {
-      cli::cli_abort(
-        "{.field mixtime} scales currently work with single-type vectors only."
-      )
-    }
-    # TODO: make this optionally user-specified
-    self$ptype <- attributes(attr(x, "v")[[1L]])
-
-    # Possibly redefine self$trans with new info from `x`
-
     if (is_bare_numeric(x)) {
       cli::cli_abort(
         c(
@@ -370,13 +360,50 @@ ScaleContinuousMixtime <- ggproto(
       )
     }
 
+    # Store common time type for default backtransformation, labels, and more.
+    if (is_waiver(self$chronon_common)) {
+      chronons <- lapply(attr(x, "v"), mixtime::time_chronon)
+      self$chronon_common <- mixtime:::chronon_common(!!!chronons)
+    }
+
+    # Attempt to match common chronon for formatting granularities
+    time_match <- vctrs::vec_match(list(self$chronon_common), chronons)
+    time_attr <- if (!is.na(time_match)) {
+      attributes(attr(x, "v")[[time_match]])
+    } else {
+      list(
+        tz = "UTC",
+        granules = list(),
+        chronon = self$chronon_common,
+        class = c("mt_linear", "mt_time", "vctrs_vctr")
+      )
+    }
+
+    attr(x, "v") <- lapply(attr(x, "v"), function(v) {
+      # Use `align_mixed` to position discrete time models on continuous scales
+      if (is.integer(v)) {
+        v <- v + self$align_mixed
+      }
+      mixtime::chronon_convert(v, self$chronon_common)
+    })
+
+    x <- vecvec::unvecvec(x)
+    attributes(x) <- time_attr
+    x <- mixtime::mixtime(x)
+    # Possibly redefine self$trans with new info from `x`
+
     ggproto_parent(ScaleContinuous, self)$transform(x)
   },
   map = function(self, x, limits = self$get_limits()) {
     # TODO: Check functionality of self$oob
     # self$oob(x, limits)
 
-    as.numeric(self$warp_time(x))
+    if (inherits(x, "mixtime")) {
+      x <- vecvec::unvecvec(x)
+    }
+    # as.numeric() -- extract the numerical representation.
+    # This is where the mixed granularities should be mapped to a common scale.
+    vctrs::vec_data(self$warp_time(x))
   },
   warp_time = function(self, x, unwarp = FALSE) {
     if (!is_waiver(self$warps)) {
@@ -414,7 +441,7 @@ ScaleContinuousMixtime <- ggproto(
     # Convert back to original time points for labelling
     breaks <- self$warp_time(breaks, unwarp = TRUE)
 
-    ggproto_parent(ScaleContinuous, self)$get_labels(breaks)
+    ggproto_parent(ScaleContinuous, self)$get_labels(as.integer(breaks))
   }
 )
 

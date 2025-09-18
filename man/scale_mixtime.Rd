@@ -12,8 +12,8 @@ scale_x_mixtime(
   time_minor_breaks = waiver(),
   labels = waiver(),
   time_labels = waiver(),
-  common_time = waiver(),
-  time_align = 0.5,
+  chronon_common = waiver(),
+  align_mixed = 0.5,
   warps = waiver(),
   time_warps = waiver(),
   limits = NULL,
@@ -72,14 +72,16 @@ notation.
 \item{time_labels}{Uses strftime strings or similar to format the labels from
 the time points.}
 
-\item{common_time}{Acts like a vctrs \code{ptype} defining the common chronon to
-use for mixed granularity. The default automatically selects it.}
+\item{chronon_common}{A time unit that defines the common chronon to use for
+mixed granularity (e.g. \code{mixtime::tu_day(1L)}). The default automatically
+selects it as the finest chronon that all time points can be represented in.}
 
-\item{time_align}{A number between 0 and 1 defining how to align coarser
+\item{align_mixed}{A number between 0 and 1 defining how to align coarser
 granularities onto the common time scale. 0 means start alignment,
 1 means end alignment, and 0.5 means center alignment (the default).}
 
-\item{warps}{Warp the time scale to have a consistent length, one of:
+\item{warps}{Normalises the time scale to have a consistent length between
+specified time points, one of:
 \itemize{
 \item \code{NULL} or \code{waiver()} for no warping (the default)
 \item A \code{mixtime} vector giving positions of warping points
@@ -222,32 +224,23 @@ using the \code{time_warps} argument, which accepts a duration like "1 month".
 }
 
 \examples{
+library(ggplot2)
+library(dplyr)
+uad_month <- tibble(
+  time = mixtime::yearmonth(36L + 0:71),
+  value = USAccDeaths
+)
+uad_year <- uad_month |>
+  group_by(time = mixtime::year(time)) |>
+  summarise(value = mean(value), .groups = "drop")
 
-## The common timezone for mixed timezone data is UTC.
-#df_tz_mixed <- data.frame(
-#  time = mixtime::mixtime(
-#    as.POSIXct("2023-10-01", tz = "Australia/Melbourne") + 0:23 * 3600,
-#    as.POSIXct("2023-10-01", tz = "America/New_York") + 0:23 * 3600
-#  ),
-#  value = c(cumsum(rnorm(12, 2)), cumsum(rnorm(12, -2)))
-#)
-#ggplot(df_tz_mixed, aes(time, value)) +
-#  geom_time_line()
-## Alternative breaks and labels apply to the common time scale.
-#ggplot(df_tz_mixed, aes(time, value)) +
-#  geom_time_line() +
-#  scale_x_mixtime(time_breaks = "6 hours", time_labels = "\%H:\%M")
-## Plotting monthly and daily data together will align months to the middle day of the month.
-#df_chronon_mixed <- data.frame(
-#  time = c(
-#    mixtime::yearmonth("2023-01") + 0:11,
-#    as.Date("2023-01-01") + 0:364
-#  ),
-#  value = c(cumsum(rnorm(12, 30)), cumsum(rnorm(365, 1)))
-#)
-## Warping the x-axis
-#ggplot(df_chronon_mixed, aes(time, value)) +
-#  geom_time_line(time_warps = "1 month")
-
+bind_rows(
+  month = uad_month,
+  year = uad_year,
+  .id = "grain"
+) |>
+  ggplot(aes(time, value, color = grain)) +
+  geom_line() +
+  scale_x_mixtime(align_mixed = 1)
 
 }
