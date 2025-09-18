@@ -97,6 +97,26 @@ automatically identified, but can be manually specified using the
 <span>  guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  position <span class="op">=</span> <span class="st">"bottom"</span>,</span>
 <span>  sec.axis <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">scale_y_mixtime</span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  breaks <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  time_breaks <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  minor_breaks <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  time_minor_breaks <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  labels <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  time_labels <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  chronon_common <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  align_mixed <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>  warps <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  time_warps <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  limits <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  expand <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  oob <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="va"><a href="https://scales.r-lib.org/reference/oob.html" class="external-link">censor</a></span>,</span>
+<span>  guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  position <span class="op">=</span> <span class="st">"bottom"</span>,</span>
+<span>  sec.axis <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -248,7 +268,11 @@ breaks and labels or using a different common time scale.</p>
 using duration-based intervals and strftime-like formatting. These time aware
 options are prefixed with <code>time_</code> (e.g. <code>time_breaks</code> and <code>time_labels</code>),
 and take precedence over the non-time aware options (e.g. <code>breaks</code> and
-<code>labels</code>). The scale's breaks can be specified with <code>mixtime::duration`` objects (e.g. </code>time_breaks = mixtime::months(1L)<code>), or with strings that can be parsed into durations (e.g. `time_breaks = "1 month"`). Labels for time points in Gregorian calendars can be specified using [base::strftime()] formats (e.g. `time_labels = "%b %Y"</code> for "Jan 2020"). Concise strings for
+<code>labels</code>). The scale's breaks can be specified with <code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration.html" class="external-link">mixtime::duration</a></code>
+objects (e.g. <code>time_breaks = mixtime::months(1L)</code>), or with strings that can
+be parsed into durations (e.g. <code>time_breaks = "1 month"</code>). Labels for time
+points in Gregorian calendars can be specified using <code><a href="https://rdrr.io/r/base/strptime.html" class="external-link">base::strftime()</a></code>
+formats (e.g. <code>time_labels = "%b %Y"</code> for "Jan 2020"). Concise strings for
 non-Gregorian calendars are not yet supported, but can be created using
 custom label functions (e.g. <code>labels = function(x) { ... }</code>).</p>
 <p>A core feature of these scales is the ability to handle time from multiple
