@@ -183,43 +183,53 @@ scale_x_mixtime <- function(
 }
 
 
-# scale_y_time <- function(name = waiver(),
-#                          breaks = waiver(),
-#                          cal_breaks = waiver(),
-#                          labels = waiver(),
-#                          cal_labels = waiver(),
-#                          minor_breaks = waiver(),
-#                          cal_minor_breaks = waiver(),
-#                          timezone = NULL,
-#                          limits = NULL,
-#                          expand = waiver(),
-#                          oob = scales::censor,
-#                          guide = waiver(),
-#                          position = "left",
-#                          sec.axis = waiver()) {
-#
-#   sc <- datetime_scale(
-#     c("y", "ymin", "ymax", "yend", "yintercept",
-#       "ymin_final", "ymax_final", "lower", "middle", "upper", "y0"),
-#     "time",
-#     name = name,
-#     palette = identity,
-#     breaks = breaks,
-#     cal_breaks = cal_breaks,
-#     labels = labels,
-#     cal_labels = cal_labels,
-#     minor_breaks = minor_breaks,
-#     cal_minor_breaks = cal_minor_breaks,
-#     timezone = timezone,
-#     guide = guide,
-#     limits = limits,
-#     expand = expand,
-#     oob = oob,
-#     position = position
-#   )
-#
-#   set_sec_axis(sec.axis, sc)
-# }
+#' @export
+#' @rdname scale_mixtime
+scale_y_mixtime <- function(
+  name = waiver(),
+  breaks = waiver(),
+  time_breaks = waiver(),
+  minor_breaks = waiver(),
+  time_minor_breaks = waiver(),
+  labels = waiver(),
+  time_labels = waiver(),
+  chronon_common = waiver(),
+  align_mixed = 0.5,
+  warps = waiver(),
+  time_warps = waiver(),
+  limits = NULL,
+  expand = waiver(),
+  oob = scales::censor,
+  guide = waiver(),
+  position = "bottom",
+  sec.axis = waiver()
+) {
+  sc <- mixtime_scale(
+    aesthetics = ggplot_global$y_aes,
+    transform = "mixtime",
+    name = name,
+    palette = identity,
+    breaks = breaks,
+    time_breaks = time_breaks,
+    minor_breaks = minor_breaks,
+    time_minor_breaks = time_minor_breaks,
+    labels = labels,
+    time_labels = time_labels,
+    chronon_common = chronon_common,
+    align_mixed = align_mixed,
+    warps = warps,
+    time_warps = time_warps,
+    timezone = NULL,
+    guide = guide,
+    limits = limits,
+    expand = expand,
+    oob = oob,
+    position = position
+  )
+  debug(sc$get_labels)
+
+  set_sec_axis(sec.axis, sc)
+}
 
 #' @importFrom scales breaks_width
 #' @keywords internal
