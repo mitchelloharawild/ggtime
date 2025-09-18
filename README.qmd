@@ -13,13 +13,12 @@ knitr::opts_chunk$set(
 )
 ```
 
-# ggtime <a href="https://pkg.mitchelloharawild.com/ggtime/"><img src="man/figures/logo.svg" align="right" height="139" alt="ggtime website" /></a>
+# ggtime <img src="man/figures/logo.svg" align="right" height="139" alt="ggtime website" />
 
 ```{=html}
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN status](https://www.r-pkg.org/badges/version/ggtime)](https://CRAN.R-project.org/package=ggtime)
-[![R-CMD-check](https://github.com/mitchelloharawild/ggtime/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/mitchelloharawild/ggtime/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 ```
 
@@ -43,11 +42,12 @@ You can install the **stable** version from
 install.packages("ggtime")
 ```
 
-You can install the development version of ggtime from [GitHub](https://github.com/) with:
+You can install the development version of ggtime locally with:
 
 ```r
 # install.packages("remotes")
-remotes::install_github("mitchelloharawild/ggtime")
+# "ggtime" is should match the folder of the ggtime source code on your computer
+remotes::install_local("ggtime")
 ```
 
 ## Examples

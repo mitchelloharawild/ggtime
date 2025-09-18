@@ -1,26 +1,9 @@
-url: https://pkg.mitchelloharawild.com/ggtime/
-
 template:
   params:
     bootswatch: cosmo
-  includes:
-    in_header: |
-      <script defer data-domain="pkg.mitchelloharawild.com" src="https://track.mitchelloharawild.com/js/plausible.js"></script>
 
 development:
   mode: auto
-
-authors:
-  Rob Hyndman:
-    href: http://robjhyndman.com
-  Mitchell O'Hara-Wild:
-    href: https://mitchelloharawild.com
-  Cynthia Huang:
-    href: https://www.cynthiahqy.com
-  Matthew Kay:
-    href: https://www.mjskay.com
-  Earo Wang:
-    href: https://earo.me
 
 navbar:
   type: default
@@ -33,9 +16,6 @@ navbar:
     menu:
     - text: Introduction to ggtime
       href: articles/ggtime.html
-  right:
-  - icon: fa-github fa-lg
-    href: https://github.com/mitchelloharawild/ggtime
 
 reference:
 - title: Plot helpers

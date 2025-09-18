@@ -3,35 +3,10 @@ Title: Grammar of Graphics and Plot Helpers for Time Series Visualization
 Version: 0.1.0.9000
 Authors@R: c(
       person(
-        given = "Mitchell",
-        family = "O'Hara-Wild",
+        given = "ggtime",
+        family = "authors",
         role = c("aut", "cre"),
-        email = "mail@mitchelloharawild.com",
-        comment = c(ORCID = "0000-0001-6729-7695")
-      ),
-      person(
-        given = "Cynthia A.", 
-        family = "Huang",
-        role = c("aut"), 
-        comment = c(ORCID = "0000-0002-9218-987X")
-      ),
-      person(
-        given = "Matthew", 
-        family = "Kay",
-        role = c("aut"), 
-        comment = c(ORCID = "0000-0001-9446-0419")
-      ),
-      person(
-        given = "Rob",
-        family = "Hyndman",
-        role = c("aut"),
-        comment = c(ORCID = "0000-0002-2140-5352")
-      ),
-      person(
-        given = "Earo",
-        family = "Wang",
-        role = c("ctb"),
-        comment = c(ORCID = "0000-0001-6448-5260")
+        email = "redacted@chi2026.acm.org"
       )
     )
 Description: Extends the capabilities of 'ggplot2' by providing grammatical
@@ -41,7 +16,6 @@ Description: Extends the capabilities of 'ggplot2' by providing grammatical
     helper functions to quickly produce commonly used time series graphics,
     including time plots, season plots, and seasonal sub-series plots.
 License: GPL (>= 3)
-URL: https://pkg.mitchelloharawild.com/ggtime, https://github.com/mitchelloharawild/ggtime
 Imports: 
     ggplot2,
     grid,

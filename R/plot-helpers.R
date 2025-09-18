@@ -685,8 +685,6 @@ gg_lag <- function(
 #'
 #' @return A list of ggplot objects showing useful plots of a time series.
 #'
-#' @author Rob J Hyndman & Mitchell O'Hara-Wild
-#'
 #' @seealso \code{\link[stats]{plot.ts}}, [feasts::ACF()],
 #' \code{\link[stats]{spec.ar}}
 #'
