@@ -48,11 +48,11 @@
 #' using duration-based intervals and strftime-like formatting. These time aware
 #' options are prefixed with `time_` (e.g. `time_breaks` and `time_labels`),
 #' and take precedence over the non-time aware options (e.g. `breaks` and
-#' `labels`). The scale's breaks can be specified with `mixtime::duration``
-#' objects (e.g. `time_breaks = mixtime::months(1L)``), or with strings that can
+#' `labels`). The scale's breaks can be specified with `mixtime::duration`
+#' objects (e.g. `time_breaks = mixtime::months(1L)`), or with strings that can
 #' be parsed into durations (e.g. `time_breaks = "1 month"`). Labels for time
 #' points in Gregorian calendars can be specified using [base::strftime()]
-#' formats (e.g. `time_labels = "%b %Y"`` for "Jan 2020"). Concise strings for
+#' formats (e.g. `time_labels = "%b %Y"` for "Jan 2020"). Concise strings for
 #' non-Gregorian calendars are not yet supported, but can be created using
 #' custom label functions (e.g. `labels = function(x) { ... }`).
 #'

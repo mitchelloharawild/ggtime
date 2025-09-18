@@ -3,9 +3,30 @@
 \name{scale_mixtime}
 \alias{scale_mixtime}
 \alias{scale_x_mixtime}
+\alias{scale_y_mixtime}
 \title{Position scales for mixtime data}
 \usage{
 scale_x_mixtime(
+  name = waiver(),
+  breaks = waiver(),
+  time_breaks = waiver(),
+  minor_breaks = waiver(),
+  time_minor_breaks = waiver(),
+  labels = waiver(),
+  time_labels = waiver(),
+  chronon_common = waiver(),
+  align_mixed = 0.5,
+  warps = waiver(),
+  time_warps = waiver(),
+  limits = NULL,
+  expand = waiver(),
+  oob = scales::censor,
+  guide = waiver(),
+  position = "bottom",
+  sec.axis = waiver()
+)
+
+scale_y_mixtime(
   name = waiver(),
   breaks = waiver(),
   time_breaks = waiver(),
@@ -158,7 +179,11 @@ Similarly to the temporal scales in ggplot2 (\code{\link[ggplot2:scale_date]{ggp
 using duration-based intervals and strftime-like formatting. These time aware
 options are prefixed with \code{time_} (e.g. \code{time_breaks} and \code{time_labels}),
 and take precedence over the non-time aware options (e.g. \code{breaks} and
-\code{labels}). The scale's breaks can be specified with \verb{mixtime::duration`` objects (e.g. }time_breaks = mixtime::months(1L)\verb{), or with strings that can be parsed into durations (e.g. `time_breaks = "1 month"`). Labels for time points in Gregorian calendars can be specified using [base::strftime()] formats (e.g. `time_labels = "\%b \%Y"} for "Jan 2020"). Concise strings for
+\code{labels}). The scale's breaks can be specified with \code{mixtime::duration}
+objects (e.g. \code{time_breaks = mixtime::months(1L)}), or with strings that can
+be parsed into durations (e.g. \code{time_breaks = "1 month"}). Labels for time
+points in Gregorian calendars can be specified using \code{\link[base:strptime]{base::strftime()}}
+formats (e.g. \code{time_labels = "\%b \%Y"} for "Jan 2020"). Concise strings for
 non-Gregorian calendars are not yet supported, but can be created using
 custom label functions (e.g. \code{labels = function(x) { ... }}).
 
