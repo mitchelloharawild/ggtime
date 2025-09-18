@@ -76,7 +76,7 @@ duplicated values.</p>
 <code>[x/y]timeoffset</code> aesthetics. Changes in time offsets are drawn using dashed lines,
 which are most commonly used for timezone changes and daylight savings time transitions.
 Timezone offsets are automatically used when times from the <code>mixtime</code> package are used
-in conjunction with <code><a href="PositionTime.html">position_time_civil()</a></code> positioning (the default).</p>
+in conjunction with <code><a href="position_time.html">position_time_civil()</a></code> positioning (the default).</p>
 <p>This geometry also respects implicit missing values in regular time series, and will
 not connect temporal observations separated by gaps.</p>
 <p>The <a href="https://ggplot2.tidyverse.org/reference/aes_group_order.html" class="external-link">ggplot2::group</a> aesthetic determines which cases are connected together.</p>
@@ -187,8 +187,8 @@ data and aesthetics and shouldn't inherit behaviour from the default plot specif
 <p>The <code>geom_time_line()</code> geometry extends <code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_line()</a></code> with time
 semantics that ensure the line's slope accurately reflects rates of change in
 the measurements over time.</p>
-<p>Most notably, <code>geom_time_line()</code> works closely with <code><a href="PositionTime.html">position_time_civil()</a></code>
-and <code><a href="PositionTime.html">position_time_absolute()</a></code> to correctly display time in civil and
+<p>Most notably, <code>geom_time_line()</code> works closely with <code><a href="position_time.html">position_time_civil()</a></code>
+and <code><a href="position_time.html">position_time_absolute()</a></code> to correctly display time in civil and
 absolute time formats, respectively. Civil time positioning (the default)
 shows time as experienced in a specific timezone (also known as 'local time',
 it is the time on clocks in that timezone). Absolute time positioning shows
@@ -225,7 +225,7 @@ sections.</p>
 offset changes, such as timezone transitions or daylight saving time changes.
 When successive time offsets differ, a dashed line segment is drawn to show
 the offset transition. These aesthetics are automatically set when using
-<code>position</code> = <code><a href="PositionTime.html">position_time_civil()</a></code> (the default), however the offsets can
+<code>position</code> = <code><a href="position_time.html">position_time_civil()</a></code> (the default), however the offsets can
 also be set manually to show other types of time offsets. One example of when
 it is useful to set the offsets manually is when showing measurements from a
 sensor with a known time drift (e.g. a clock that runs fast or slow) that is
@@ -258,7 +258,7 @@ draw all lines that connect to and from each of the duplicated time values.</p>
     </div>
     <div id="see-also">
     <h2>See also</h2>
-    <div class="dont-index"><p><code><a href="PositionTime.html">position_time_civil()</a></code>/<code><a href="PositionTime.html">position_time_absolute()</a></code> for civil and absolute time positioning.</p>
+    <div class="dont-index"><p><code><a href="position_time.html">position_time_civil()</a></code>/<code><a href="position_time.html">position_time_absolute()</a></code> for civil and absolute time positioning.</p>
 <p><code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_line()</a></code>/<code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_path()</a></code> for standard line/path geoms in ggplot2.</p></div>
     </div>
     <div id="aesthetics">
@@ -292,7 +292,7 @@ draw all lines that connect to and from each of the duplicated time values.</p>
 <span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="geom_time_line-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_back</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span>position <span class="op">=</span> <span class="fu"><a href="PositionTime.html">position_time_absolute</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span>position <span class="op">=</span> <span class="fu"><a href="position_time.html">position_time_absolute</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="geom_time_line-3.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Random walk with a forward timezone change (DST starts)</span></span></span>
@@ -304,7 +304,7 @@ draw all lines that connect to and from each of the duplicated time values.</p>
 <span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="geom_time_line-4.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_forward</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span> <span class="fu">geom_time_line</span><span class="op">(</span>position <span class="op">=</span> <span class="fu"><a href="PositionTime.html">position_time_absolute</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span> <span class="fu">geom_time_line</span><span class="op">(</span>position <span class="op">=</span> <span class="fu"><a href="position_time.html">position_time_absolute</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="geom_time_line-5.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span></span></span>
