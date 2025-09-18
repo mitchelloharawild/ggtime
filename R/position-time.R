@@ -54,18 +54,18 @@
 #' #ggplot(df_tz_mixed, aes(time, value)) +
 #' #  geom_point(position = position_time_civil())
 #'
-#' @name PositionTime
+#' @name position_time
 #' @aliases position_time_civil position_time_absolute
 #' @export position_time_civil position_time_absolute
 NULL
 
-#' @rdname PositionTime
+#' @rdname position_time
 #' @export
 position_time_civil <- function() {
   PositionTimeCivil
 }
 
-#' @rdname PositionTime
+#' @rdname position_time
 #' @format NULL
 #' @usage NULL
 #' @export
@@ -107,13 +107,13 @@ PositionTimeCivil <- ggproto(
   }
 )
 
-#' @rdname PositionTime
+#' @rdname position_time
 #' @export
 position_time_absolute <- function() {
   PositionTimeAbsolute
 }
 
-#' @rdname PositionTime
+#' @rdname position_time
 #' @format NULL
 #' @usage NULL
 #' @export

@@ -290,7 +290,9 @@ specialize_coord_loop.CoordCartesian <- function(coord, ...) {
   force(coord)
 
   if (!isTRUE(coord$time %in% c("x", "y"))) {
-    stop("coord_loop(coord = <CoordCartesian>, time = ...) requires time %in% c('x', 'y').")
+    stop(
+      "coord_loop(coord = <CoordCartesian>, time = ...) requires time %in% c('x', 'y')."
+    )
   }
 
   ggplot2::ggproto(
@@ -339,7 +341,9 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
   force(coord)
 
   if (!isTRUE(coord$time == coord$theta)) {
-    stop("coord_loop(coord = <CoordRadial>, time = ...) requires time == coord$theta.")
+    stop(
+      "coord_loop(coord = <CoordRadial>, time = ...) requires time == coord$theta."
+    )
   }
 
   ggplot2::ggproto(
@@ -416,13 +420,13 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
         ties = "min"
       )
       params$in_gap <- function(x) {
-        in_gap_indicator(x) %in% 1  # NA => FALSE
+        in_gap_indicator(x) %in% 1 # NA => FALSE
       }
 
       params
     },
 
-    transform =  function(self, data, panel_params) {
+    transform = function(self, data, panel_params) {
       # align the starting point of each loop
       data[[self$theta]] <- panel_params$align(data[[self$theta]])
 
@@ -449,6 +453,8 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
 #' to use in message in case of failure
 #' @param check if not `TRUE` no check is made
 #' @returns `invisible(NULL)` if clipping is supported or raises an error if not.
+#' @noRd
+#' @keywords internal
 check_can_clip <- function(context, check) {
   if (check && !ggplot2::check_device("clippingPaths")) {
     stop(context, " requires R v4.2.0 or higher.")
@@ -576,6 +582,7 @@ cut_axis_time_loop <- function(panel_params, axis, by, ljust) {
   time_cuts <- unique(c(
     seq(time_range[1], time_range[2] + 1, by = by),
     time_range[2] + 1
-  )) - ljust
+  )) -
+    ljust
   time_cuts
 }

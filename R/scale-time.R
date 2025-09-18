@@ -131,6 +131,9 @@
 #'   geom_line() +
 #'   scale_x_mixtime(align_mixed = 1)
 #'
+#' @name scale_mixtime
+NULL
+
 #' @export
 #' @rdname scale_mixtime
 scale_x_mixtime <- function(

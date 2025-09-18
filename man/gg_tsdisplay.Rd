@@ -53,6 +53,3 @@ and practice}, 3rd edition, OTexts: Melbourne, Australia.
 \code{\link[stats]{plot.ts}}, \code{\link[feasts:ACF]{feasts::ACF()}},
 \code{\link[stats]{spec.ar}}
 }
-\author{
-Rob J Hyndman & Mitchell O'Hara-Wild
-}
