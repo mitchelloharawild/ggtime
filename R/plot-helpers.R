@@ -265,7 +265,7 @@ gg_season <- function(
   ...
 ) {
   # Guide users from {feasts} to {ggtime}
-  feasts_deprecate(match.call())
+  ggtime_migrate_deprecate(match.call(), "feasts")
 
   y <- guess_plot_var(data, !!enquo(y))
 
@@ -505,7 +505,7 @@ gg_season <- function(
 #' @export
 gg_subseries <- function(data, y = NULL, period = NULL, ...) {
   # Guide users from {feasts} to {ggtime}
-  feasts_deprecate(match.call())
+  ggtime_migrate_deprecate(match.call(), "feasts")
 
   y <- guess_plot_var(data, !!enquo(y))
   n_key <- n_keys(data)
@@ -612,7 +612,7 @@ gg_lag <- function(
   ...
 ) {
   # Guide users from {feasts} to {ggtime}
-  feasts_deprecate(match.call())
+  ggtime_migrate_deprecate(match.call(), "feasts")
 
   if (isTRUE(arrow)) {
     arrow <- grid::arrow(length = grid::unit(0.05, "npc"))
@@ -730,7 +730,7 @@ gg_tsdisplay <- function(
   lag_max = NULL
 ) {
   # Guide users from {feasts} to {ggtime}
-  feasts_deprecate(match.call())
+  ggtime_migrate_deprecate(match.call(), "feasts")
 
   if (n_keys(data) > 1) {
     abort(
@@ -856,7 +856,7 @@ gg_tsresiduals <- function(
   ...
 ) {
   # Guide users from {feasts} to {ggtime}
-  feasts_deprecate(match.call())
+  ggtime_migrate_deprecate(match.call(), "feasts")
 
   if (!fabletools::is_mable(data)) {
     abort(
@@ -952,7 +952,7 @@ grid.draw.gg_tsensemble <- function(x, recording = TRUE) {
 #' @export
 gg_arma <- function(data) {
   # Guide users from {feasts} to {ggtime}
-  feasts_deprecate(match.call())
+  ggtime_migrate_deprecate(match.call(), "feasts")
 
   if (!fabletools::is_mable(data)) {
     abort(
@@ -1012,7 +1012,7 @@ gg_arma <- function(data) {
 #' @export
 gg_irf <- function(data, y = all_of(measured_vars(data))) {
   # Guide users from {feasts} to {ggtime}
-  feasts_deprecate(match.call())
+  ggtime_migrate_deprecate(match.call(), "feasts")
 
   kv <- key_vars(data)
   if (is_empty(kv)) {
@@ -1045,6 +1045,9 @@ gg_irf <- function(data, y = all_of(measured_vars(data))) {
 #' @importFrom stats qnorm
 #' @export
 autoplot.tbl_cf <- function(object, level = 95, ...) {
+  # Guide users from {feasts} to {ggtime}
+  ggtime_migrate_deprecate(match.call(), "feasts")
+
   cf_type <- colnames(object)[colnames(object) %in% c("acf", "pacf", "ccf")]
   plot_aes <- ggplot2::aes(
     x = !!sym("lag"),

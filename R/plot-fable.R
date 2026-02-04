@@ -38,6 +38,9 @@ autoplot.fbl_ts <- function(
   show_gap = TRUE,
   ...
 ) {
+  # Guide users from {fabletools} to {ggtime}
+  ggtime_migrate_deprecate(match.call(), "fabletools")
+
   fc_resp <- fabletools::response_vars(object)
   fc_key <- setdiff(key_vars(object), ".model")
   common_models <- duplicated(
@@ -136,6 +139,9 @@ autolayer.fbl_ts <- function(
   show_gap = TRUE,
   ...
 ) {
+  # Guide users from {fabletools} to {ggtime}
+  ggtime_migrate_deprecate(match.call(), "fabletools")
+
   build_fbl_layer(
     object = object,
     data = data,

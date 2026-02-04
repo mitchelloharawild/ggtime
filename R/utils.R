@@ -219,7 +219,7 @@ lag <- function(x, n) {
   out
 }
 
-feasts_deprecate <- function(cl) {
+ggtime_migrate_deprecate <- function(cl, pkg) {
   # Skip if ggtime is explicitly attached
   if ("package:ggtime" %in% search()) {
     return(NULL)
@@ -238,7 +238,7 @@ feasts_deprecate <- function(cl) {
   fn <- deparse(cl[[1L]])
   lifecycle::deprecate_soft(
     when = "0.4.2",
-    what = paste0("feasts::", fn, "()"),
+    what = paste0(pkg, "::", fn, "()"),
     with = paste0("ggtime::", fn, "()"),
     details = "Graphics functions have been moved to the {ggtime} package. Please use `library(ggtime)` instead.",
     env = caller_env(),

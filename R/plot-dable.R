@@ -28,6 +28,9 @@ autoplot.dcmp_ts <- function(
   level = c(80, 95),
   ...
 ) {
+  # Guide users from {fabletools} to {ggtime}
+  ggtime_migrate_deprecate(match.call(), "fabletools")
+
   method <- object %@% "method"
   idx <- index(object)
   keys <- key(object)
