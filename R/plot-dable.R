@@ -30,7 +30,7 @@ autoplot.dcmp_ts <- function(
   ...
 ) {
   # Guide users from {fabletools} to {ggtime}
-  ggtime_migrate_deprecate(match.call(), "fabletools")
+  ggtime_migrate_deprecate(match.call(), "fabletools", "0.6.0")
 
   method <- object %@% "method"
   idx <- index(object)

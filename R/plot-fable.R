@@ -39,7 +39,7 @@ autoplot.fbl_ts <- function(
   ...
 ) {
   # Guide users from {fabletools} to {ggtime}
-  ggtime_migrate_deprecate(match.call(), "fabletools")
+  ggtime_migrate_deprecate(match.call(), "fabletools", "0.6.0")
 
   fc_resp <- fabletools::response_vars(object)
   fc_key <- setdiff(key_vars(object), ".model")
@@ -140,7 +140,7 @@ autolayer.fbl_ts <- function(
   ...
 ) {
   # Guide users from {fabletools} to {ggtime}
-  ggtime_migrate_deprecate(match.call(), "fabletools")
+  ggtime_migrate_deprecate(match.call(), "fabletools", "0.6.0")
 
   build_fbl_layer(
     object = object,

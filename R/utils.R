@@ -219,7 +219,7 @@ lag <- function(x, n) {
   out
 }
 
-ggtime_migrate_deprecate <- function(cl, pkg) {
+ggtime_migrate_deprecate <- function(cl, pkg, version) {
   # Skip if ggtime is explicitly attached
   if ("package:ggtime" %in% search()) {
     return(NULL)
@@ -237,7 +237,7 @@ ggtime_migrate_deprecate <- function(cl, pkg) {
   # Raise deprecation notice
   fn <- deparse(cl[[1L]])
   lifecycle::deprecate_soft(
-    when = "0.4.2",
+    when = version,
     what = paste0(pkg, "::", fn, "()"),
     with = paste0("ggtime::", fn, "()"),
     details = "Graphics functions have been moved to the {ggtime} package. Please use `library(ggtime)` instead.",
