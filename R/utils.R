@@ -218,3 +218,30 @@ lag <- function(x, n) {
   out <- c(rep(NA, n), x[seq_len(xlen - n)])
   out
 }
+
+feasts_deprecate <- function(cl) {
+  # Skip if ggtime is explicitly attached
+  if ("package:ggtime" %in% search()) {
+    return(NULL)
+  }
+
+  # Skip if ggtime is explicitly called with :: or :::
+  if (is.call(cl[[1L]])) {
+    if (identical(sym("ggtime"), cl[[1L]][[2L]])) {
+      return(NULL)
+    } else {
+      cl[[1L]] <- cl[[1L]][[length(cl[[1L]])]]
+    }
+  }
+
+  # Raise deprecation notice
+  fn <- deparse(cl[[1L]])
+  lifecycle::deprecate_soft(
+    when = "0.4.2",
+    what = paste0("feasts::", fn, "()"),
+    with = paste0("ggtime::", fn, "()"),
+    details = "Graphics functions have been moved to the {ggtime} package. Please use `library(ggtime)` instead.",
+    env = caller_env(),
+    user_env = caller_env(2)
+  )
+}

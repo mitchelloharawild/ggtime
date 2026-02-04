@@ -264,6 +264,9 @@ gg_season <- function(
   labels_right_nudge = 0,
   ...
 ) {
+  # Guide users from {feasts} to {ggtime}
+  feasts_deprecate(match.call())
+
   y <- guess_plot_var(data, !!enquo(y))
 
   labels <- match.arg(labels)
@@ -501,6 +504,9 @@ gg_season <- function(
 #' @importFrom ggplot2 facet_grid
 #' @export
 gg_subseries <- function(data, y = NULL, period = NULL, ...) {
+  # Guide users from {feasts} to {ggtime}
+  feasts_deprecate(match.call())
+
   y <- guess_plot_var(data, !!enquo(y))
   n_key <- n_keys(data)
   keys <- key(data)
@@ -605,6 +611,9 @@ gg_lag <- function(
   arrow = FALSE,
   ...
 ) {
+  # Guide users from {feasts} to {ggtime}
+  feasts_deprecate(match.call())
+
   if (isTRUE(arrow)) {
     arrow <- grid::arrow(length = grid::unit(0.05, "npc"))
   } else if (isFALSE(arrow)) {
@@ -720,6 +729,9 @@ gg_tsdisplay <- function(
   ),
   lag_max = NULL
 ) {
+  # Guide users from {feasts} to {ggtime}
+  feasts_deprecate(match.call())
+
   if (n_keys(data) > 1) {
     abort(
       "The data provided to contains more than one time series. Please filter a single time series to use `gg_tsdisplay()`"
@@ -843,6 +855,9 @@ gg_tsresiduals <- function(
   plot_type = "histogram",
   ...
 ) {
+  # Guide users from {feasts} to {ggtime}
+  feasts_deprecate(match.call())
+
   if (!fabletools::is_mable(data)) {
     abort(
       "gg_tsresiduals() must be used with a mable containing only one model."
@@ -936,6 +951,9 @@ grid.draw.gg_tsensemble <- function(x, recording = TRUE) {
 #' }
 #' @export
 gg_arma <- function(data) {
+  # Guide users from {feasts} to {ggtime}
+  feasts_deprecate(match.call())
+
   if (!fabletools::is_mable(data)) {
     abort(
       "gg_arma() must be used with a mable containing models that compute ARMA roots"
@@ -993,6 +1011,9 @@ gg_arma <- function(data) {
 #'
 #' @export
 gg_irf <- function(data, y = all_of(measured_vars(data))) {
+  # Guide users from {feasts} to {ggtime}
+  feasts_deprecate(match.call())
+
   kv <- key_vars(data)
   if (is_empty(kv)) {
     kv <- NULL
