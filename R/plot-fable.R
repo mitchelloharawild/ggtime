@@ -125,7 +125,7 @@ autoplot.fbl_ts <- function(
 }
 
 #' @rdname autoplot.fbl_ts
-#' @examplesIf requireNamespace("fable", quietly = TRUE)
+#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE)
 #' aus_production %>%
 #'   autoplot(Beer) +
 #'   autolayer(fc)

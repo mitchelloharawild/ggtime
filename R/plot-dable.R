@@ -14,8 +14,9 @@
 #'
 #' @examplesIf requireNamespace("feasts", quietly = TRUE) && requireNamespace("tsibbledata", quietly = TRUE)
 #' library(fabletools)
+#' library(feasts)
 #' tsibbledata::aus_production %>%
-#'   model(feasts::STL(Beer)) %>%
+#'   model(STL(Beer)) %>%
 #'   components() %>%
 #'   autoplot()
 #'

@@ -10,11 +10,7 @@
 #'
 #' @return A ggplot object showing a time plot of a time series.
 #'
-#' @examplesIf requireNamespace("fable", quietly = TRUE)
-#' library(fable)
-#' library(tsibbledata)
-#' library(tsibble)
-#'
+#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE)
 #' tsibbledata::gafa_stock %>%
 #'  autoplot(vars(Close, log(Close)))
 #'
