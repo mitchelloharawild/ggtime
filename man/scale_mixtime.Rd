@@ -192,7 +192,7 @@ timezones, granularities, and calendars. This is achieved by mapping all time
 points to a common time scale, which is automatically identifying the finest
 compatible chronon that can represent the input data. This allows time points
 across different granularities (e.g. \link[base:DateTimeClasses]{base::POSIXt}, \link[base:Dates]{base::Date}, and
-\link[mixtime:gregorian-continuous]{mixtime::yearmonth}) to be plotted together on a common time scale. In this
+\link[mixtime:linear_gregorian]{mixtime::yearmonth}) to be plotted together on a common time scale. In this
 case the finest chronon is 1 second (from \link[base:DateTimeClasses]{base::POSIXt}), so all time points
 are mapped to a 1 second chronon for plotting. Mapping day and month chronons
 to seconds introduces indeterminancy - which second should be used to
