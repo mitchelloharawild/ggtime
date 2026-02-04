@@ -283,7 +283,7 @@ timezones, granularities, and calendars. This is achieved by mapping all time
 points to a common time scale, which is automatically identifying the finest
 compatible chronon that can represent the input data. This allows time points
 across different granularities (e.g. <a href="https://rdrr.io/r/base/DateTimeClasses.html" class="external-link">base::POSIXt</a>, <a href="https://rdrr.io/r/base/Dates.html" class="external-link">base::Date</a>, and
-mixtime::yearmonth) to be plotted together on a common time scale. In this
+<a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_gregorian.html" class="external-link">mixtime::yearmonth</a>) to be plotted together on a common time scale. In this
 case the finest chronon is 1 second (from <a href="https://rdrr.io/r/base/DateTimeClasses.html" class="external-link">base::POSIXt</a>), so all time points
 are mapped to a 1 second chronon for plotting. Mapping day and month chronons
 to seconds introduces indeterminancy - which second should be used to
