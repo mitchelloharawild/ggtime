@@ -13,6 +13,7 @@ Useful links:
 \itemize{
   \item \url{https://pkg.mitchelloharawild.com/ggtime}
   \item \url{https://github.com/mitchelloharawild/ggtime}
+  \item Report bugs at \url{https://github.com/mitchelloharawild/ggtime/issues}
 }
 
 }
