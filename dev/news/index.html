@@ -62,7 +62,17 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="ggtime-development-version">ggtime (development version)<a class="anchor" aria-label="anchor" href="#ggtime-development-version"></a></h2>
-</div>
+<p>This release completes the migration of graphics functions from {feasts} and {fabletools}, including a deprecation process for a gradual migration to {ggtime}. If you previously used time-series graphics from {feasts} or {fable}, you should now include <code><a href="https://pkg.mitchelloharawild.com/ggtime">library(ggtime)</a></code> in your script to avoid deprecation notices. Existing code will continue to work with a deprecation warning.</p>
+<p>The following plot helper functions from {fabletools} are included in this release:</p>
+<ul><li>
+<code>autoplot(&lt;fbl_ts&gt;)</code>: Forecast plots to show forecast intervals with historical data.</li>
+<li>
+<code>autolayer(&lt;fbl_ts&gt;)</code>: Forecast layers for fable objects.</li>
+<li>
+<code>autoplot(&lt;dcmp_ts&gt;)</code>: Decomposition plots to show components of a dable object.</li>
+<li>
+<code>fortify(&lt;fbl_ts&gt;)</code>: Fortify method for converting fable objects into basic data frames.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.1.0" id="ggtime-010">ggtime 0.1.0<small>2025-06-10</small><a class="anchor" aria-label="anchor" href="#ggtime-010"></a></h2>
 <p>Initial release including all plot helper functions from across the tidy time series analysis packages. The following plot helper functions are included in this release:</p>

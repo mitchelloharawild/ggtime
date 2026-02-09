@@ -7,9 +7,6 @@
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/autoplot.fbl_ts.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/autoplot.tbl_cf.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/autoplot.tbl_ts.html</loc></url>
-<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/coord_calendar.html</loc></url>
-<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/coord_loop.html</loc></url>
-<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/geom_time_line.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_arma.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_irf.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_lag.html</loc></url>
@@ -19,9 +16,7 @@
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/gg_tsresiduals.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/ggtime-package.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/index.html</loc></url>
-<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/position_time.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/reexports.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/scale_cf_lag.html</loc></url>
-<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/scale_mixtime.html</loc></url>
 </urlset>
 
