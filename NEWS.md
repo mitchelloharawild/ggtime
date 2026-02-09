@@ -1,4 +1,4 @@
-# ggtime (development version)
+# ggtime 0.2.0
 
 This release completes the migration of graphics functions from {feasts} and
 {fabletools}, including a deprecation process for a gradual migration to 
