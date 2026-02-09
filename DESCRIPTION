@@ -55,8 +55,7 @@ Imports:
     lubridate (>= 1.7.1),
     tidyr,
     vctrs,
-    cli,
-    vecvec
+    cli
 Suggests: 
     testthat (>= 3.0.0),
     tsibbledata,
