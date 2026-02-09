@@ -47,7 +47,7 @@ fc <- aus_production \%>\%
 fc \%>\%
   autoplot(aus_production)
 \dontshow{\}) # examplesIf}
-\dontshow{if (requireNamespace("fable", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 aus_production \%>\%
   autoplot(Beer) +
   autolayer(fc)

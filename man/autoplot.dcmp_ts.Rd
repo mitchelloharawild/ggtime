@@ -28,8 +28,9 @@ in a decomposition or model.
 \examples{
 \dontshow{if (requireNamespace("feasts", quietly = TRUE) && requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(fabletools)
+library(feasts)
 tsibbledata::aus_production \%>\%
-  model(feasts::STL(Beer)) \%>\%
+  model(STL(Beer)) \%>\%
   components() \%>\%
   autoplot()
 \dontshow{\}) # examplesIf}
