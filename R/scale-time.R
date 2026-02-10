@@ -378,11 +378,17 @@ ScaleContinuousMixtime <- ggproto(
 
     # Store common time type for default backtransformation, labels, and more.
     if (is_waiver(self$chronon_common)) {
-      chronons <- lapply(attr(x, "v"), mixtime::time_chronon)
-      self$chronon_common <- mixtime:::chronon_common(!!!chronons)
+      self$chronon_common <- mixtime::time_chronon(x)
+    }
+
+    # Quick fix for Date/POSIXt types
+    # TODO - handle this conversion earlier and more directly in mixtime
+    if (!is_mixtime(x)) {
+      x <- mixtime::mixtime(x)
     }
 
     # Attempt to match common chronon for formatting granularities
+    chronons <- lapply(attr(x, "v"), mixtime::time_chronon)
     time_match <- vctrs::vec_match(list(self$chronon_common), chronons)
     time_attr <- if (!is.na(time_match)) {
       attributes(attr(x, "v")[[time_match]])
@@ -423,16 +429,24 @@ ScaleContinuousMixtime <- ggproto(
   },
   warp_time = function(self, x, unwarp = FALSE) {
     if (!is_waiver(self$warps)) {
-      warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
-      if (inherits(x, "mixtime")) {
-        # Obtain chronons from mixtime vector
-        x <- vctrs::vec_data(vecvec::unvecvec(x))
+      if (is.function(self$warps)) {
+        self$warps <- self$warps(x)
+      }
+      if (!is_mixtime(self$warps)) {
+        self$warps <- mixtime::mixtime(self$warps)
+      }
+      # TODO - this should be guaranteed and happen earlier in Scale
+      if (!is_mixtime(x)) {
+        x <- mixtime::mixtime(x)
+      }
 
-        # Unsafe code:
-        # Only apply warping if mixtime is provided, otherwise it is a pre-warped position
-        x <- stats::approx(warps, seq_along(warps), xout = x)$y
-      } else if (unwarp) {
+      warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
+      # Obtain chronons from mixtime vector
+      x <- vctrs::vec_data(vecvec::unvecvec(x))
+      if (unwarp) {
         x <- stats::approx(seq_along(warps), warps, xout = x, rule = 2L)$y
+      } else {
+        x <- stats::approx(warps, seq_along(warps), xout = x)$y
       }
     }
     x
