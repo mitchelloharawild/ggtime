@@ -358,7 +358,10 @@ ScaleContinuousMixtime <- ggproto(
     missing_aes_i <- match(missing_aes, paste0(names(df), "offset"))
     missing_aes_i <- missing_aes_i[!is.na(missing_aes_i)]
 
-    df[missing_aes[missing_aes_i]] <- lapply(df[missing_aes_i], tz_offset)
+    df[missing_aes[missing_aes_i]] <- lapply(
+      df[missing_aes_i],
+      mixtime::tz_offset
+    )
 
     df
   },
@@ -510,21 +513,4 @@ transform_mixtime <- function() {
     breaks = scales::breaks_pretty() #,
     #domain = to_mixtime(c(-Inf, Inf))
   )
-}
-
-
-gmt_offset <- function(x) {
-  tryCatch(
-    as.POSIXlt(x)$gmtoff,
-    error = function(e) rep(0, length(x))
-  )
-}
-tz_offset <- function(x) {
-  if (!inherits(x, "mixtime")) {
-    cli::cli_warn(
-      "Missing timezone offset could not be calculated in the scale."
-    )
-  }
-  attr(x, "v") <- lapply(attr(x, "v"), gmt_offset)
-  as.numeric(vecvec::unvecvec(x))
 }

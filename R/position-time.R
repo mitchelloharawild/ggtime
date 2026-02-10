@@ -80,13 +80,13 @@ PositionTimeCivil <- ggproto(
   # individual timezones from each calendar need to be used here.
   compute_panel = function(self, data, params, scales) {
     if (inherits(scales$x, "ScaleContinuousDatetime")) {
-      data$xtimeoffset <- gmt_offset(scales$x$get_transformation()$inverse(
+      data$xtimeoffset <- mixtime::tz_offset(scales$x$get_transformation()$inverse(
         data$x
       ))
       scales$x$timezone <- "UTC"
     }
     if (inherits(scales$y, "ScaleContinuousDatetime")) {
-      data$ytimeoffset <- gmt_offset(scales$y$get_transformation()$inverse(
+      data$ytimeoffset <- mixtime::tz_offset(scales$y$get_transformation()$inverse(
         data$y
       ))
       scales$y$timezone <- "UTC"
