@@ -10,7 +10,6 @@ coord_calendar(
   cols = waiver(),
   time_cols = waiver(),
   time = "x",
-  ljust = 0.5,
   xlim = NULL,
   ylim = NULL,
   expand = FALSE,
@@ -37,10 +36,6 @@ specified, \code{time_rows} wins.}
 \item{time}{A string specifying which aesthetic contains the time variable that
 should be looped over. Default is \code{"x"}.}
 
-\item{ljust}{Loop justification, a number between 0 and 1
-indicating where the lines between looped positions are drawn
-(0 indicates left, 1 indicates right, 0.5 indicates center).}
-
 \item{xlim, ylim}{Limits for the x and y axes. \code{NULL} means use the default limits.}
 
 \item{expand}{Logical indicating whether to expand the coordinate limits.
@@ -53,7 +48,7 @@ Default is \code{FALSE}.}
 A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} means no.}
 
 \item{clip_rows}{Should the drawing of each loop of the timescale be clipped to
-the breaks defined by \code{time_rows} and \code{ljust}?
+the breaks defined by \code{time_rows}?
 A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} means no.}
 
 \item{coord}{The underlying coordinate system to use. Default is \code{coord_cartesian()}.}
@@ -94,8 +89,8 @@ their dates change each year (such as Easter).
 
 Similarly to \code{\link[=coord_loop]{coord_loop()}}, the calendar coordinate system draws geometries
 that cross the boundaries of calendar rows or columns. The justification of
-these geometries can be controlled with the \code{ljust} parameter, as described
-in \code{\link[=coord_loop]{coord_loop()}}.
+these geometries can be controlled with the \code{align_mixed} parameter of
+\code{\link[=scale_x_mixtime]{scale_x_mixtime()}} as described in \code{\link[=coord_loop]{coord_loop()}}.
 
 The calendar coordinate system works well in conjunction with facetting to
 give more space between months and/or years of the calendar. When facetting,

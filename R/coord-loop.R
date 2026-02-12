@@ -14,9 +14,6 @@
 #' specified, `time_loops` wins.
 #' @param time A string specifying which aesthetic contains the time variable that
 #'   should be looped over. Default is `"x"`.
-#' @param ljust Loop justification, a number between 0 and 1
-#'   indicating where the lines between looped positions are drawn
-#'   (0 indicates left, 1 indicates right, 0.5 indicates center).
 #' @param xlim,ylim Limits for the x and y axes. `NULL` means use the default limits.
 #' @param expand Logical indicating whether to expand the coordinate limits.
 #'   Default is `FALSE`.
@@ -25,7 +22,7 @@
 #' @param clip Should drawing be clipped to the extent of the plot panel?
 #'   A setting of `"on"` (the default) means yes, and a setting of `"off"` means no.
 #' @param clip_loops Should the drawing of each loop of the timescale be clipped to
-#'   the breaks defined by `time_loops` and `ljust`?
+#'   the breaks defined by `time_loops`?
 #'   A setting of `"on"` (the default) means yes, and a setting of `"off"` means no.
 #' @param coord The underlying coordinate system to use. Default is `coord_cartesian()`.
 #'
@@ -58,11 +55,12 @@
 #' factors (e.g. months of the year, or days of week). This allows lines and
 #' other geometries to be drawn across seasonal boundaries, such as a line that
 #' connects December to January when plotting annual seasonality.
-#' The justification parameter `ljust` controls the side of the panel where
-#' these connections are made, left justificiation (`ljust = 0`) gives space
-#' for inter-seasonal time on the left of the panel, right justification
-#' (`ljust = 1`) uses the right side of the panel, and center justification
-#' (`ljust = 0.5`, the default) uses equal spacing on both ends of the season.
+#' The justification of looping can be controlled using the `align_mixed` option
+#' of [scale_x_mixtime()], where values from 0 to 1 specify the alignment.
+#' Left alignment (`align_mixed = 0`) places inter-seasonal connections on the
+#' left of the panel, right alignment (`align_mixed = 1`) uses the right side,
+#' and center alignment (`align_mixed = 0.5`, the default) uses equal spacing
+#' on both ends of the season.
 #'
 #' @section Why not use seasonal factors?:
 #'
@@ -133,7 +131,6 @@ coord_loop <- function(
   loops = waiver(),
   time_loops = waiver(),
   time = "x",
-  ljust = 0.5,
   xlim = NULL,
   ylim = NULL,
   expand = FALSE,
@@ -148,7 +145,6 @@ coord_loop <- function(
     loops = loops,
     time_loops = time_loops,
     time = time,
-    ljust = ljust,
     limits = list(x = xlim, y = ylim),
     expand = expand,
     default = default,
@@ -194,14 +190,13 @@ CoordLoop <- function(coord) {
         time_cuts <- cut_axis_time_loop(
           uncut_params,
           self$time_scale,
-          self$time_loops,
-          self$ljust
+          self$time_loops
         )
       } else {
         time_cuts <- sort(unique(self$loops))
         time_cuts <- c(
-          time_cuts - self$ljust,
-          time_cuts[length(time_cuts)] + (1 - self$ljust)
+          time_cuts,
+          time_cuts[length(time_cuts)] + 1
         )
       }
 
@@ -245,7 +240,7 @@ CoordLoop <- function(coord) {
 #' Specialize the implementation of coord_loop depending on the base coord
 #'
 #' [coord_loop()] wraps a base coord such as [coord_cartesian()] or
-#' [coord_radial()]. This function is called by [CoordLoop()] to specialize an
+#' [coord_radial()]. This function is called by `CoordLoop()` to specialize an
 #' instance for its underlying base coord by overriding methods needed to support
 #' that base coord.
 #' @param coord A [`ggproto`] object of class `CoordLoop`, which will inherit
@@ -366,7 +361,7 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
       # construct a piecewise linear transformation that re-aligns the start of
       # each cut to the origin
       time_trans <- params$theta$get_transformation()$transform
-      cuts <- time_trans(params$time_cuts) + self$ljust
+      cuts <- time_trans(params$time_cuts)
       widths <- diff(cuts)
       origin <- cuts[1]
       rest <- cuts[-1]
@@ -413,8 +408,8 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
       # need a function to identify if a value is in the gap
       in_gap_indicator <- stats::stepfun(
         vctrs::vec_interleave(
-          prev_upper_limits - self$ljust * eps,
-          next_lower_limits - self$ljust * eps
+          prev_upper_limits,
+          next_lower_limits
         ),
         c(0, rep(c(1, 0), length(rest))),
         ties = "min"
@@ -568,10 +563,9 @@ flip_grid_fun <- function(f, is_flipped) {
 #' and passed to `Coord$draw_panel(params = ...)`
 #' @param axis Axis to cut (`"x"` or `"y"`).
 #' @param by Duration to cut by
-#' @param ljust Loop justification, a number between 0 and 1
 #' @returns vector of time cutpoints
 #' @noRd
-cut_axis_time_loop <- function(panel_params, axis, by, ljust) {
+cut_axis_time_loop <- function(panel_params, axis, by) {
   trans <- panel_params[[axis]]$get_transformation()
   range <- panel_params[[axis]]$limits
   time_range <- trans$inverse(range)
@@ -582,7 +576,6 @@ cut_axis_time_loop <- function(panel_params, axis, by, ljust) {
   time_cuts <- unique(c(
     seq(time_range[1], time_range[2] + 1, by = by),
     time_range[2] + 1
-  )) -
-    ljust
+  ))
   time_cuts
 }

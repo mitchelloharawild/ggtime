@@ -24,7 +24,7 @@
 # "1 weeks", or "1 month". If both `cols` and `time_cols` are
 # specified, `time_cols` wins.
 #' @param clip_rows Should the drawing of each loop of the timescale be clipped to
-#'   the breaks defined by `time_rows` and `ljust`?
+#'   the breaks defined by `time_rows`?
 #'   A setting of `"on"` (the default) means yes, and a setting of `"off"` means no.
 #'
 #' @details
@@ -55,8 +55,8 @@
 #'
 #' Similarly to [coord_loop()], the calendar coordinate system draws geometries
 #' that cross the boundaries of calendar rows or columns. The justification of
-#' these geometries can be controlled with the `ljust` parameter, as described
-#' in [coord_loop()].
+#' these geometries can be controlled with the `align_mixed` parameter of
+#' [scale_x_mixtime()] as described in [coord_loop()].
 #'
 #' The calendar coordinate system works well in conjunction with facetting to
 #' give more space between months and/or years of the calendar. When facetting,
@@ -101,7 +101,6 @@ coord_calendar <- function(
   cols = waiver(),
   time_cols = waiver(),
   time = "x",
-  ljust = 0.5,
   xlim = NULL,
   ylim = NULL,
   expand = FALSE,
@@ -122,7 +121,6 @@ coord_calendar <- function(
     loops = rows,
     time_loops = time_rows,
     time = time,
-    ljust = ljust,
     xlim = xlim,
     ylim = ylim,
     expand = expand,
