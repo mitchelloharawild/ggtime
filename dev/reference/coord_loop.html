@@ -76,7 +76,6 @@ patterns can be more easily seen when superimposed on top of each other.</p>
 <span>  loops <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  time_loops <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  time <span class="op">=</span> <span class="st">"x"</span>,</span>
-<span>  ljust <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  xlim <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ylim <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  expand <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -109,12 +108,6 @@ specified, <code>time_loops</code> wins.</p></dd>
 should be looped over. Default is <code>"x"</code>.</p></dd>
 
 
-<dt id="arg-ljust">ljust<a class="anchor" aria-label="anchor" href="#arg-ljust"></a></dt>
-<dd><p>Loop justification, a number between 0 and 1
-indicating where the lines between looped positions are drawn
-(0 indicates left, 1 indicates right, 0.5 indicates center).</p></dd>
-
-
 <dt id="arg-xlim-ylim">xlim, ylim<a class="anchor" aria-label="anchor" href="#arg-xlim-ylim"></a></dt>
 <dd><p>Limits for the x and y axes. <code>NULL</code> means use the default limits.</p></dd>
 
@@ -136,7 +129,7 @@ A setting of <code>"on"</code> (the default) means yes, and a setting of <code>"
 
 <dt id="arg-clip-loops">clip_loops<a class="anchor" aria-label="anchor" href="#arg-clip-loops"></a></dt>
 <dd><p>Should the drawing of each loop of the timescale be clipped to
-the breaks defined by <code>time_loops</code> and <code>ljust</code>?
+the breaks defined by <code>time_loops</code>?
 A setting of <code>"on"</code> (the default) means yes, and a setting of <code>"off"</code> means no.</p></dd>
 
 
@@ -176,11 +169,12 @@ preserved. This is otherwise lost when time is discretised into ordered
 factors (e.g. months of the year, or days of week). This allows lines and
 other geometries to be drawn across seasonal boundaries, such as a line that
 connects December to January when plotting annual seasonality.
-The justification parameter <code>ljust</code> controls the side of the panel where
-these connections are made, left justificiation (<code>ljust = 0</code>) gives space
-for inter-seasonal time on the left of the panel, right justification
-(<code>ljust = 1</code>) uses the right side of the panel, and center justification
-(<code>ljust = 0.5</code>, the default) uses equal spacing on both ends of the season.</p>
+The justification of looping can be controlled using the <code>align_mixed</code> option
+of <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code>, where values from 0 to 1 specify the alignment.
+Left alignment (<code>align_mixed = 0</code>) places inter-seasonal connections on the
+left of the panel, right alignment (<code>align_mixed = 1</code>) uses the right side,
+and center alignment (<code>align_mixed = 0.5</code>, the default) uses equal spacing
+on both ends of the season.</p>
     </div>
     <div id="why-not-use-seasonal-factors-">
     <h2>Why not use seasonal factors?</h2>
