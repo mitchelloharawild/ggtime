@@ -320,7 +320,7 @@ specialize_coord_loop.CoordCartesian <- function(coord, ...) {
       check_can_clip("coord_loop(clip = 'on')", self$is_clipped)
 
       # Get cutpoints along the axis for dividing the panel grob into regions
-      cuts <- params[[self$time_scale]]$rescale(params$time_cuts)
+      cuts <- params[[self$time_scale]]$rescale(as.numeric(params$time_cuts))
 
       translated_panels <- translate_and_superimpose_grobs(
         panel,
@@ -576,8 +576,8 @@ cut_axis_time_loop <- function(panel_params, axis, by, ljust) {
   range <- panel_params[[axis]]$limits
   time_range <- trans$inverse(range)
   if (is.character(by)) {
-    time_range[1] <- lubridate::floor_date(time_range[1], by, week_start = 1L)
-    time_range[2] <- lubridate::ceiling_date(time_range[2], by, week_start = 1L)
+    time_range[1] <- mixtime::floor_time(time_range[1], by, week_start = 1L)
+    time_range[2] <- mixtime::ceiling_time(time_range[2], by, week_start = 1L)
   }
   time_cuts <- unique(c(
     seq(time_range[1], time_range[2] + 1, by = by),
