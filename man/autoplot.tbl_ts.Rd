@@ -14,7 +14,7 @@
 
 \item{.vars}{A bare expression containing data you wish to plot. Multiple variables can be plotted using \code{\link[ggplot2:vars]{ggplot2::vars()}}.}
 
-\item{...}{Further arguments passed to \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}, which can be used to specify fixed aesthetics such as \code{colour = "red"} or \code{size = 3}.}
+\item{...}{Further arguments passed to \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}, which can be used to specify fixed aesthetics such as \code{colour = "red"} or \code{size = 3}.}
 }
 \value{
 A ggplot object showing a time plot of a time series.

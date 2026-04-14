@@ -325,7 +325,7 @@ mixtime_scale <- function(
 
   # Range is hard-coded and not inherited by `super` in
   # `ggplot2::continuous_scale`, replace it.
-  sc$range <- MixtimeRange$new()
+  # sc$range <- MixtimeRange$new()
   sc
 }
 
@@ -340,12 +340,12 @@ ScaleContinuousMixtime <- ggproto(
   ScaleContinuous,
   secondary.axis = waiver(),
   timezone = NULL,
-  range = MixtimeRange$new(),
-  clone = function(self) {
-    new <- ggproto(NULL, self)
-    new$range <- MixtimeRange$new()
-    new
-  },
+  # range = MixtimeRange$new(),
+  # clone = function(self) {
+  #   new <- ggproto(NULL, self)
+  #   new$range <- MixtimeRange$new()
+  #   new
+  # },
   # Redefine ScaleContinuous$train for (possible) self$range scoping issue
   train = function(self, x) {
     if (length(x) == 0) {

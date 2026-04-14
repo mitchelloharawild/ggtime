@@ -17,77 +17,15 @@ geom_time_line(
 )
 }
 \arguments{
-\item{mapping}{Set of aesthetic mappings created by \code{\link[ggplot2:aes]{aes()}}. If specified and
-\code{inherit.aes = TRUE} (the default), it is combined with the default mapping
-at the top level of the plot. You must supply \code{mapping} if there is no plot
-mapping.}
-
-\item{data}{The data to be displayed in this layer. There are three
-options:
-
-If \code{NULL}, the default, the data is inherited from the plot
-data as specified in the call to \code{\link[ggplot2:ggplot]{ggplot()}}.
-
-A \code{data.frame}, or other object, will override the plot
-data. All objects will be fortified to produce a data frame. See
-\code{\link[ggplot2:fortify]{fortify()}} for which variables will be created.
-
-A \code{function} will be called with a single argument,
-the plot data. The return value must be a \code{data.frame}, and
-will be used as the layer data. A \code{function} can be created
-from a \code{formula} (e.g. \code{~ head(.x, 10)}).}
-
-\item{stat}{The statistical transformation to use on the data for this layer.
-When using a \verb{geom_*()} function to construct a layer, the \code{stat}
-argument can be used to override the default coupling between geoms and
-stats. The \code{stat} argument accepts the following:
-\itemize{
-\item A \code{Stat} ggproto subclass, for example \code{StatCount}.
-\item A string naming the stat. To give the stat as a string, strip the
-function name of the \code{stat_} prefix. For example, to use \code{stat_count()},
-give the stat as \code{"count"}.
-\item For more information and other ways to specify the stat, see the
-\link[ggplot2:layer_stats]{layer stat} documentation.
-}}
-
-\item{position}{A position adjustment to use on the data for this layer. This
-can be used in various ways, including to prevent overplotting and
-improving the display. The \code{position} argument accepts the following:
-\itemize{
-\item The result of calling a position function, such as \code{position_jitter()}.
-This method allows for passing extra arguments to the position.
-\item A string naming the position adjustment. To give the position as a
-string, strip the function name of the \code{position_} prefix. For example,
-to use \code{position_jitter()}, give the position as \code{"jitter"}.
-\item For more information and other ways to specify the position, see the
-\link[ggplot2:layer_positions]{layer position} documentation.
-}}
-
-\item{na.rm}{If \code{FALSE}, the default, missing values are removed with
-a warning. If \code{TRUE}, missing values are silently removed.}
-
-\item{orientation}{The orientation of the layer. The default (\code{NA})
-automatically determines the orientation from the aesthetic mapping. In the
-rare event that this fails it can be given explicitly by setting \code{orientation}
-to either \code{"x"} or \code{"y"}. See the \emph{Orientation} section for more detail.}
-
-\item{show.legend}{logical. Should this layer be included in the legends?
-\code{NA}, the default, includes if any aesthetics are mapped.
-\code{FALSE} never includes, and \code{TRUE} always includes.
-It can also be a named logical vector to finely select the aesthetics to
-display. To include legend keys for all levels, even
-when no data exists, use \code{TRUE}.  If \code{NA}, all levels are shown in legend,
-but unobserved levels are omitted.}
-
 \item{inherit.aes}{If \code{FALSE}, overrides the default aesthetics, rather than
 combining with them. This is most useful for helper functions that define both
 data and aesthetics and shouldn't inherit behaviour from the default plot specification.}
 
-\item{...}{Other arguments passed on to \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}.}
+\item{...}{Other arguments passed on to \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}.}
 }
 \description{
 \code{geom_time_line()} connects observations in order of the time variable, similar to
-\code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}, but with special handling for time zones, gaps and
+\code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}, but with special handling for time zones, gaps and
 duplicated values.
 
 The geometry helps to visualise time with changing time offsets provided by the
@@ -99,12 +37,12 @@ in conjunction with \code{\link[=position_time_civil]{position_time_civil()}} po
 This geometry also respects implicit missing values in regular time series, and will
 not connect temporal observations separated by gaps.
 
-The \link[ggplot2:aes_group_order]{ggplot2::group} aesthetic determines which cases are connected together.
+The \link[ggplot2:group]{ggplot2::group} aesthetic determines which cases are connected together.
 }
 \section{Practical usage}{
 
 
-The \code{geom_time_line()} geometry extends \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}} with time
+The \code{geom_time_line()} geometry extends \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}} with time
 semantics that ensure the line's slope accurately reflects rates of change in
 the measurements over time.
 
@@ -160,9 +98,9 @@ re-calibrated at known times.
 
 Explicit missing values are where an \code{NA} value is included in the data, but
 for regular time series it is also possible to identify implicit missing time
-values. Unlike \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}, \code{geom_time_line()} will also not connect
+values. Unlike \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}, \code{geom_time_line()} will also not connect
 points separated by implicit missing values, creating gaps in the line (just
-like when an explicit missing value is present in \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}).
+like when an explicit missing value is present in \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}).
 }
 
 \section{Duplicated time values}{
@@ -172,7 +110,7 @@ If there are duplicated time values within a group, \code{geom_time_line()} will
 issue a warning. An error will be raised if these duplications are systematic
 across the geometry, specifically if more than 50\% of time points contain the
 same number of duplicates. Systematic duplicates typically indicate a need to
-use grouping aesthetics (\link[ggplot2:aes_group_order]{ggplot2::group}, or \link[ggplot2:aes_colour_fill_alpha]{ggplot2::colour}) to
+use grouping aesthetics (\link[ggplot2:group]{ggplot2::group}, or \link[ggplot2:colour]{ggplot2::colour}) to
 draw separate lines for each time series. Rather than plotting an erroneous
 'sawtooth' line which misrepresents the rate of change, the geometry will
 draw all lines that connect to and from each of the duplicated time values.
@@ -216,7 +154,7 @@ ggplot(df_tz_forward, aes(time, value)) +
 \seealso{
 \code{\link[=position_time_civil]{position_time_civil()}}/\code{\link[=position_time_absolute]{position_time_absolute()}} for civil and absolute time positioning.
 
-\code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}/\code{\link[ggplot2:geom_path]{ggplot2::geom_path()}} for standard line/path geoms in ggplot2.
+\code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}/\code{\link[ggplot2:geom_path]{ggplot2::geom_path()}} for standard line/path geoms in ggplot2.
 }
 \section{Aesthetics}{
 
