@@ -354,6 +354,22 @@ ScaleContinuousMixtime <- ggproto(
     self$range$train(x, call = self$call)
   },
   transform_df = function(self, df) {
+    # Mostly ggplot2::Scale$transform_df
+    # Additionally passes in the aesthetic name for aes_nudge alignments
+    if (is.null(df) || nrow(df) == 0 || ncol(df) == 0 || is_waiver(df)) {
+      return()
+    }
+    aesthetics <- intersect(self$aesthetics, names(df))
+    if (length(aesthetics) == 0) {
+      return()
+    }
+    df <- .mapply(
+      self$transform,
+      list(df[aesthetics], aesthetics),
+      MoreArgs = NULL
+    )
+    names(df) <- aesthetics
+
     # HACK
     # Add offsets for PositionTime[Civil/Absolute] here as "after_stat" since
     # Position$default_aes = aes(xoffset = stage(after_stat = f(x))) isn't
@@ -368,8 +384,6 @@ ScaleContinuousMixtime <- ggproto(
     #   key = c(PANEL, group)
     # )))
 
-    df <- ggproto_parent(ScaleContinuous, self)$transform_df(df)
-
     # Match missing_aes offset positions to transformed scales
     missing_aes_i <- match(missing_aes, paste0(names(df), "offset"))
     missing_aes_i <- missing_aes_i[!is.na(missing_aes_i)]
@@ -381,54 +395,51 @@ ScaleContinuousMixtime <- ggproto(
 
     df
   },
-  transform = function(self, x) {
+  transform = function(self, x, aes = NULL) {
     if (is_bare_numeric(x)) {
       cli::cli_abort(
         c(
           "A {.cls numeric} value was passed to a {.field mixtime} scale.",
-          i = "Please use the mixtime package to create time values."
+          i = "Please use the {.pkg mixtime} package to create time values."
         ),
         call = self$call
       )
     }
 
     # Store common time type for default backtransformation, labels, and more.
+    # Maybe other attributes are needed (e.g. cycle for cyclical time)
     if (is_waiver(self$chronon_common)) {
       self$chronon_common <- mixtime::time_chronon(x)
     }
 
-    # Quick fix for Date/POSIXt types
-    # TODO - handle this conversion earlier and more directly in mixtime
+    # Quick fix for Date/POSIXt types calling mixtime scales
     if (!is_mixtime(x)) {
       x <- mixtime::mixtime(x)
     }
 
-    # Attempt to match common chronon for formatting granularities
-    chronons <- lapply(attr(x, "v"), mixtime::time_chronon)
-    time_match <- vctrs::vec_match(list(self$chronon_common), chronons)
-    time_attr <- if (!is.na(time_match)) {
-      attributes(attr(x, "v")[[time_match]])
-    } else {
-      list(
-        tz = "UTC",
-        granules = list(),
-        chronon = self$chronon_common,
-        class = c("mt_linear", "mt_time", "vctrs_vctr")
+    if (any(mixtime::is_time_cyclical(x))) {
+      cli::cli_abort(
+        "Plotting cyclical time values is not yet supported.",
+        call = self$call
       )
     }
 
-    attr(x, "v") <- lapply(attr(x, "v"), function(v) {
-      # Use `align_discrete` to position discrete time models on continuous scales
-      # if (is.integer(v)) {
-      #   v <- v + self$align_discrete
-      # }
-      mixtime::chronon_convert(v, self$chronon_common)
-    })
+    align_nudge <- self$align_discrete
+    # Aesthetic specific nudges from aes_nudge()
+    if (!is.null(aes) && is.function(align_nudge)) {
+      align_nudge <- align_nudge(aes)
+    }
 
-    x <- vecvec::unvecvec(x)
-    attributes(x) <- time_attr
-    x <- mixtime::mixtime(x)
-    # Possibly redefine self$trans with new info from `x`
+    x@x <- lapply(x@x, function(v) {
+      # Use `align_discrete` to position discrete time models on continuous scales
+      if (is.integer(v)) {
+        v <- v + align_nudge
+      }
+      # TODO - Better conversion in mixtime to a different chronon
+      # mixtime:::chronon_convert(v, self$chronon_common)
+      v <- mixtime::mixtime(v, chronon = self$chronon_common, discrete = FALSE)
+      v@x[[1L]]
+    })
 
     ggproto_parent(ScaleContinuous, self)$transform(x)
   },
