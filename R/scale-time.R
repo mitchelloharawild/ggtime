@@ -528,3 +528,38 @@ transform_mixtime <- function() {
     #domain = to_mixtime(c(-Inf, Inf))
   )
 }
+
+#' @export
+aes_nudge <- function(
+  center = 0.5,
+  left = 0,
+  right = 1,
+  x = center,
+  xmin = left,
+  xmax = right,
+  xend = center,
+  xintercept = center,
+  xmin_final = left,
+  xmax_final = right,
+  xlower = left,
+  xmiddle = center,
+  xupper = right,
+  x0 = center,
+  y = center,
+  ymin = left,
+  ymax = right,
+  yend = center,
+  yintercept = center,
+  ymin_final = left,
+  ymax_final = right,
+  ylower = left,
+  ymiddle = center,
+  yupper = right,
+  y0 = center
+) {
+  offsets <- as.list(environment())
+
+  function(aesthetic) {
+    offsets[[aesthetic]] %||% center
+  }
+}
