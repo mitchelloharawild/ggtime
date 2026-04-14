@@ -7,6 +7,7 @@
 #' @import ggplot2
 #' @import grid
 #' @import rlang
+#' @importFrom mixtime is_mixtime
 #' @importFrom vctrs %0%
 ## usethis namespace: end
 NULL
