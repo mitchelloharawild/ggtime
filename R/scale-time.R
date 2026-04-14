@@ -191,8 +191,6 @@ scale_x_mixtime <- function(
     oob = oob,
     position = position
   )
-  debug(sc$get_labels)
-
   set_sec_axis(sec.axis, sc)
 }
 
