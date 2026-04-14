@@ -443,6 +443,7 @@ ScaleContinuousMixtime <- ggproto(
 
     ggproto_parent(ScaleContinuous, self)$transform(x)
   },
+
   map = function(self, x, limits = self$get_limits()) {
     # TODO: Check functionality of self$oob
     # self$oob(x, limits)
@@ -452,8 +453,9 @@ ScaleContinuousMixtime <- ggproto(
     }
     # as.numeric() -- extract the numerical representation.
     # This is where the mixed granularities should be mapped to a common scale.
-    vctrs::vec_data(self$warp_time(x))
+    as.numeric(self$warp_time(x))
   },
+
   warp_time = function(self, x, unwarp = FALSE) {
     if (!is_waiver(self$warps)) {
       if (is.function(self$warps)) {
