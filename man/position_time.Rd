@@ -18,7 +18,7 @@ Timezone-aware position adjustments preserve the vertical position of a
 geometry while adjusting its horizontal position display the time in
 either civil or absolute time. It requires the time variables to be mapped to
 either the x or y aesthetic to be represented in either a \code{\link[base:DateTimeClasses]{base::POSIXt}} or
-\code{\link[mixtime:mixtime-package]{mixtime::mixtime()}} format.
+\code{\link[mixtime:mixtime]{mixtime::mixtime()}} format.
 }
 \details{
 These position adjustments handle time data with different timezone behaviors:

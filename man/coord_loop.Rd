@@ -88,11 +88,11 @@ preserved. This is otherwise lost when time is discretised into ordered
 factors (e.g. months of the year, or days of week). This allows lines and
 other geometries to be drawn across seasonal boundaries, such as a line that
 connects December to January when plotting annual seasonality.
-The justification of looping can be controlled using the \code{align_mixed} option
+The justification of looping can be controlled using the \code{align_discrete} option
 of \code{\link[=scale_x_mixtime]{scale_x_mixtime()}}, where values from 0 to 1 specify the alignment.
-Left alignment (\code{align_mixed = 0}) places inter-seasonal connections on the
-left of the panel, right alignment (\code{align_mixed = 1}) uses the right side,
-and center alignment (\code{align_mixed = 0.5}, the default) uses equal spacing
+Left alignment (\code{align_discrete = 0}) places inter-seasonal connections on the
+left of the panel, right alignment (\code{align_discrete = 1}) uses the right side,
+and center alignment (\code{align_discrete = 0.5}, the default) uses equal spacing
 on both ends of the season.
 }
 

@@ -20,9 +20,23 @@
 #' @param chronon_common A time unit that defines the common chronon to use for
 #' mixed granularity (e.g. `mixtime::tu_day(1L)`). The default automatically
 #' selects it as the finest chronon that all time points can be represented in.
-#' @param align_mixed A number between 0 and 1 defining how to align coarser
-#' granularities onto the common time scale. 0 means start alignment,
-#' 1 means end alignment, and 0.5 means center alignment (the default).
+#' @param align_discrete Either a single number between 0 and 1, or a
+#'   `aes_nudge()` object, defining how to align coarser granularities
+#'   onto the common time scale.
+#'
+#'   If a single number is supplied, it is used for all positional aesthetics:
+#'   0 means start alignment, 1 means end alignment, and 0.5 means center
+#'   alignment (the default).
+#'
+#'   To specify different offsets for different positional aesthetics (e.g.
+#'   `x`, `xmin`, `xend`, `y`, `ymin`, ...), pass a `aes_nudge()` call,
+#'   for example:
+#'
+#'   `align_discrete = aes_nudge(center = 0.5, left = 0.25, right = 0.75)``
+#'
+#'   The `center`, `left`, and `right` arguments apply to the semantically
+#'   equivalent positional aesthetics (e.g. `left` applies to `xstart`, `xmin`,
+#'   and `xlower`).
 #' @param time_labels Uses strftime strings or similar to format the labels from
 #' the time points.
 #' @param warps Normalises the time scale to have a consistent length between
@@ -65,7 +79,7 @@
 #' case the finest chronon is 1 second (from [base::POSIXt]), so all time points
 #' are mapped to a 1 second chronon for plotting. Mapping day and month chronons
 #' to seconds introduces indeterminancy - which second should be used to
-#' represent a day or month? This is resolved using the `time_align` argument,
+#' represent a day or month? This is resolved using the `align_discrete` argument,
 #' which defaults to center alignment. This means that a day is mapped to noon,
 #' and a month is mapped to the middle of the month.
 #'
@@ -89,14 +103,14 @@
 #' plotting monthly and daily data together raises the question of where to
 #' place the monthly points relative to the daily points. By default, mixtime
 #' uses center alignment, mapping the monthly points to the middle of the
-#' month. This is controlled using the `time_align` argument, which accepts a
+#' month. This is controlled using the `align_discrete` argument, which accepts a
 #' value between 0 (start alignment) and 1 (end alignment) and defaults to 0.5.
 #'
 #' The common time scale that defines how all granularities are mapped is
 #' automatically identified based on the input data. This is achieved by finding
 #' the finest chronon that all time points can be represented in. For example,
 #' if the data contains both monthly and daily time points, the common time scale
-#' will be daily, with the monthly points aligned according to the `time_align`
+#' will be daily, with the monthly points aligned according to the `align_discrete`
 #' argument. If multiple time zones are present, the common time zone will
 #' default to UTC. The common time scale can be manually specified using the
 #' `common_time` argument, which accepts a `mixtime::time_unit`.
@@ -129,7 +143,7 @@
 #' ) |>
 #'   ggplot(aes(time, value, color = grain)) +
 #'   geom_line() +
-#'   scale_x_mixtime(align_mixed = 1)
+#'   scale_x_mixtime(align_discrete = 1)
 #'
 #' @name scale_mixtime
 NULL
@@ -145,7 +159,7 @@ scale_x_mixtime <- function(
   labels = waiver(),
   time_labels = waiver(),
   chronon_common = waiver(),
-  align_mixed = 0.5,
+  align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
   limits = NULL,
@@ -167,7 +181,7 @@ scale_x_mixtime <- function(
     labels = labels,
     time_labels = time_labels,
     chronon_common = chronon_common,
-    align_mixed = align_mixed,
+    align_discrete = align_discrete,
     warps = warps,
     time_warps = time_warps,
     timezone = NULL,
@@ -194,7 +208,7 @@ scale_y_mixtime <- function(
   labels = waiver(),
   time_labels = waiver(),
   chronon_common = waiver(),
-  align_mixed = 0.5,
+  align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
   limits = NULL,
@@ -216,7 +230,7 @@ scale_y_mixtime <- function(
     labels = labels,
     time_labels = time_labels,
     chronon_common = chronon_common,
-    align_mixed = align_mixed,
+    align_discrete = align_discrete,
     warps = warps,
     time_warps = time_warps,
     timezone = NULL,
@@ -245,7 +259,7 @@ mixtime_scale <- function(
   labels = waiver(),
   time_labels = waiver(),
   chronon_common = waiver(),
-  align_mixed = 0.5,
+  align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
   timezone = NULL,
@@ -304,7 +318,7 @@ mixtime_scale <- function(
       scale_class,
       warps = warps,
       chronon_common = chronon_common,
-      align_mixed = align_mixed,
+      align_discrete = align_discrete,
       timezone = timezone
     )
   )
@@ -402,10 +416,10 @@ ScaleContinuousMixtime <- ggproto(
     }
 
     attr(x, "v") <- lapply(attr(x, "v"), function(v) {
-      # Use `align_mixed` to position discrete time models on continuous scales
-      if (is.integer(v)) {
-        v <- v + self$align_mixed
-      }
+      # Use `align_discrete` to position discrete time models on continuous scales
+      # if (is.integer(v)) {
+      #   v <- v + self$align_discrete
+      # }
       mixtime::chronon_convert(v, self$chronon_common)
     })
 

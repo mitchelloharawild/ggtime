@@ -55,7 +55,7 @@
 #'
 #' Similarly to [coord_loop()], the calendar coordinate system draws geometries
 #' that cross the boundaries of calendar rows or columns. The justification of
-#' these geometries can be controlled with the `align_mixed` parameter of
+#' these geometries can be controlled with the `align_discrete` parameter of
 #' [scale_x_mixtime()] as described in [coord_loop()].
 #'
 #' The calendar coordinate system works well in conjunction with facetting to

@@ -89,7 +89,7 @@ their dates change each year (such as Easter).
 
 Similarly to \code{\link[=coord_loop]{coord_loop()}}, the calendar coordinate system draws geometries
 that cross the boundaries of calendar rows or columns. The justification of
-these geometries can be controlled with the \code{align_mixed} parameter of
+these geometries can be controlled with the \code{align_discrete} parameter of
 \code{\link[=scale_x_mixtime]{scale_x_mixtime()}} as described in \code{\link[=coord_loop]{coord_loop()}}.
 
 The calendar coordinate system works well in conjunction with facetting to

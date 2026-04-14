@@ -15,7 +15,7 @@ scale_x_mixtime(
   labels = waiver(),
   time_labels = waiver(),
   chronon_common = waiver(),
-  align_mixed = 0.5,
+  align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
   limits = NULL,
@@ -35,7 +35,7 @@ scale_y_mixtime(
   labels = waiver(),
   time_labels = waiver(),
   chronon_common = waiver(),
-  align_mixed = 0.5,
+  align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
   limits = NULL,
@@ -98,9 +98,23 @@ the time points.}
 mixed granularity (e.g. \code{mixtime::tu_day(1L)}). The default automatically
 selects it as the finest chronon that all time points can be represented in.}
 
-\item{align_mixed}{A number between 0 and 1 defining how to align coarser
-granularities onto the common time scale. 0 means start alignment,
-1 means end alignment, and 0.5 means center alignment (the default).}
+\item{align_discrete}{Either a single number between 0 and 1, or a
+\code{aes_nudge()} object, defining how to align coarser granularities
+onto the common time scale.
+
+If a single number is supplied, it is used for all positional aesthetics:
+0 means start alignment, 1 means end alignment, and 0.5 means center
+alignment (the default).
+
+To specify different offsets for different positional aesthetics (e.g.
+\code{x}, \code{xmin}, \code{xend}, \code{y}, \code{ymin}, ...), pass a \code{aes_nudge()} call,
+for example:
+
+`align_discrete = aes_nudge(center = 0.5, left = 0.25, right = 0.75)``
+
+The \code{center}, \code{left}, and \code{right} arguments apply to the semantically
+equivalent positional aesthetics (e.g. \code{left} applies to \code{xstart}, \code{xmin},
+and \code{xlower}).}
 
 \item{warps}{Normalises the time scale to have a consistent length between
 specified time points, one of:
@@ -192,11 +206,11 @@ timezones, granularities, and calendars. This is achieved by mapping all time
 points to a common time scale, which is automatically identifying the finest
 compatible chronon that can represent the input data. This allows time points
 across different granularities (e.g. \link[base:DateTimeClasses]{base::POSIXt}, \link[base:Dates]{base::Date}, and
-\link[mixtime:linear_gregorian]{mixtime::yearmonth}) to be plotted together on a common time scale. In this
+\link[mixtime:linear_time_helpers]{mixtime::yearmonth}) to be plotted together on a common time scale. In this
 case the finest chronon is 1 second (from \link[base:DateTimeClasses]{base::POSIXt}), so all time points
 are mapped to a 1 second chronon for plotting. Mapping day and month chronons
 to seconds introduces indeterminancy - which second should be used to
-represent a day or month? This is resolved using the \code{time_align} argument,
+represent a day or month? This is resolved using the \code{align_discrete} argument,
 which defaults to center alignment. This means that a day is mapped to noon,
 and a month is mapped to the middle of the month.
 
@@ -224,14 +238,14 @@ mapping of less precise time points onto a common time scale. For example,
 plotting monthly and daily data together raises the question of where to
 place the monthly points relative to the daily points. By default, mixtime
 uses center alignment, mapping the monthly points to the middle of the
-month. This is controlled using the \code{time_align} argument, which accepts a
+month. This is controlled using the \code{align_discrete} argument, which accepts a
 value between 0 (start alignment) and 1 (end alignment) and defaults to 0.5.
 
 The common time scale that defines how all granularities are mapped is
 automatically identified based on the input data. This is achieved by finding
 the finest chronon that all time points can be represented in. For example,
 if the data contains both monthly and daily time points, the common time scale
-will be daily, with the monthly points aligned according to the \code{time_align}
+will be daily, with the monthly points aligned according to the \code{align_discrete}
 argument. If multiple time zones are present, the common time zone will
 default to UTC. The common time scale can be manually specified using the
 \code{common_time} argument, which accepts a \code{mixtime::time_unit}.
@@ -267,6 +281,6 @@ bind_rows(
 ) |>
   ggplot(aes(time, value, color = grain)) +
   geom_line() +
-  scale_x_mixtime(align_mixed = 1)
+  scale_x_mixtime(align_discrete = 1)
 
 }
