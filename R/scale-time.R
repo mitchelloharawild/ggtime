@@ -337,8 +337,9 @@ ScaleContinuousMixtime <- ggproto(
   #   new
   # },
   transform_df = function(self, df) {
-    # Mostly ggplot2::Scale$transform_df
-    # Additionally passes in the aesthetic name for aes_nudge alignments
+    # Mostly ggplot2::Scale$transform_df, it additionally:
+    # * computes the appropriate common time scale for mixed granularities
+    # * passes in the aesthetic name for aes_nudge alignments
     if (is.null(df) || nrow(df) == 0 || ncol(df) == 0 || is_waiver(df)) {
       return()
     }
@@ -346,6 +347,14 @@ ScaleContinuousMixtime <- ggproto(
     if (length(aesthetics) == 0) {
       return()
     }
+
+    # Store common time type for default backtransformation, labels, and more.
+    # Maybe other attributes are needed (e.g. cycle for cyclical time)
+    if (is_waiver(self$chronon_common)) {
+      self$chronon_common <- mixtime::time_chronon(do.call(c, df[aesthetics]))
+    }
+
+    # TODO - Consider applying the aes_nudge here, and calling ggplot2::Scale$transform_df.
     df <- .mapply(
       self$transform,
       list(df[aesthetics], aesthetics),
@@ -387,12 +396,6 @@ ScaleContinuousMixtime <- ggproto(
         ),
         call = self$call
       )
-    }
-
-    # Store common time type for default backtransformation, labels, and more.
-    # Maybe other attributes are needed (e.g. cycle for cyclical time)
-    if (is_waiver(self$chronon_common)) {
-      self$chronon_common <- mixtime::time_chronon(x)
     }
 
     # Quick fix for Date/POSIXt types calling mixtime scales
