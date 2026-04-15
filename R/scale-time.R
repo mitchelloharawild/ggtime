@@ -143,7 +143,7 @@
 #' ) |>
 #'   ggplot(aes(time, value, color = grain)) +
 #'   geom_line() +
-#'   scale_x_mixtime(align_discrete = 1)
+#'   scale_x_mixtime()
 #'
 #' @name scale_mixtime
 NULL
@@ -171,7 +171,6 @@ scale_x_mixtime <- function(
 ) {
   sc <- mixtime_scale(
     aesthetics = ggplot_global$x_aes,
-    transform = "mixtime",
     name = name,
     palette = identity,
     breaks = breaks,
@@ -184,7 +183,6 @@ scale_x_mixtime <- function(
     align_discrete = align_discrete,
     warps = warps,
     time_warps = time_warps,
-    timezone = NULL,
     guide = guide,
     limits = limits,
     expand = expand,
@@ -218,7 +216,6 @@ scale_y_mixtime <- function(
 ) {
   sc <- mixtime_scale(
     aesthetics = ggplot_global$y_aes,
-    transform = "mixtime",
     name = name,
     palette = identity,
     breaks = breaks,
@@ -231,7 +228,6 @@ scale_y_mixtime <- function(
     align_discrete = align_discrete,
     warps = warps,
     time_warps = time_warps,
-    timezone = NULL,
     guide = guide,
     limits = limits,
     expand = expand,
@@ -247,7 +243,6 @@ scale_y_mixtime <- function(
 #' @keywords internal
 mixtime_scale <- function(
   aesthetics,
-  transform,
   trans = deprecated(),
   palette,
   breaks = scales::breaks_pretty(),
@@ -260,7 +255,6 @@ mixtime_scale <- function(
   align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
-  timezone = NULL,
   guide = "legend",
   call = caller_call(),
   ...
@@ -286,7 +280,7 @@ mixtime_scale <- function(
   if (!is_waiver(time_labels)) {
     # TODO: Validate input as <duration>
     labels <- function(self, x) {
-      scales::label_date(time_labels, timezone)(x)
+      scales::label_date(time_labels)(x)
     }
   }
   if (!is_waiver(time_warps)) {
@@ -317,7 +311,6 @@ mixtime_scale <- function(
       warps = warps,
       chronon_common = chronon_common,
       align_discrete = align_discrete,
-      timezone = timezone
     )
   )
 
@@ -337,20 +330,12 @@ ScaleContinuousMixtime <- ggproto(
   "ScaleContinuousMixtime",
   ScaleContinuous,
   secondary.axis = waiver(),
-  timezone = NULL,
   # range = MixtimeRange$new(),
   # clone = function(self) {
   #   new <- ggproto(NULL, self)
   #   new$range <- MixtimeRange$new()
   #   new
   # },
-  # Redefine ScaleContinuous$train for (possible) self$range scoping issue
-  train = function(self, x) {
-    if (length(x) == 0) {
-      return()
-    }
-    self$range$train(x, call = self$call)
-  },
   transform_df = function(self, df) {
     # Mostly ggplot2::Scale$transform_df
     # Additionally passes in the aesthetic name for aes_nudge alignments
@@ -501,60 +486,6 @@ ScaleContinuousMixtime <- ggproto(
     ggproto_parent(ScaleContinuous, self)$get_labels(as.integer(breaks))
   }
 )
-
-# Inversion requires recollection of offset and regularity
-# Warping between specific time points numeric 0-n for n warp points, decimals indicate time between warp points
-transform_mixtime <- function() {
-  # TODO: replace common_attr with ptype provided by scale
-  common_attr <- NULL
-
-  # To original granularity
-  to_mixtime <- function(x) {
-    if (inherits(x, "mixtime")) {
-      return(x)
-    }
-
-    # Less than perfect ('hack')
-    #
-    # The default coord limits are
-    # `transformation$transform(transformation$inverse(c(NA_real_, NA_real_)))`,
-    # which then also requires `Scale$transform$transform` to return atomic
-    # numeric values :(
-    #
-    # A non-mixtime object is required here in order to have `ifelse()` work
-    # correctly in `ggplot2:::expand_limits_continuous_trans()`
-    #
-    # This is also required for other aspects of ggplot2, such as for `pretty()`
-    # to work in computing the default breaks.
-    attributes(x) <- common_attr
-    return(x)
-  }
-  # To common granularity (possibly with alignment?)
-  # If local time is set, then an offset argument should be passed into the geom?
-
-  # For aligning, find the range of times with a duration-based floor/ceiling.
-  from_mixtime <- function(x) {
-    if (!inherits(x, "mixtime")) {
-      return(x)
-    }
-    if (length(attr(x, "v")) != 1L) {
-      cli::cli_abort(
-        "{.fun transform_mixtime} currently works with single granularity vectors only."
-      )
-    }
-    common_attr <<- attributes(attr(x, "v")[[1L]])
-    return(x)
-
-    # structure(as.numeric(vecvec::unvecvec(x)), names = names(x), x = x)
-  }
-  scales::new_transform(
-    "mixtime",
-    transform = "from_mixtime",
-    inverse = "to_mixtime",
-    breaks = scales::breaks_pretty() #,
-    #domain = to_mixtime(c(-Inf, Inf))
-  )
-}
 
 #' @export
 aes_nudge <- function(
