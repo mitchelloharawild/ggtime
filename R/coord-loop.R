@@ -569,10 +569,8 @@ cut_axis_time_loop <- function(panel_params, axis, by) {
   trans <- panel_params[[axis]]$get_transformation()
   range <- panel_params[[axis]]$limits
   time_range <- trans$inverse(range)
-  if (is.character(by)) {
-    time_range[1] <- mixtime::floor_time(time_range[1], by, week_start = 1L)
-    time_range[2] <- mixtime::ceiling_time(time_range[2], by, week_start = 1L)
-  }
+  time_range[1] <- mixtime::time_floor(time_range[1], by)
+  time_range[2] <- mixtime::time_ceiling(time_range[2], by)
   time_cuts <- unique(c(
     seq(time_range[1], time_range[2] + 1, by = by),
     time_range[2] + 1
