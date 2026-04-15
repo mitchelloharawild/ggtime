@@ -409,8 +409,8 @@ ScaleContinuousMixtime <- ggproto(
 
     align_nudge <- self$align_discrete
     # Aesthetic specific nudges from aes_nudge()
-    if (!is.null(aes) && is.function(align_nudge)) {
-      align_nudge <- align_nudge(aes)
+    if (is.function(align_nudge)) {
+      align_nudge <- align_nudge(aes %||% "center")
     }
 
     x@x <- lapply(x@x, function(v) {
