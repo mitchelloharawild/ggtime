@@ -55,8 +55,7 @@ scale_y_mixtime(
 "2 weeks", or "10 years". If both \code{minor_breaks} and \code{time_minor_breaks} are
 specified, \code{time_minor_breaks} wins.}
 
-\item{time_labels}{Uses strftime strings or similar to format the labels from
-the time points.}
+\item{time_labels}{A mixtime format string to format the labels.}
 
 \item{time_chronon}{A time granule that defines the common chronon to use for
 mixed granularity (e.g. \code{mixtime::tu_day(1L)}). The default automatically

@@ -37,8 +37,7 @@
 #'   The `center`, `left`, and `right` arguments apply to the semantically
 #'   equivalent positional aesthetics (e.g. `left` applies to `xstart`, `xmin`,
 #'   and `xlower`).
-#' @param time_labels Uses strftime strings or similar to format the labels from
-#' the time points.
+#' @param time_labels A mixtime format string to format the labels.
 #' @param warps Normalises the time scale to have a consistent length between
 #' specified time points, one of:
 #'   - `NULL` or `waiver()` for no warping (the default)
@@ -280,7 +279,7 @@ mixtime_scale <- function(
   if (!is_waiver(time_labels)) {
     # TODO: Validate input as <duration>
     labels <- function(self, x) {
-      scales::label_date(time_labels)(x)
+      format(x, format = time_labels)
     }
   }
   if (!is_waiver(time_warps)) {
