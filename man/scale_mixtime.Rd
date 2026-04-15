@@ -14,7 +14,7 @@ scale_x_mixtime(
   time_minor_breaks = waiver(),
   labels = waiver(),
   time_labels = waiver(),
-  chronon_common = waiver(),
+  time_chronon = waiver(),
   align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
@@ -34,7 +34,7 @@ scale_y_mixtime(
   time_minor_breaks = waiver(),
   labels = waiver(),
   time_labels = waiver(),
-  chronon_common = waiver(),
+  time_chronon = waiver(),
   align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
@@ -58,7 +58,7 @@ specified, \code{time_minor_breaks} wins.}
 \item{time_labels}{Uses strftime strings or similar to format the labels from
 the time points.}
 
-\item{chronon_common}{A time unit that defines the common chronon to use for
+\item{time_chronon}{A time granule that defines the common chronon to use for
 mixed granularity (e.g. \code{mixtime::tu_day(1L)}). The default automatically
 selects it as the finest chronon that all time points can be represented in.}
 
@@ -118,7 +118,7 @@ Similarly to the temporal scales in ggplot2 (\code{\link[ggplot2:scale_x_date]{g
 using duration-based intervals and strftime-like formatting. These time aware
 options are prefixed with \code{time_} (e.g. \code{time_breaks} and \code{time_labels}),
 and take precedence over the non-time aware options (e.g. \code{breaks} and
-\code{labels}). The scale's breaks can be specified with \code{mixtime::duration}
+\code{labels}). The scale's breaks can be specified with \code{\link[mixtime:duration]{mixtime::duration()}}
 objects (e.g. \code{time_breaks = mixtime::months(1L)}), or with strings that can
 be parsed into durations (e.g. \code{time_breaks = "1 month"}). Labels for time
 points in Gregorian calendars can be specified using \code{\link[base:strptime]{base::strftime()}}

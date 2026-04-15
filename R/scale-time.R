@@ -17,7 +17,7 @@
 #' @param time_minor_breaks A duration giving the distance between minor breaks like
 #' "2 weeks", or "10 years". If both `minor_breaks` and `time_minor_breaks` are
 #' specified, `time_minor_breaks` wins.
-#' @param chronon_common A time unit that defines the common chronon to use for
+#' @param time_chronon A time granule that defines the common chronon to use for
 #' mixed granularity (e.g. `mixtime::tu_day(1L)`). The default automatically
 #' selects it as the finest chronon that all time points can be represented in.
 #' @param align_discrete Either a single number between 0 and 1, or a
@@ -62,7 +62,7 @@
 #' using duration-based intervals and strftime-like formatting. These time aware
 #' options are prefixed with `time_` (e.g. `time_breaks` and `time_labels`),
 #' and take precedence over the non-time aware options (e.g. `breaks` and
-#' `labels`). The scale's breaks can be specified with `mixtime::duration`
+#' `labels`). The scale's breaks can be specified with [mixtime::duration()]
 #' objects (e.g. `time_breaks = mixtime::months(1L)`), or with strings that can
 #' be parsed into durations (e.g. `time_breaks = "1 month"`). Labels for time
 #' points in Gregorian calendars can be specified using [base::strftime()]
@@ -158,7 +158,7 @@ scale_x_mixtime <- function(
   time_minor_breaks = waiver(),
   labels = waiver(),
   time_labels = waiver(),
-  chronon_common = waiver(),
+  time_chronon = waiver(),
   align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
@@ -179,7 +179,7 @@ scale_x_mixtime <- function(
     time_minor_breaks = time_minor_breaks,
     labels = labels,
     time_labels = time_labels,
-    chronon_common = chronon_common,
+    time_chronon = time_chronon,
     align_discrete = align_discrete,
     warps = warps,
     time_warps = time_warps,
@@ -203,7 +203,7 @@ scale_y_mixtime <- function(
   time_minor_breaks = waiver(),
   labels = waiver(),
   time_labels = waiver(),
-  chronon_common = waiver(),
+  time_chronon = waiver(),
   align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
@@ -224,7 +224,7 @@ scale_y_mixtime <- function(
     time_minor_breaks = time_minor_breaks,
     labels = labels,
     time_labels = time_labels,
-    chronon_common = chronon_common,
+    time_chronon = time_chronon,
     align_discrete = align_discrete,
     warps = warps,
     time_warps = time_warps,
@@ -251,7 +251,7 @@ mixtime_scale <- function(
   time_minor_breaks = waiver(),
   labels = waiver(),
   time_labels = waiver(),
-  chronon_common = waiver(),
+  time_chronon = waiver(),
   align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
@@ -309,7 +309,7 @@ mixtime_scale <- function(
       NULL,
       scale_class,
       warps = warps,
-      chronon_common = chronon_common,
+      time_chronon = time_chronon,
       align_discrete = align_discrete,
     )
   )
@@ -350,8 +350,8 @@ ScaleContinuousMixtime <- ggproto(
 
     # Store common time type for default backtransformation, labels, and more.
     # Maybe other attributes are needed (e.g. cycle for cyclical time)
-    if (is_waiver(self$chronon_common)) {
-      self$chronon_common <- mixtime::time_chronon(do.call(c, df[aesthetics]))
+    if (is_waiver(self$time_chronon)) {
+      self$time_chronon <- mixtime::time_chronon(do.call(c, df[aesthetics]))
     }
 
     # TODO - Consider applying the aes_nudge here, and calling ggplot2::Scale$transform_df.
@@ -422,8 +422,8 @@ ScaleContinuousMixtime <- ggproto(
         v <- v + align_nudge
       }
       # TODO - Better conversion in mixtime to a different chronon
-      # mixtime:::chronon_convert(v, self$chronon_common)
-      v <- mixtime::mixtime(v, chronon = self$chronon_common, discrete = FALSE)
+      # mixtime:::chronon_convert(v, self$time_chronon)
+      v <- mixtime::mixtime(v, chronon = self$time_chronon, discrete = FALSE)
       v@x[[1L]]
     })
 
