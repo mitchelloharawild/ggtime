@@ -217,6 +217,19 @@ CoordLoop <- function(coord) {
       )
       self$limits <- old_limits
 
+      # Use cyclical labels
+      if (!is_waiver(self$time_loops)) {
+        # TODO - A better way to inform scale/transform that labels are cyclical
+        trans_env <- environment(cut_params[[self$time]]$scale$trans$inverse)
+        cycle <- time_chronon(self$time_loops)
+        cycle@n <- cycle@n * as.numeric(self$time_loops)
+        trans_env$ptype <- mixtime::new_time(
+          chronon = time_chronon(trans_env$ptype),
+          cycle = cycle,
+          class = "mt_cyclical"
+        )
+      }
+
       cut_params$time_cuts <- time_cuts
       cut_params$time_rows <- rep.int(1L, length(cut_params$time_cuts) - 1)
       cut_params$uncut <- uncut_params
