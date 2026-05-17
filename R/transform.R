@@ -6,7 +6,7 @@ transform_mixtime <- function(ptype = NULL) {
   # To original granularity
   to_mixtime <- function(x) {
     # Restore mt_time structure
-    vec_restore(x, ptype)
+    vctrs::vec_restore(x, ptype)
   }
 
   from_mixtime <- function(x) {
