@@ -277,7 +277,6 @@ mixtime_scale <- function(
     minor_breaks <- breaks_width(time_minor_breaks)
   }
   if (!is_waiver(time_labels)) {
-    # TODO: Validate input as <duration>
     labels <- function(self, x) {
       format(x, format = time_labels)
     }
@@ -446,37 +445,26 @@ ScaleContinuousMixtime <- ggproto(
       if (is.function(self$warps)) {
         self$warps <- self$warps(x)
       }
-      if (!is_mixtime(self$warps)) {
-        self$warps <- mixtime::mixtime(self$warps)
-      }
-      # TODO - this should be guaranteed and happen earlier in Scale
-      if (!is_mixtime(x)) {
-        x <- mixtime::mixtime(x)
+      if (is_mixtime(self$warps)) {
+        warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
+      } else {
+        warps <- vctrs::vec_data(self$warps)
       }
 
-      warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
-      # Obtain chronons from mixtime vector
-      x <- vctrs::vec_data(vecvec::unvecvec(x))
-      if (unwarp) {
-        x <- stats::approx(seq_along(warps), warps, xout = x, rule = 2L)$y
-      } else {
+      if (inherits(x, "mixtime")) {
+        # Obtain chronons from mixtime vector
+        x <- vctrs::vec_data(vecvec::unvecvec(x))
+
+        # Unsafe code:
+        # Only apply warping if mixtime is provided, otherwise it is a pre-warped position
         x <- stats::approx(warps, seq_along(warps), xout = x)$y
+      } else if (unwarp) {
+        x <- stats::approx(seq_along(warps), warps, xout = x, rule = 2L)$y
       }
     }
     x
   },
   get_breaks = function(self, limits = self$get_limits()) {
-    # if (!is_waiver(self$warps)) {
-    #   warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
-    #   limits <- stats::approx(
-    #     seq_along(warps),
-    #     warps,
-    #     xout = limits,
-    #     rule = 2L
-    #   )$y
-    #   attributes(limits) <- attributes(attr(self$warps, "v")[[1L]])
-    # }
-
     breaks <- ggproto_parent(ScaleContinuous, self)$get_breaks(limits)
     self$warp_time(breaks)
   },
