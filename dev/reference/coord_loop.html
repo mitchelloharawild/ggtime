@@ -169,11 +169,11 @@ preserved. This is otherwise lost when time is discretised into ordered
 factors (e.g. months of the year, or days of week). This allows lines and
 other geometries to be drawn across seasonal boundaries, such as a line that
 connects December to January when plotting annual seasonality.
-The justification of looping can be controlled using the <code>align_mixed</code> option
+The justification of looping can be controlled using the <code>align_discrete</code> option
 of <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code>, where values from 0 to 1 specify the alignment.
-Left alignment (<code>align_mixed = 0</code>) places inter-seasonal connections on the
-left of the panel, right alignment (<code>align_mixed = 1</code>) uses the right side,
-and center alignment (<code>align_mixed = 0.5</code>, the default) uses equal spacing
+Left alignment (<code>align_discrete = 0</code>) places inter-seasonal connections on the
+left of the panel, right alignment (<code>align_discrete = 1</code>) uses the right side,
+and center alignment (<code>align_discrete = 0.5</code>, the default) uses equal spacing
 on both ends of the season.</p>
     </div>
     <div id="why-not-use-seasonal-factors-">
@@ -236,7 +236,7 @@ width on the x-axis despite the fact that months have different lengths.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With yearly looping to show seasonal patterns</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">+</span> <span class="fu">coord_loop</span><span class="op">(</span>time_loop <span class="op">=</span> <span class="st">"1 year"</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="coord_loop-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in time_chronon(self$time_loops):</span> could not find function "time_chronon"</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
