@@ -6,6 +6,8 @@
 \alias{ggtime-package}
 \title{ggtime: Grammar of Graphics and Plot Helpers for Time Series Visualization}
 \description{
+\if{html}{\figure{logo.svg}{options: style='float: right' alt='logo' width='120'}}
+
 Extends the capabilities of 'ggplot2' by providing grammatical elements and plot helpers designed for visualizing temporal patterns. The package implements a grammar of temporal graphics, which leverages calendar structures to highlight changes over time. The package also provides plot helper functions to quickly produce commonly used time series graphics, including time plots, season plots, and seasonal sub-series plots.
 }
 \seealso{
@@ -22,6 +24,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Mitchell O'Hara-Wild \email{mail@mitchelloharawild.com} (\href{https://orcid.org/0000-0001-6729-7695}{ORCID})
   \item Cynthia A. Huang (\href{https://orcid.org/0000-0002-9218-987X}{ORCID})
   \item Matthew Kay (\href{https://orcid.org/0000-0001-9446-0419}{ORCID})
   \item Rob Hyndman (\href{https://orcid.org/0000-0002-2140-5352}{ORCID})

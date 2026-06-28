@@ -888,7 +888,6 @@ gg_tsresiduals <- function(
   e1
 }
 
-#' @export
 chooseOpsMethod.gg_tsensemble <- function(x, y, mx, my, cl, reverse) {
   # Always use the gg_tsensemble method
   TRUE

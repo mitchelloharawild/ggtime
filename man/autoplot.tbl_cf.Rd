@@ -7,7 +7,7 @@
 \method{autoplot}{tbl_cf}(object, level = 95, ...)
 }
 \arguments{
-\item{object}{A tbl_cf object (the result \code{\link[feasts:ACF]{feasts::ACF()}}, \code{\link[feasts:ACF]{feasts::PACF()}}, or \code{\link[feasts:ACF]{feasts::CCF()}}).}
+\item{object}{A tbl_cf object (the result \code{\link[feasts:ACF]{feasts::ACF()}}, \code{\link[feasts:PACF]{feasts::PACF()}}, or \code{\link[feasts:CCF]{feasts::CCF()}}).}
 
 \item{level}{The level of confidence for the blue dashed lines.}
 
@@ -17,5 +17,5 @@
 A ggplot object showing the correlations.
 }
 \description{
-Produces an appropriate plot for the result of  \code{\link[feasts:ACF]{feasts::ACF()}}, \code{\link[feasts:ACF]{feasts::PACF()}}, or \code{\link[feasts:ACF]{feasts::CCF()}}.
+Produces an appropriate plot for the result of  \code{\link[feasts:ACF]{feasts::ACF()}}, \code{\link[feasts:PACF]{feasts::PACF()}}, or \code{\link[feasts:CCF]{feasts::CCF()}}.
 }
