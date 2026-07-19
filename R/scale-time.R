@@ -426,7 +426,7 @@ ScaleContinuousMixtime <- ggproto(
     # Convert back to original time points for labelling
     breaks <- self$warp_time(breaks, unwarp = TRUE)
 
-    ggproto_parent(ScaleContinuous, self)$get_labels(as.integer(breaks))
+    ggproto_parent(ScaleContinuous, self)$get_labels(breaks)
   }
 )
 
