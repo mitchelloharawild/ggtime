@@ -3,30 +3,9 @@
 \name{scale_mixtime}
 \alias{scale_mixtime}
 \alias{scale_x_mixtime}
-\alias{scale_y_mixtime}
 \title{Position scales for mixtime data}
 \usage{
 scale_x_mixtime(
-  name = waiver(),
-  breaks = waiver(),
-  time_breaks = waiver(),
-  minor_breaks = waiver(),
-  time_minor_breaks = waiver(),
-  labels = waiver(),
-  time_labels = waiver(),
-  time_chronon = waiver(),
-  align_discrete = aes_nudge(),
-  warps = waiver(),
-  time_warps = waiver(),
-  limits = NULL,
-  expand = waiver(),
-  oob = scales::censor,
-  guide = waiver(),
-  position = "bottom",
-  sec.axis = waiver()
-)
-
-scale_y_mixtime(
   name = waiver(),
   breaks = waiver(),
   time_breaks = waiver(),
@@ -176,7 +155,7 @@ points across multiple granularities onto a common time scale. This is
 achieved by identifying and coercing all time points to the finest chronon
 that all time points can be represented in. This common time chronon is
 automatically identified, but can be manually specified using the
-\code{common_time}.
+\code{time_chronon} argument.
 }
 \section{Practical usage}{
 
@@ -247,7 +226,7 @@ if the data contains both monthly and daily time points, the common time scale
 will be daily, with the monthly points aligned according to the \code{align_discrete}
 argument. If multiple time zones are present, the common time zone will
 default to UTC. The common time scale can be manually specified using the
-\code{common_time} argument, which accepts a \code{mixtime::time_unit}.
+\code{time_chronon} argument, which accepts a \code{mixtime::time_unit}.
 }
 
 \section{Temporal warping}{

@@ -8,7 +8,7 @@
 #' achieved by identifying and coercing all time points to the finest chronon
 #' that all time points can be represented in. This common time chronon is
 #' automatically identified, but can be manually specified using the
-#' `common_time`.
+#' `time_chronon` argument.
 #'
 #' @inheritParams ggplot2::scale_x_date
 #' @param time_breaks A duration giving the distance between breaks like
@@ -112,7 +112,7 @@
 #' will be daily, with the monthly points aligned according to the `align_discrete`
 #' argument. If multiple time zones are present, the common time zone will
 #' default to UTC. The common time scale can be manually specified using the
-#' `common_time` argument, which accepts a `mixtime::time_unit`.
+#' `time_chronon` argument, which accepts a `mixtime::time_unit`.
 #'
 #' @section Temporal warping:
 #'
