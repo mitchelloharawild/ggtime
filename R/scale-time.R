@@ -207,7 +207,7 @@ mixtime_scale <- function(
   align_discrete = aes_nudge(),
   warps = waiver(),
   time_warps = waiver(),
-  guide = "legend",
+  guide = waiver(),
   call = caller_call(),
   ...
 ) {
