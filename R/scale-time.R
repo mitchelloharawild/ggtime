@@ -478,6 +478,38 @@ ScaleContinuousMixtime <- ggproto(
   }
 )
 
+#' Aesthetic specific alignment of discrete time
+#'
+#' Positioning discrete time points (e.g. months) on a continuous time scale
+#' (e.g. days) is indeterminate - which day should represent a month? This is
+#' resolved by aligning each time point within its granularity, where 0 is
+#' start alignment, 1 is end alignment, and 0.5 is center alignment.
+#'
+#' Different positional aesthetics often require different alignments. A ribbon
+#' spanning a month should start at the beginning of the month and end at the
+#' end of it, while a line should pass through its center. `aes_nudge()`
+#' specifies these alignments per aesthetic, and is passed to the
+#' `align_discrete` argument of [scale_x_mixtime()].
+#'
+#' @param center,left,right Alignment applied to centered (e.g. `x`, `xend`),
+#'   lower (e.g. `xmin`, `xlower`), and upper (e.g. `xmax`, `xupper`)
+#'   positional aesthetics respectively. Setting these changes the default for
+#'   all semantically equivalent aesthetics below.
+#' @param x,xmin,xmax,xend,xintercept,xmin_final,xmax_final,xlower,xmiddle,xupper,x0
+#'   Alignment for individual `x` aesthetics.
+#' @param y,ymin,ymax,yend,yintercept,ymin_final,ymax_final,ylower,ymiddle,yupper,y0
+#'   Alignment for individual `y` aesthetics.
+#'
+#' @returns A function that takes an aesthetic name and returns its alignment,
+#'   suitable for the `align_discrete` argument of [scale_x_mixtime()].
+#'
+#' @examples
+#' # Center aligned points, with intervals spanning the full granularity
+#' aes_nudge(center = 0.5, left = 0, right = 1)
+#'
+#' # Align all time points to the start of their granularity
+#' aes_nudge(center = 0, left = 0, right = 0)
+#'
 #' @export
 aes_nudge <- function(
   center = 0.5,
