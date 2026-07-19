@@ -47,13 +47,49 @@ scale_y_mixtime(
 )
 }
 \arguments{
+\item{name}{The name of the scale. Used as the axis or legend title. If
+\code{waiver()}, the default, the name of the scale is taken from the first
+mapping used for that aesthetic. If \code{NULL}, the legend title will be
+omitted.}
+
+\item{breaks}{One of:
+\itemize{
+\item \code{NULL} for no breaks
+\item \code{waiver()} for the breaks specified by \code{date_breaks}
+\item A \code{Date}/\code{POSIXct} vector giving positions of breaks
+\item A function that takes the limits as input and returns breaks as output
+}}
+
 \item{time_breaks}{A duration giving the distance between breaks like
 "2 weeks", or "10 years". If both \code{breaks} and \code{time_breaks} are specified,
 \code{time_breaks} wins.}
 
+\item{minor_breaks}{One of:
+\itemize{
+\item \code{NULL} for no breaks
+\item \code{waiver()} for the breaks specified by \code{date_minor_breaks}
+\item A \code{Date}/\code{POSIXct} vector giving positions of minor breaks
+\item A function that takes the limits as input and returns minor breaks as
+output
+}}
+
 \item{time_minor_breaks}{A duration giving the distance between minor breaks like
 "2 weeks", or "10 years". If both \code{minor_breaks} and \code{time_minor_breaks} are
 specified, \code{time_minor_breaks} wins.}
+
+\item{labels}{One of the options below. Please note that when \code{labels} is a
+vector, it is highly recommended to also set the \code{breaks} argument as a
+vector to protect against unintended mismatches.
+\itemize{
+\item \code{NULL} for no labels
+\item \code{waiver()} for the default labels computed by the
+transformation object
+\item A character vector giving labels (must be same length as \code{breaks})
+\item An expression vector (must be the same length as breaks). See ?plotmath for details.
+\item A function that takes the breaks as input and returns labels
+as output. Also accepts rlang \link[rlang:as_function]{lambda} function
+notation.
+}}
 
 \item{time_labels}{A mixtime format string to format the labels.}
 
@@ -91,6 +127,45 @@ output
 \item{time_warps}{A duration giving the distance between temporal warping
 like "2 weeks", or "10 years". If both \code{warps} and \code{time_warps} are
 specified, \code{time_warps} wins.}
+
+\item{limits}{One of:
+\itemize{
+\item \code{NULL} to use the default scale range
+\item A numeric vector of length two providing limits of the scale.
+Use \code{NA} to refer to the existing minimum or maximum
+\item A function that accepts the existing (automatic) limits and returns
+new limits. Also accepts rlang \link[rlang:as_function]{lambda} function
+notation.
+Note that setting limits on positional scales will \strong{remove} data outside of the limits.
+If the purpose is to zoom, use the limit argument in the coordinate system
+(see \code{\link[ggplot2:coord_cartesian]{coord_cartesian()}}).
+}}
+
+\item{expand}{For position scales, a vector of range expansion constants used to add some
+padding around the data to ensure that they are placed some distance
+away from the axes. Use the convenience function \code{\link[ggplot2:expansion]{expansion()}}
+to generate the values for the \code{expand} argument. The defaults are to
+expand the scale by 5\% on each side for continuous variables, and by
+0.6 units on each side for discrete variables.}
+
+\item{oob}{One of:
+\itemize{
+\item Function that handles limits outside of the scale limits
+(out of bounds). Also accepts rlang \link[rlang:as_function]{lambda}
+function notation.
+\item The default (\code{\link[scales:oob]{scales::censor()}}) replaces out of
+bounds values with \code{NA}.
+\item \code{\link[scales:oob]{scales::squish()}} for squishing out of bounds values into range.
+\item \code{\link[scales:oob]{scales::squish_infinite()}} for squishing infinite values into range.
+}}
+
+\item{guide}{A function used to create a guide or its name. See
+\code{\link[ggplot2:guides]{guides()}} for more information.}
+
+\item{position}{For position scales, The position of the axis.
+\code{left} or \code{right} for y axes, \code{top} or \code{bottom} for x axes.}
+
+\item{sec.axis}{\code{\link[ggplot2:sec_axis]{sec_axis()}} is used to specify a secondary axis.}
 }
 \description{
 These are the default scales for mixtime vectors, responsible for mapping
@@ -120,7 +195,7 @@ and take precedence over the non-time aware options (e.g. \code{breaks} and
 \code{labels}). The scale's breaks can be specified with \code{\link[mixtime:duration]{mixtime::duration()}}
 objects (e.g. \code{time_breaks = mixtime::months(1L)}), or with strings that can
 be parsed into durations (e.g. \code{time_breaks = "1 month"}). Labels for time
-points in Gregorian calendars can be specified using \code{\link[base:strptime]{base::strftime()}}
+points in Gregorian calendars can be specified using \code{\link[base:strftime]{base::strftime()}}
 formats (e.g. \code{time_labels = "\%b \%Y"} for "Jan 2020"). Concise strings for
 non-Gregorian calendars are not yet supported, but can be created using
 custom label functions (e.g. \code{labels = function(x) { ... }}).
@@ -129,9 +204,9 @@ A core feature of these scales is the ability to handle time from multiple
 timezones, granularities, and calendars. This is achieved by mapping all time
 points to a common time scale, which is automatically identifying the finest
 compatible chronon that can represent the input data. This allows time points
-across different granularities (e.g. \link[base:DateTimeClasses]{base::POSIXt}, \link[base:Dates]{base::Date}, and
+across different granularities (e.g. \link[base:POSIXt]{base::POSIXt}, \link[base:Date]{base::Date}, and
 \link[mixtime:yearmonth]{mixtime::yearmonth}) to be plotted together on a common time scale. In this
-case the finest chronon is 1 second (from \link[base:DateTimeClasses]{base::POSIXt}), so all time points
+case the finest chronon is 1 second (from \link[base:POSIXt]{base::POSIXt}), so all time points
 are mapped to a 1 second chronon for plotting. Mapping day and month chronons
 to seconds introduces indeterminancy - which second should be used to
 represent a day or month? This is resolved using the \code{align_discrete} argument,
