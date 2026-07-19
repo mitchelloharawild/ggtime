@@ -57,7 +57,7 @@ Imports:
     vctrs,
     cli,
     vecvec,
-    mixtime,
+    mixtime (> 0.2.0),
     S7
 Suggests: 
     testthat (>= 3.0.0),

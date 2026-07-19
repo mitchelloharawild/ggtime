@@ -318,11 +318,6 @@ mixtime_scale <- function(
   sc
 }
 
-#' @export
-S7::method(scale_type, mixtime::class_mixtime) <- function(x) {
-  c("mixtime", "continuous")
-}
-
 #' @keywords internal
 ScaleContinuousMixtime <- ggproto(
   "ScaleContinuousMixtime",
