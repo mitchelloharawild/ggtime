@@ -242,7 +242,6 @@ scale_y_mixtime <- function(
 #' @keywords internal
 mixtime_scale <- function(
   aesthetics,
-  trans = deprecated(),
   palette,
   breaks = scales::breaks_pretty(),
   time_breaks = waiver(),
@@ -300,7 +299,6 @@ mixtime_scale <- function(
     labels = labels,
     guide = guide,
     transform = transform_mixtime(),
-    trans = trans,
     call = call,
     ...,
     super = ggproto(
