@@ -192,52 +192,6 @@ scale_x_mixtime <- function(
 }
 
 
-#' @export
-#' @rdname scale_mixtime
-scale_y_mixtime <- function(
-  name = waiver(),
-  breaks = waiver(),
-  time_breaks = waiver(),
-  minor_breaks = waiver(),
-  time_minor_breaks = waiver(),
-  labels = waiver(),
-  time_labels = waiver(),
-  time_chronon = waiver(),
-  align_discrete = aes_nudge(),
-  warps = waiver(),
-  time_warps = waiver(),
-  limits = NULL,
-  expand = waiver(),
-  oob = scales::censor,
-  guide = waiver(),
-  position = "bottom",
-  sec.axis = waiver()
-) {
-  sc <- mixtime_scale(
-    aesthetics = ggplot_global$y_aes,
-    name = name,
-    palette = identity,
-    breaks = breaks,
-    time_breaks = time_breaks,
-    minor_breaks = minor_breaks,
-    time_minor_breaks = time_minor_breaks,
-    labels = labels,
-    time_labels = time_labels,
-    time_chronon = time_chronon,
-    align_discrete = align_discrete,
-    warps = warps,
-    time_warps = time_warps,
-    guide = guide,
-    limits = limits,
-    expand = expand,
-    oob = oob,
-    position = position
-  )
-  debug(sc$get_labels)
-
-  set_sec_axis(sec.axis, sc)
-}
-
 #' @importFrom scales breaks_width
 #' @keywords internal
 mixtime_scale <- function(
