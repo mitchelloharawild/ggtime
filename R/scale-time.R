@@ -437,7 +437,7 @@ ScaleContinuousMixtime <- ggproto(
     }
     # as.numeric() -- extract the numerical representation.
     # This is where the mixed granularities should be mapped to a common scale.
-    as.numeric(self$warp_time(x))
+    as.numeric(x)
   },
 
   warp_time = function(self, x, unwarp = FALSE) {
