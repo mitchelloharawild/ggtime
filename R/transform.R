@@ -1,18 +1,27 @@
-# Inversion requires recollection of offset and regularity
-# Warping between specific time points numeric 0-n for n warp points, decimals indicate time between warp points
+# Transformation between `mixtime` mixed-granularity vectors and the continuous
+# single-granularity time points needed for plotting.
+#
+# The transformation collapses a `mixtime` (a `vecvec` of potentially several
+# temporal granularities) into a singular granularity `mt_time` vector.
+#
+# It is deliberately *not* a bare double, so that downstream transforms are
+# time-aware, so that transforms requiring time (e.g. warping) can use time
+# units, and transforms which are meaningless for time (`log10()`, `sqrt()`)
+# produce an error.
 transform_mixtime <- function(ptype = NULL) {
   force(ptype)
 
   # To original granularity
   to_mixtime <- function(x) {
-    # Restore mt_time structure
-    attributes(x) <- attributes(ptype)
-    mixtime:::new_time(
-      x,
-      chronon = attr(ptype, "chronon"),
-      cycle = attr(ptype, "cycle")
-    )
-    x <- vctrs::vec_restore(x, ptype)
+    if (is.null(ptype)) {
+      # No forward transformation has been performed yet, so there is nothing to
+      # restore to. This happens when `scales::transform_compose()` probes the
+      # domain of a composed transform.
+      return(x)
+    }
+
+    # Restore the `mt_time` structure (and thus the chronon) from the ptype.
+    x <- vctrs::vec_restore(vctrs::vec_data(x), ptype)
 
     if (!is.null(cycle <- attr(ptype, "cycle"))) {
       # Offset timezone for labelling purposes
@@ -33,11 +42,11 @@ transform_mixtime <- function(ptype = NULL) {
     if (!is.null(cycle <- attr(ptype, "cycle"))) {
       # Set cyclical time points to be relative to the start of the cycle, so
       # they are plotted cyclically irrespective of linear time point.
-      tz <- tz_name(ptype)
       x <- x - mixtime::time_floor(x, cycle)
     }
 
-    return(as.numeric(x))
+    # Collapse to a singular time type, keeping the time attributes.
+    vecvec::unvecvec(x)
   }
 
   scales::new_transform(
@@ -46,4 +55,41 @@ transform_mixtime <- function(ptype = NULL) {
     inverse = "to_mixtime",
     breaks = scales::breaks_pretty()
   )
+}
+
+#' Compose a transformation with the mixtime transformation
+#'
+#' Time transformations must run after time points have been mapped onto a
+#' common time scale, so `transform_mixtime()` is always applied first. This
+#' wraps [scales::transform_compose()] to keep behaviour which it discards:
+#'
+#' * `format` is taken from `transform_mixtime()`, since breaks are chosen (and
+#'   therefore labelled) in mixtime space.
+#' * `breaks` likewise come from `transform_mixtime()`.
+#'
+#' @param transform A transformation to apply after `transform_mixtime()`,
+#'   given as a `<transform>` object or a name accepted by
+#'   [scales::as.transform()]. `NULL` or `waiver()` applies no further
+#'   transformation.
+#' @param ptype Passed through to `transform_mixtime()`.
+#'
+#' @noRd
+compose_time_transform <- function(transform = NULL, ptype = NULL) {
+  time_transform <- transform_mixtime(ptype)
+
+  if (is.null(transform) || is_waiver(transform)) {
+    return(time_transform)
+  }
+
+  transform <- scales::as.transform(transform)
+  if (identical(transform$name, "identity")) {
+    return(time_transform)
+  }
+
+  composed <- scales::transform_compose(time_transform, transform)
+
+  # Breaks are chosen in mixtime space, and so must also be formatted there.
+  composed$breaks <- time_transform$breaks
+  composed$format <- time_transform$format
+  composed
 }

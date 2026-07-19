@@ -38,15 +38,10 @@
 #'   equivalent positional aesthetics (e.g. `left` applies to `xstart`, `xmin`,
 #'   and `xlower`).
 #' @param time_labels A mixtime format string to format the labels.
-#' @param warps Normalises the time scale to have a consistent length between
-#' specified time points, one of:
-#'   - `NULL` or `waiver()` for no warping (the default)
-#'   - A `mixtime` vector giving positions of warping points
-#'   - A function that takes the limits as input and returns warping points as
-#'     output
-#' @param time_warps A duration giving the distance between temporal warping
-#' like "2 weeks", or "10 years". If both `warps` and `time_warps` are
-#' specified, `time_warps` wins.
+#' @param transform A transformation applied to the time scale, after time
+#' points have been mapped onto the common time scale. Given as either a
+#' `<transform>` object or the name of one. Defaults to `"identity"`, applying
+#' no further transformation.
 #'
 #' @section Practical usage:
 #'
@@ -82,16 +77,6 @@
 #' which defaults to center alignment. This means that a day is mapped to noon,
 #' and a month is mapped to the middle of the month.
 #'
-#' Another time specific feature of these scales is temporal warping. This
-#' adjusts the mapping of time points to plot aesthetics to have a consistent
-#' length between specified time points. This is most useful in comparing the
-#' shapes of cycles with irregular durations, including:
-#' * astronomical cycles (e.g. the rising and setting of the sun)
-#' * economic cycles (e.g. growth and recession phases of economies)
-#' * predator-prey cycles (e.g. population dynamics of interacting species)
-#' * biological cycles (e.g. hormonal cycles)
-#' * calendar cycles (e.g. days in each month)
-#'
 #' Further details about time specific scale options are described in the
 #' following sections.
 #'
@@ -113,16 +98,6 @@
 #' argument. If multiple time zones are present, the common time zone will
 #' default to UTC. The common time scale can be manually specified using the
 #' `time_chronon` argument, which accepts a `mixtime::time_unit`.
-#'
-#' @section Temporal warping:
-#'
-#' Time scales can be warped to have a consistent length between specified time
-#' points. This is useful when visually exploring cyclical patterns where each
-#' cycle has varying length. By warping the time scale, the shape of each cycle
-#' can be more easily compared. Temporal warping is controlled using the `warps`
-#' argument, which accepts a `mixtime` vector defining the positions of the
-#' warping points. Calendar-based warping points can be conveniently specified
-#' using the `time_warps` argument, which accepts a duration like "1 month".
 #'
 #' @examples
 #' library(ggplot2)
@@ -159,8 +134,7 @@ scale_x_mixtime <- function(
   time_labels = waiver(),
   time_chronon = waiver(),
   align_discrete = aes_nudge(),
-  warps = waiver(),
-  time_warps = waiver(),
+  transform = "identity",
   limits = NULL,
   expand = waiver(),
   oob = scales::censor,
@@ -180,8 +154,7 @@ scale_x_mixtime <- function(
     time_labels = time_labels,
     time_chronon = time_chronon,
     align_discrete = align_discrete,
-    warps = warps,
-    time_warps = time_warps,
+    transform = transform,
     guide = guide,
     limits = limits,
     expand = expand,
@@ -205,8 +178,7 @@ mixtime_scale <- function(
   time_labels = waiver(),
   time_chronon = waiver(),
   align_discrete = aes_nudge(),
-  warps = waiver(),
-  time_warps = waiver(),
+  transform = "identity",
   guide = waiver(),
   call = caller_call(),
   ...
@@ -234,9 +206,6 @@ mixtime_scale <- function(
       format(x, format = time_labels)
     }
   }
-  if (!is_waiver(time_warps)) {
-    warps <- breaks_width(time_warps)
-  }
 
   # x/y position aesthetics should use ScaleContinuousMixtime; others use ScaleContinuous
   if (all(aesthetics %in% c(ggplot_global$x_aes, ggplot_global$y_aes))) {
@@ -252,13 +221,12 @@ mixtime_scale <- function(
     minor_breaks = minor_breaks,
     labels = labels,
     guide = guide,
-    transform = transform_mixtime(),
+    transform = compose_time_transform(transform),
     call = call,
     ...,
     super = ggproto(
       NULL,
       scale_class,
-      warps = warps,
       time_chronon = time_chronon,
       align_discrete = align_discrete,
     )
@@ -391,42 +359,6 @@ ScaleContinuousMixtime <- ggproto(
     # as.numeric() -- extract the numerical representation.
     # This is where the mixed granularities should be mapped to a common scale.
     as.numeric(x)
-  },
-
-  warp_time = function(self, x, unwarp = FALSE) {
-    if (!is_waiver(self$warps)) {
-      if (is.function(self$warps)) {
-        self$warps <- self$warps(x)
-      }
-      if (is_mixtime(self$warps)) {
-        warps <- vctrs::vec_data(vecvec::unvecvec(self$warps))
-      } else {
-        warps <- vctrs::vec_data(self$warps)
-      }
-
-      if (inherits(x, "mixtime")) {
-        # Obtain chronons from mixtime vector
-        x <- vctrs::vec_data(vecvec::unvecvec(x))
-
-        # Unsafe code:
-        # Only apply warping if mixtime is provided, otherwise it is a pre-warped position
-        x <- stats::approx(warps, seq_along(warps), xout = x)$y
-      } else if (unwarp) {
-        x <- stats::approx(seq_along(warps), warps, xout = x, rule = 2L)$y
-      }
-    }
-    x
-  },
-  get_breaks = function(self, limits = self$get_limits()) {
-    breaks <- ggproto_parent(ScaleContinuous, self)$get_breaks(limits)
-    self$warp_time(breaks)
-  },
-
-  get_labels = function(self, breaks = self$get_breaks()) {
-    # Convert back to original time points for labelling
-    breaks <- self$warp_time(breaks, unwarp = TRUE)
-
-    ggproto_parent(ScaleContinuous, self)$get_labels(breaks)
   }
 )
 

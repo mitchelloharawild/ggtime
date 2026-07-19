@@ -15,8 +15,7 @@ scale_x_mixtime(
   time_labels = waiver(),
   time_chronon = waiver(),
   align_discrete = aes_nudge(),
-  warps = waiver(),
-  time_warps = waiver(),
+  transform = "identity",
   limits = NULL,
   expand = waiver(),
   oob = scales::censor,
@@ -94,18 +93,10 @@ The \code{center}, \code{left}, and \code{right} arguments apply to the semantic
 equivalent positional aesthetics (e.g. \code{left} applies to \code{xstart}, \code{xmin},
 and \code{xlower}).}
 
-\item{warps}{Normalises the time scale to have a consistent length between
-specified time points, one of:
-\itemize{
-\item \code{NULL} or \code{waiver()} for no warping (the default)
-\item A \code{mixtime} vector giving positions of warping points
-\item A function that takes the limits as input and returns warping points as
-output
-}}
-
-\item{time_warps}{A duration giving the distance between temporal warping
-like "2 weeks", or "10 years". If both \code{warps} and \code{time_warps} are
-specified, \code{time_warps} wins.}
+\item{transform}{A transformation applied to the time scale, after time
+points have been mapped onto the common time scale. Given as either a
+\verb{<transform>} object or the name of one. Defaults to \code{"identity"}, applying
+no further transformation.}
 
 \item{limits}{One of:
 \itemize{
@@ -192,18 +183,6 @@ represent a day or month? This is resolved using the \code{align_discrete} argum
 which defaults to center alignment. This means that a day is mapped to noon,
 and a month is mapped to the middle of the month.
 
-Another time specific feature of these scales is temporal warping. This
-adjusts the mapping of time points to plot aesthetics to have a consistent
-length between specified time points. This is most useful in comparing the
-shapes of cycles with irregular durations, including:
-\itemize{
-\item astronomical cycles (e.g. the rising and setting of the sun)
-\item economic cycles (e.g. growth and recession phases of economies)
-\item predator-prey cycles (e.g. population dynamics of interacting species)
-\item biological cycles (e.g. hormonal cycles)
-\item calendar cycles (e.g. days in each month)
-}
-
 Further details about time specific scale options are described in the
 following sections.
 }
@@ -227,18 +206,6 @@ will be daily, with the monthly points aligned according to the \code{align_disc
 argument. If multiple time zones are present, the common time zone will
 default to UTC. The common time scale can be manually specified using the
 \code{time_chronon} argument, which accepts a \code{mixtime::time_unit}.
-}
-
-\section{Temporal warping}{
-
-
-Time scales can be warped to have a consistent length between specified time
-points. This is useful when visually exploring cyclical patterns where each
-cycle has varying length. By warping the time scale, the shape of each cycle
-can be more easily compared. Temporal warping is controlled using the \code{warps}
-argument, which accepts a \code{mixtime} vector defining the positions of the
-warping points. Calendar-based warping points can be conveniently specified
-using the \code{time_warps} argument, which accepts a duration like "1 month".
 }
 
 \examples{
