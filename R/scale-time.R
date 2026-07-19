@@ -402,10 +402,16 @@ ScaleContinuousMixtime <- ggproto(
     }
 
     if (any(mixtime::is_time_cyclical(x))) {
-      cli::cli_abort(
-        "Plotting cyclical time values is not yet supported.",
-        call = self$call
-      )
+      cycle <- unique(time_cycle(x))
+      if (length(cycle) > 1L) {
+        cli::cli_abort(
+          c(
+            "Multiple time cycles detected in the data: {format_list(cycle)}.",
+            i = "Cyclical time scales currently only support a single cycle. Please ensure all cyclical time data uses the same cycle."
+          ),
+          call = self$call
+        )
+      }
     }
 
     align_nudge <- self$align_discrete
