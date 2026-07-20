@@ -328,6 +328,18 @@ ScaleContinuousMixtime <- ggproto(
       )
     }
 
+    is_duration <- vapply(x@x, inherits, logical(1L), "mt_duration")
+    if (any(is_duration) && !all(is_duration)) {
+      cli::cli_abort(
+        c(
+          "Can't scale durations alongside other modes of time.",
+          i = "The duration mode of time measures a length of time, which has
+               no position on a scale of time points."
+        ),
+        call = self$call
+      )
+    }
+
     align_nudge <- self$align_discrete
     # Aesthetic specific nudges from aes_nudge()
     if (is.function(align_nudge)) {
@@ -335,6 +347,17 @@ ScaleContinuousMixtime <- ggproto(
     }
 
     x@x <- lapply(x@x, function(v) {
+      if (inherits(v, "mt_duration")) {
+        # The duration mode of time is an exact length rather than a point
+        # within a granule, so it needs no `align_discrete` alignment. It must
+        # also stay in the duration mode: measuring it from the epoch would
+        # make "2 days" an absolute time point ("1970-01-03").
+        return(mixtime::duration(
+          mixtime:::chronon_convert(v, self$time_chronon),
+          chronon = self$time_chronon
+        )@x[[1L]])
+      }
+
       # Use `align_discrete` to position discrete time models on continuous scales
       if (is.integer(v)) {
         v <- v + align_nudge
