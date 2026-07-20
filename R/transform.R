@@ -66,12 +66,10 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
     if (identical(attr(x, "chronon"), target)) {
       return(x)
     }
-    # `chronon_convert()` returns a bare numeric, so the class is rebuilt.
-    mixtime:::new_time(
-      mixtime:::chronon_convert(x, target),
-      chronon = target,
-      class = "mt_linear"
-    )
+    # `chronon_convert()` returns a bare numeric, so the time attributes are
+    # restored from `ptype` - which already carries the target chronon, and
+    # keeps a duration a duration rather than making it a time point.
+    vctrs::vec_restore(mixtime:::chronon_convert(x, target), ptype)
   }
 
   to_mixtime <- function(x) {
