@@ -221,7 +221,7 @@ mixtime_scale <- function(
     minor_breaks = minor_breaks,
     labels = labels,
     guide = guide,
-    transform = compose_time_transform(transform),
+    transform = transform_mixtime(transform),
     call = call,
     ...,
     super = ggproto(

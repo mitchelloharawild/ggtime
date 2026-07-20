@@ -1,97 +1,131 @@
-# Transformation between `mixtime` mixed-granularity vectors and the continuous
-# single-granularity time points needed for plotting.
-#
-# The transformation collapses a `mixtime` (a `vecvec` of potentially several
-# temporal granularities) into a singular granularity `mt_time` vector.
-#
-# It is deliberately *not* a bare double, so that downstream transforms are
-# time-aware, so that transforms requiring time (e.g. warping) can use time
-# units, and transforms which are meaningless for time (`log10()`, `sqrt()`)
-# produce an error.
-transform_mixtime <- function(ptype = NULL) {
+#' The mixtime scale transformation
+#'
+#' Maps `mixtime` vectors onto the continuous positions ggplot2 draws with, in
+#' three steps:
+#'
+#' 1. collapse the mixed-granularity `mixtime` (a `vecvec` of potentially
+#'    several temporal granularities) onto a common single-granularity
+#'    `<mt_time>`;
+#' 2. apply `transform` to those time points;
+#' 3. hand back plain numbers.
+#'
+#' Step 2 deliberately sees an `<mt_time>` rather than a bare double, so that
+#' time-aware transformations (e.g. [transform_warp()]) can work in time units,
+#' and transformations which are meaningless for time (`log10()`, `sqrt()`)
+#' error rather than quietly producing nonsense. Step 3 is equally deliberate:
+#' ggplot2 compares transformed values against numeric limits (`censor()`,
+#' `oob_squish()`), which errors on an `<mt_time>`. The time metadata therefore
+#' exists only *between* those steps, and never reaches the scale.
+#'
+#' @param transform A transformation to apply to the time points, given as a
+#'   `<transform>` object or a name accepted by [scales::as.transform()].
+#'   `NULL` or `waiver()` applies no further transformation.
+#' @param ptype The common time type to map onto. Defaults to `NULL`, taking it
+#'   from the first `mixtime` transformed.
+#'
+#' @noRd
+transform_mixtime <- function(transform = NULL, ptype = NULL) {
   force(ptype)
 
-  # To original granularity
-  to_mixtime <- function(x) {
-    if (is.null(ptype)) {
-      # No forward transformation has been performed yet, so there is nothing to
-      # restore to. This happens when `scales::transform_compose()` probes the
-      # domain of a composed transform.
-      return(x)
+  if (is_waiver(transform)) {
+    transform <- NULL
+  }
+  if (!is.null(transform)) {
+    transform <- scales::as.transform(transform)
+    if (identical(transform$name, "identity")) {
+      transform <- NULL
     }
-
-    # Restore the `mt_time` structure (and thus the chronon) from the ptype.
-    x <- vctrs::vec_restore(vctrs::vec_data(x), ptype)
-
-    if (!is.null(cycle <- attr(ptype, "cycle"))) {
-      # Offset timezone for labelling purposes
-      x <- x - tz_offset(x, tz_name(cycle))
-    }
-    x
   }
 
   from_mixtime <- function(x) {
-    if (!S7::S7_inherits(x, mixtime::class_mixtime)) {
+    if (is_mixtime(x)) {
+      # Collapse to a singular time type, keeping the time attributes. The first
+      # mixtime seen is the data, and so defines the common scale.
+      x <- vecvec::unvecvec(x)
+      if (is.null(ptype)) {
+        ptype <<- vctrs::vec_ptype(x)
+      }
+    }
+
+    # What is left may still not be on the common time scale: ggplot2 hands
+    # user-supplied `breaks` straight to the transformation, rather than through
+    # the scale's own `transform()` method.
+    if (is.null(ptype)) {
+      # No forward transformation yet, so there is nothing to convert onto.
+      return(x)
+    }
+    if (!inherits(x, "mt_time")) {
+      # Bare numbers are already positions in the common granularity, and need
+      # only their class back.
+      return(vctrs::vec_restore(vctrs::vec_data(x), ptype))
+    }
+
+    # An `<mt_time>` carries a `chronon` which may be coarser than the data's.
+    # e.g. monthly breaks on a daily series - convert to the ptype granularity.
+    target <- attr(ptype, "chronon")
+    if (identical(attr(x, "chronon"), target)) {
+      return(x)
+    }
+    # `chronon_convert()` returns a bare numeric, so the class is rebuilt.
+    mixtime:::new_time(
+      mixtime:::chronon_convert(x, target),
+      chronon = target,
+      class = "mt_linear"
+    )
+  }
+
+  to_mixtime <- function(x) {
+    if (inherits(x, "mt_time")) {
+      # Already carries its granularity, no need to convert to common ptype.
       return(x)
     }
     if (is.null(ptype)) {
-      # TODO - better method for obtaining the ptype?
-      ptype <<- x@x[[1L]][0L]
+      # No forward transformation yet, so there is nothing to restore to.
+      return(x)
     }
+    # Restores the time attributes lost by a temporally unaware transformation.
+    vctrs::vec_restore(vctrs::vec_data(x), ptype)
+  }
 
-    if (!is.null(cycle <- attr(ptype, "cycle"))) {
-      # Set cyclical time points to be relative to the start of the cycle, so
-      # they are plotted cyclically irrespective of linear time point.
-      x <- x - mixtime::time_floor(x, cycle)
+  # Breaks are chosen in mixtime space, so `breaks_pretty()` returns bare
+  # numbers. Restoring them to the limits' time type keeps the granularity
+  # attached, so it survives the trip back through `transform` on its way to
+  # becoming a position.
+  time_breaks <- function(x, n = 5) {
+    breaks <- scales::breaks_pretty()(x, n)
+    if (inherits(x, "mt_time")) {
+      breaks <- vctrs::vec_restore(breaks, x)
     }
-
-    # Collapse to a singular time type, keeping the time attributes.
-    vecvec::unvecvec(x)
+    breaks
   }
 
   scales::new_transform(
-    "mixtime",
-    transform = "from_mixtime",
-    inverse = "to_mixtime",
-    breaks = scales::breaks_pretty()
+    name = if (is.null(transform)) {
+      "mixtime"
+    } else {
+      paste0("mixtime(", transform$name, ")")
+    },
+    transform = function(x) {
+      x <- from_mixtime(x)
+      if (!is.null(transform)) {
+        x <- transform$transform(x)
+      }
+      vctrs::vec_data(x)
+    },
+    inverse = function(x) {
+      # Forced on arrival so that everything downstream reads `ptype` after it
+      # has been set.
+      force(x)
+
+      if (!is.null(transform)) {
+        x <- transform$inverse(x)
+      }
+      to_mixtime(x)
+    },
+    breaks = time_breaks,
+    # Much like `scales::transform_compose()`
+    domain = transform$domain %||% c(-Inf, Inf)
   )
-}
-
-#' Compose a transformation with the mixtime transformation
-#'
-#' Time transformations must run after time points have been mapped onto a
-#' common time scale, so `transform_mixtime()` is always applied first. This
-#' wraps [scales::transform_compose()] to keep behaviour which it discards:
-#'
-#' * `format` is taken from `transform_mixtime()`, since breaks are chosen (and
-#'   therefore labelled) in mixtime space.
-#' * `breaks` likewise come from `transform_mixtime()`.
-#'
-#' @param transform A transformation to apply after `transform_mixtime()`,
-#'   given as a `<transform>` object or a name accepted by
-#'   [scales::as.transform()]. `NULL` or `waiver()` applies no further
-#'   transformation.
-#' @param ptype Passed through to `transform_mixtime()`.
-#'
-#' @noRd
-compose_time_transform <- function(transform = NULL, ptype = NULL) {
-  time_transform <- transform_mixtime(ptype)
-
-  if (is.null(transform) || is_waiver(transform)) {
-    return(time_transform)
-  }
-
-  transform <- scales::as.transform(transform)
-  if (identical(transform$name, "identity")) {
-    return(time_transform)
-  }
-
-  composed <- scales::transform_compose(time_transform, transform)
-
-  # Breaks are chosen in mixtime space, and so must also be formatted there.
-  composed$breaks <- time_transform$breaks
-  composed$format <- time_transform$format
-  composed
 }
 
 #' Warp a scale so that intervals between fixed points are equally spaced
@@ -312,10 +346,6 @@ transform_warp <- function(warps) {
     transform = "warp_transform",
     inverse = "warp_inverse",
     breaks = scales::breaks_pretty(),
-    # A warp is only defined between its outermost points. Declaring that lets
-    # `scales::transform_compose()` clamp to it instead of probing with a value
-    # the warp cannot position.
-    #
     # A time warp cannot state its domain (it varies with data granularity).
     domain = if (warp_is_time) c(-Inf, Inf) else range(warp_values)
   )
