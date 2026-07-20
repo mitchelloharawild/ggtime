@@ -317,16 +317,15 @@ ScaleContinuousMixtime <- ggproto(
     }
 
     if (any(mixtime::is_time_cyclical(x))) {
-      cycle <- unique(time_cycle(x))
-      if (length(cycle) > 1L) {
-        cli::cli_abort(
-          c(
-            "Multiple time cycles detected in the data: {format_list(cycle)}.",
-            i = "Cyclical time scales currently only support a single cycle. Please ensure all cyclical time data uses the same cycle."
-          ),
-          call = self$call
-        )
-      }
+      # For now, focus on linear arrangements of time.
+      cli::cli_abort(
+        c(
+          "Cyclical time is not currently supported by {.pkg mixtime} scales.",
+          i = "Cyclical time points cannot yet be placed relative to the start
+               of their cycle."
+        ),
+        call = self$call
+      )
     }
 
     align_nudge <- self$align_discrete
