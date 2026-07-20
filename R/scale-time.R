@@ -350,15 +350,17 @@ ScaleContinuousMixtime <- ggproto(
   },
 
   map = function(self, x, limits = self$get_limits()) {
-    # TODO: Check functionality of self$oob
-    # self$oob(x, limits)
-
     if (inherits(x, "mixtime")) {
       x <- vecvec::unvecvec(x)
     }
     # as.numeric() -- extract the numerical representation.
     # This is where the mixed granularities should be mapped to a common scale.
-    as.numeric(x)
+    # `limits` is already in transformed space, so `oob` compares like with like.
+    scaled <- as.numeric(self$oob(vctrs::vec_data(x), limits))
+    if (!anyNA(scaled)) {
+      return(scaled)
+    }
+    vctrs::vec_assign(scaled, is.na(scaled), self$na.value)
   }
 )
 
