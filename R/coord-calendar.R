@@ -65,29 +65,37 @@
 #'
 #' @examples
 #' library(ggplot2)
+#' library(mixtime)
+#'
+#' # Hourly pedestrian counts in Melbourne, as mixtime time points.
+#' pedestrian <- tsibble::pedestrian |>
+#'   dplyr::mutate(Time = datetime(Date_Time))
 #'
 #' # A weekly calendar arrangement of pedestrian counts in Melbourne
 #' # Notice the periods of high activity days for the Birrarung Marr sensor
 #' # during the Australian Open tennis tournament in late January.
-#' tsibble::pedestrian |>
-#'   dplyr::filter(Date < "2015-02-01") |>
-#'   ggplot(aes(x = Date_Time, y = Count, color = Sensor)) +
+#' pedestrian |>
+#'   dplyr::filter(Time < datetime("2015-02-01 00:00:00")) |>
+#'   ggplot(aes(x = Time, y = Count, color = Sensor)) +
 #'   geom_line() +
 #'   coord_calendar(time_rows = "1 week") +
-#'   scale_x_datetime(date_breaks = "1 day", date_labels = "%a") +
+#'   scale_x_mixtime(
+#'     time_breaks = "1 day",
+#'     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
+#'   ) +
 #'   theme(legend.position = "bottom")
 #'
 #' # Monthly facets can be used to create a complete calendar for 2015.
-#' tsibble::pedestrian |>
-#'   dplyr::filter(lubridate::year(Date) == 2015) |>
-#'   ggplot(aes(x = Date_Time, y = Count, color = Sensor)) +
+#' pedestrian |>
+#'   dplyr::filter(year(Time) == year(2015)) |>
+#'   ggplot(aes(x = Time, y = Count, color = Sensor)) +
 #'   geom_line() +
 #'   coord_calendar(time_rows = "1 week") +
-#'   facet_wrap(
-#'     vars(lubridate::month(Date, label = TRUE)),
-#'     ncol = 4, scales = "free_x"
+#'   facet_wrap(vars(yearmonth(Time)), ncol = 4, scales = "free_x") +
+#'   scale_x_mixtime(
+#'     time_breaks = "1 day",
+#'     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
 #'   ) +
-#'   scale_x_datetime(date_breaks = "1 day", date_labels = "%a") +
 #'   theme(
 #'     legend.position = "bottom",
 #'     axis.text.y = element_blank(), axis.ticks.y = element_blank()
