@@ -69,7 +69,8 @@ as output. Also accepts rlang \link[rlang:as_function]{lambda} function
 notation.
 }}
 
-\item{time_labels}{A mixtime format string to format the labels.}
+\item{time_labels}{A mixtime format string to format the labels, as described
+in \code{vignette("time-format-strings", package = "mixtime")}.}
 
 \item{time_chronon}{A time granule that defines the common chronon to use for
 mixed granularity (e.g. \code{mixtime::tu_day(1L)}). The default automatically
@@ -159,16 +160,18 @@ breaks and labels or using a different common time scale.
 
 Similarly to the temporal scales in ggplot2 (\code{\link[ggplot2:scale_x_date]{ggplot2::scale_x_date()}} and
 \code{\link[ggplot2:scale_x_datetime]{ggplot2::scale_x_datetime()}}), these scales can adjust the breaks and labels
-using duration-based intervals and strftime-like formatting. These time aware
+using duration-based intervals and time formatting. These time aware
 options are prefixed with \code{time_} (e.g. \code{time_breaks} and \code{time_labels}),
 and take precedence over the non-time aware options (e.g. \code{breaks} and
 \code{labels}). The scale's breaks can be specified with \code{\link[mixtime:duration]{mixtime::duration()}}
 objects (e.g. \code{time_breaks = mixtime::months(1L)}), or with strings that can
-be parsed into durations (e.g. \code{time_breaks = "1 month"}). Labels for time
-points in Gregorian calendars can be specified using \code{\link[base:strftime]{base::strftime()}}
-formats (e.g. \code{time_labels = "\%b \%Y"} for "Jan 2020"). Concise strings for
-non-Gregorian calendars are not yet supported, but can be created using
-custom label functions (e.g. \code{labels = function(x) { ... }}).
+be parsed into durations (e.g. \code{time_breaks = "1 month"}).
+
+Labels are specified with mixtime format strings, which describe a time point
+as glue-style \code{{}} placeholders holding the granules to show. Since the
+granules come from a calendar, this works across calendars rather than only
+Gregorian ones: \code{time_labels = "{cyc(month, year, label = TRUE, abbreviate = TRUE)} {lin(year)}"} gives "Jan 2020". See
+\code{vignette("time-format-strings", package = "mixtime")} for the full syntax.
 
 A core feature of these scales is the ability to handle time from multiple
 timezones, granularities, and calendars. This is achieved by mapping all time

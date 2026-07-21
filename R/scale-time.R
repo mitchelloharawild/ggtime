@@ -37,7 +37,8 @@
 #'   The `center`, `left`, and `right` arguments apply to the semantically
 #'   equivalent positional aesthetics (e.g. `left` applies to `xstart`, `xmin`,
 #'   and `xlower`).
-#' @param time_labels A mixtime format string to format the labels.
+#' @param time_labels A mixtime format string to format the labels, as described
+#' in `vignette("time-format-strings", package = "mixtime")`.
 #' @param transform A transformation applied to the time scale, after time
 #' points have been mapped onto the common time scale. Given as either a
 #' `<transform>` object or the name of one. Defaults to `"identity"`, applying
@@ -53,16 +54,19 @@
 #'
 #' Similarly to the temporal scales in ggplot2 ([ggplot2::scale_x_date()] and
 #' [ggplot2::scale_x_datetime()]), these scales can adjust the breaks and labels
-#' using duration-based intervals and strftime-like formatting. These time aware
+#' using duration-based intervals and time formatting. These time aware
 #' options are prefixed with `time_` (e.g. `time_breaks` and `time_labels`),
 #' and take precedence over the non-time aware options (e.g. `breaks` and
 #' `labels`). The scale's breaks can be specified with [mixtime::duration()]
 #' objects (e.g. `time_breaks = mixtime::months(1L)`), or with strings that can
-#' be parsed into durations (e.g. `time_breaks = "1 month"`). Labels for time
-#' points in Gregorian calendars can be specified using [base::strftime()]
-#' formats (e.g. `time_labels = "%b %Y"` for "Jan 2020"). Concise strings for
-#' non-Gregorian calendars are not yet supported, but can be created using
-#' custom label functions (e.g. `labels = function(x) { ... }`).
+#' be parsed into durations (e.g. `time_breaks = "1 month"`).
+#'
+#' Labels are specified with mixtime format strings, which describe a time point
+#' as glue-style `{}` placeholders holding the granules to show. Since the
+#' granules come from a calendar, this works across calendars rather than only
+#' Gregorian ones: `time_labels = "{cyc(month, year, label = TRUE, abbreviate =
+#' TRUE)} {lin(year)}"` gives "Jan 2020". See
+#' `vignette("time-format-strings", package = "mixtime")` for the full syntax.
 #'
 #' A core feature of these scales is the ability to handle time from multiple
 #' timezones, granularities, and calendars. This is achieved by mapping all time
