@@ -13,7 +13,6 @@ coord_loop(
   expand = FALSE,
   default = FALSE,
   clip = "on",
-  clip_loops = "on",
   coord = coord_cartesian()
 )
 }
@@ -43,10 +42,6 @@ Default is \code{FALSE}.}
 \item{clip}{Should drawing be clipped to the extent of the plot panel?
 A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} means no.}
 
-\item{clip_loops}{Should the drawing of each loop of the timescale be clipped to
-the breaks defined by \code{time_loops}?
-A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} means no.}
-
 \item{coord}{The underlying coordinate system to use. Default is \code{coord_cartesian()}.}
 }
 \value{
@@ -63,13 +58,14 @@ This coordinate system is particularly useful for visualizing seasonal or
 cyclic patterns in time series data. It works by:
 
 \enumerate{
-\item Dividing the time axis into segments based on the specified loop period
-\item Translating each segment to overlay on the first segment
-\item Creating a visualization where multiple time periods are superimposed
+\item Dividing the time axis into loops based on the specified loop period
+\item Folding the time values of every loop into the first loop's window
+\item Cutting geometries that cross a loop boundary into one piece per loop
 }
 
-The coordinate system requires R version 4.2.0 or higher due to its use of
-usage of clipping paths.
+Since the looping is applied to the data rather than to the drawing, the
+panel is drawn only once regardless of how many loops are shown. The cost of
+the plot is therefore independent of the number of loops.
 }
 \section{Practical usage}{
 
@@ -141,14 +137,25 @@ annual seasonal pattern with months as a factor, each month is given equal
 width on the x-axis despite the fact that months have different lengths.
 }
 
+\section{Known limitations}{
+
+
+Geometries are cut into loops by splitting the paths and rings that make them
+up, which requires those shapes to be monotone along the time axis. This
+works works for lines, paths, ribbons, areas, rects, tiles, bars, columns and
+segments. A non-monotone concave polygon that crosses a loop boundary is not
+cut correctly.
+}
+
 \examples{
 library(ggplot2)
 library(ggtime)
+library(mixtime)
 
 # Basic usage with US accidental deaths data
 uad <- tsibble::as_tsibble(USAccDeaths)
 # Requires mixtime, POSIXct, or Date time types
-uad$index <- as.Date(uad$index)
+uad$index <- yearmonth(uad$index)
 
 p <- ggplot(uad, aes(x = index, y = value)) +
   geom_line()
@@ -157,6 +164,6 @@ p <- ggplot(uad, aes(x = index, y = value)) +
 p
 
 # With yearly looping to show seasonal patterns
-p + coord_loop(time_loop = "1 year")
+p + coord_loop(time_loops = "1 year")
 
 }

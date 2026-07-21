@@ -15,7 +15,6 @@ coord_calendar(
   expand = FALSE,
   default = FALSE,
   clip = "on",
-  clip_rows = "on",
   coord = coord_cartesian()
 )
 }
@@ -47,10 +46,6 @@ Default is \code{FALSE}.}
 \item{clip}{Should drawing be clipped to the extent of the plot panel?
 A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} means no.}
 
-\item{clip_rows}{Should the drawing of each loop of the timescale be clipped to
-the breaks defined by \code{time_rows}?
-A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} means no.}
-
 \item{coord}{The underlying coordinate system to use. Default is \code{coord_cartesian()}.}
 }
 \description{
@@ -68,11 +63,14 @@ It works by:
 
 \enumerate{
 \item Dividing the time axis into segments based on the specified row (and column) periods
-\item Translating each panel into the rows and columns of a calendar layout
+\item Folding the time values of every segment into the first segment's window
+\item Cutting geometries that cross a segment boundary, and placing each
+piece into its own calendar row
 }
 
-The coordinate system requires R version 4.2.0 or higher due to its use of
-usage of clipping paths.
+As for \code{\link[=coord_loop]{coord_loop()}}, the layout is applied to the data rather than to the
+drawing, so the panel contents are drawn only once regardless of how many
+rows the calendar has.
 }
 \section{Practical usage}{
 

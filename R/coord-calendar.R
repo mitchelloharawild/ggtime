@@ -23,9 +23,6 @@
 # @param time_cols A duration giving the distance between calendar columns like
 # "1 weeks", or "1 month". If both `cols` and `time_cols` are
 # specified, `time_cols` wins.
-#' @param clip_rows Should the drawing of each loop of the timescale be clipped to
-#'   the breaks defined by `time_rows`?
-#'   A setting of `"on"` (the default) means yes, and a setting of `"off"` means no.
 #'
 #' @details
 #' This coordinate system is particularly useful for visualizing long time spans
@@ -35,11 +32,14 @@
 #'
 #' \enumerate{
 #'   \item Dividing the time axis into segments based on the specified row (and column) periods
-#'   \item Translating each panel into the rows and columns of a calendar layout
+#'   \item Folding the time values of every segment into the first segment's window
+#'   \item Cutting geometries that cross a segment boundary, and placing each
+#'     piece into its own calendar row
 #' }
 #'
-#' The coordinate system requires R version 4.2.0 or higher due to its use of
-#' usage of clipping paths.
+#' As for [coord_loop()], the layout is applied to the data rather than to the
+#' drawing, so the panel contents are drawn only once regardless of how many
+#' rows the calendar has.
 #'
 #' @section Practical usage:
 #'
@@ -106,17 +106,17 @@ coord_calendar <- function(
   expand = FALSE,
   default = FALSE,
   clip = "on",
-  clip_rows = "on",
   coord = coord_cartesian()
 ) {
   if (!is_waiver(cols) || !is_waiver(time_cols)) {
-    stop(
-      "`cols` and `time_cols` are not currently supported in coord_calendar()"
+    cli::cli_abort(
+      "{.arg cols} and {.arg time_cols} are not yet supported by {.fn coord_calendar}."
     )
   }
 
-  # TODO: maybe don't want an inheritance relationship here
-  # (would need to factor out common setup_panel_params / draw_panel code)
+  # A calendar is a loop whose pieces are stacked into rows rather than
+  # superimposed, so all of the cutting and folding is inherited from
+  # `coord_loop()` and only the layout of the pieces is overridden.
   base_coord <- coord_loop(
     loops = rows,
     time_loops = time_rows,
@@ -126,13 +126,10 @@ coord_calendar <- function(
     expand = expand,
     default = default,
     clip = clip,
-    clip_loops = clip_rows
+    coord = coord
   )
 
-  ggplot2::ggproto(
-    NULL,
-    CoordCalendar(base_coord)
-  )
+  ggplot2::ggproto(NULL, CoordCalendar(base_coord))
 }
 
 #' @rdname ggplot2-ggproto
@@ -143,12 +140,23 @@ CoordCalendar <- function(coord) {
     "CoordCalendar",
     coord,
 
-    n_row = 1L,
+    # The row count actually used. Derived across panels, so it is state rather
+    # than input, and is reset at the start of every build by `setup_params()`.
+    .n_row = 1L,
+
+    # `setup_params()` runs once per build, before any panel is set up. Resetting
+    # here is what keeps the `max()` below from accumulating across builds: the
+    # coord object outlives a single build, so a plot reusing a coord that had
+    # previously drawn more rows would otherwise keep the larger row count.
+    setup_params = function(self, data) {
+      self$.n_row <- 1L
+      ggproto_parent(coord, self)$setup_params(data)
+    },
 
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
       if (!inherits(self, "CoordCartesian")) {
         cls <- setdiff(class(self), c("CoordCalendar", "CoordLoop"))[1L]
-        stop("coord_calendar(coord = <", cls, ">) is not supported.")
+        cli::cli_abort("{.fn coord_calendar} does not support {.cls {cls}}.")
       }
 
       params <- ggproto_parent(coord, self)$setup_panel_params(
@@ -157,25 +165,49 @@ CoordCalendar <- function(coord) {
         params
       )
 
-      # Determine row for each cut region
-      # TODO: Currently this just lays everything out in a column, but n_row
-      # and/or time_rows presumably should come from somewhere that knows stuff
-      # about the layout of the calendar.
-      n_row_local <- length(params$time_cuts) - 1L
-      self$n_row <- max(self$n_row, n_row_local)
-      params$time_rows <- seq_len(n_row_local)
+      if (is.null(self$n_row)) {
+        # One row per cut loop, taking the maximum across panels so that facets
+        # share a layout and a calendar row is the same height in every facet.
+        self$.n_row <- max(self$.n_row, length(params$time_cuts) - 1L)
+      }
 
       params
     },
 
+    # Loop `k` becomes calendar row `k`, counting from the top of the panel.
+    # `CoordLoop$transform()` has already cut, folded and rescaled the data, so
+    # placing a piece into its row is just an affine squeeze along the
+    # non-time axis.
+    arrange_loops = function(self, data, panel_params) {
+      row <- data$.loop
+      data$.loop <- NULL
+      n_row <- self$.n_row
+      if (is.null(row) || n_row == 1L) {
+        return(data)
+      }
+
+      offset <- (n_row - row) / n_row
+      stacked <- if (self$is_flipped) {
+        ggplot_global$x_aes
+      } else {
+        ggplot_global$y_aes
+      }
+      for (col in intersect(stacked, names(data))) {
+        data[[col]] <- data[[col]] / n_row + offset
+      }
+      data
+    },
+
+    # `CoordLoop` already renders decoration for a single loop window; a
+    # calendar just repeats that window down the panel.
     render_fg = function(self, panel_params, theme) {
       fg <- ggproto_parent(coord, self)$render_fg(panel_params, theme)
-      repeat_grob_in_rows(fg, self$n_row, self$is_flipped)
+      repeat_grob_in_rows(fg, self$.n_row, self$is_flipped)
     },
 
     render_bg = function(self, panel_params, theme) {
       bg <- ggproto_parent(coord, self)$render_bg(panel_params, theme)
-      repeat_grob_in_rows(bg, self$n_row, self$is_flipped)
+      repeat_grob_in_rows(bg, self$.n_row, self$is_flipped)
     },
 
     render_axis_v = function(self, panel_params, theme) {
@@ -185,13 +217,13 @@ CoordCalendar <- function(coord) {
       )
       if (!self$is_flipped) {
         # TODO: factor out (see note in repeat_grob_in_rows)
-        height <- 1 / self$n_row
+        height <- 1 / self$.n_row
         axis_grobs <- lapply(axis_grobs, function(grob) {
           gtable_col(
             "y_axis",
-            replicate(self$n_row, grob, simplify = FALSE),
+            replicate(self$.n_row, grob, simplify = FALSE),
             width = grobWidth(grob),
-            heights = unit(rep(height, self$n_row), "npc")
+            heights = unit(rep(height, self$.n_row), "npc")
           )
         })
       }
@@ -205,19 +237,46 @@ CoordCalendar <- function(coord) {
       )
       if (self$is_flipped) {
         # TODO: factor out (see note in repeat_grob_in_rows)
-        width <- 1 / self$n_row
+        width <- 1 / self$.n_row
         axis_grobs <- lapply(axis_grobs, function(grob) {
           gtable_row(
             "x_axis",
-            replicate(self$n_row, grob, simplify = FALSE),
+            replicate(self$.n_row, grob, simplify = FALSE),
             height = grobHeight(grob),
-            widths = unit(rep(width, self$n_row), "npc")
+            widths = unit(rep(width, self$.n_row), "npc")
           )
         })
       }
       axis_grobs
     }
   )
+}
+
+#' Flip the x and y axes of a grid function
+#' @param f a \pkg{grid} function, like [viewport()] or [rectGrob()].
+#' @param is_flipped should it be flipped?
+#' @returns function with the same parameters as `f` but with positional axis
+#' arguments (`x`, `y`, `width`, `height`, ...) swapped.
+#' @noRd
+flip_grid_fun <- function(f, is_flipped) {
+  if (!is_flipped) {
+    return(f)
+  }
+  new_f <- function(x, y, width, height, just, hjust, vjust, ...) {
+    f(
+      x = y,
+      y = x,
+      width = height,
+      height = width,
+      just = rev(just),
+      hjust = vjust,
+      vjust = hjust,
+      ...
+    )
+  }
+  formals(new_f)[c("x", "y", "width", "height", "hjust", "vjust")] <-
+    formals(f)[c("y", "x", "height", "width", "vjust", "hjust")]
+  new_f
 }
 
 #' Replicate a grob in rows

@@ -21,9 +21,6 @@
 #'   Default is `FALSE`.
 #' @param clip Should drawing be clipped to the extent of the plot panel?
 #'   A setting of `"on"` (the default) means yes, and a setting of `"off"` means no.
-#' @param clip_loops Should the drawing of each loop of the timescale be clipped to
-#'   the breaks defined by `time_loops`?
-#'   A setting of `"on"` (the default) means yes, and a setting of `"off"` means no.
 #' @param coord The underlying coordinate system to use. Default is `coord_cartesian()`.
 #'
 #' @details
@@ -31,13 +28,14 @@
 #' cyclic patterns in time series data. It works by:
 #'
 #' \enumerate{
-#'   \item Dividing the time axis into segments based on the specified loop period
-#'   \item Translating each segment to overlay on the first segment
-#'   \item Creating a visualization where multiple time periods are superimposed
+#'   \item Dividing the time axis into loops based on the specified loop period
+#'   \item Folding the time values of every loop into the first loop's window
+#'   \item Cutting geometries that cross a loop boundary into one piece per loop
 #' }
 #'
-#' The coordinate system requires R version 4.2.0 or higher due to its use of
-#' usage of clipping paths.
+#' Since the looping is applied to the data rather than to the drawing, the
+#' panel is drawn only once regardless of how many loops are shown. The cost of
+#' the plot is therefore independent of the number of loops.
 #'
 #' @section Practical usage:
 #'
@@ -106,16 +104,25 @@
 #' annual seasonal pattern with months as a factor, each month is given equal
 #' width on the x-axis despite the fact that months have different lengths.
 #'
+#' @section Known limitations:
+#'
+#' Geometries are cut into loops by splitting the paths and rings that make them
+#' up, which requires those shapes to be monotone along the time axis. This
+#' works works for lines, paths, ribbons, areas, rects, tiles, bars, columns and
+#' segments. A non-monotone concave polygon that crosses a loop boundary is not
+#' cut correctly.
+#'
 #' @return A `Coord` ggproto object that can be added to a ggplot.
 #'
 #' @examples
 #' library(ggplot2)
 #' library(ggtime)
+#' library(mixtime)
 #'
 #' # Basic usage with US accidental deaths data
 #' uad <- tsibble::as_tsibble(USAccDeaths)
 #' # Requires mixtime, POSIXct, or Date time types
-#' uad$index <- as.Date(uad$index)
+#' uad$index <- yearmonth(uad$index)
 #'
 #' p <- ggplot(uad, aes(x = index, y = value)) +
 #'   geom_line()
@@ -124,7 +131,7 @@
 #' p
 #'
 #' # With yearly looping to show seasonal patterns
-#' p + coord_loop(time_loop = "1 year")
+#' p + coord_loop(time_loops = "1 year")
 #'
 #' @export
 coord_loop <- function(
@@ -136,7 +143,6 @@ coord_loop <- function(
   expand = FALSE,
   default = FALSE,
   clip = "on",
-  clip_loops = "on",
   coord = coord_cartesian()
 ) {
   specialize_coord_loop(ggplot2::ggproto(
@@ -145,11 +151,11 @@ coord_loop <- function(
     loops = loops,
     time_loops = time_loops,
     time = time,
+    is_flipped = isTRUE(time == "y"),
     limits = list(x = xlim, y = ylim),
     expand = expand,
     default = default,
-    clip = clip,
-    clip_loops = clip_loops
+    clip = clip
   ))
 }
 
@@ -166,48 +172,43 @@ CoordLoop <- function(coord) {
     # must set this appropriately (in [specialize_coord_loop()]).
     time_scale = NULL,
 
-    # Number of rows in the layout (e.g. for `coord_calendar()`).
-    n_row = 1L,
+    # Is the coord being wrapped linear? Used to decide whether munching needs
+    # to do any real work, see `distance()` below.
+    parent_is_linear = coord$is_linear(),
+
+    # Set by `distance()` and consumed by `transform()` to detect connected data.
+    munch_connected = FALSE,
+
+    # When TRUE, cutting and layout are both skipped. Panel decoration
+    # (gridlines, axis keys) is already expressed in the coordinates of the loop
+    # window, so it must be passed straight through -- see `as_decoration()`.
+    is_decoration = FALSE,
 
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
-      self$is_clipped <- isTRUE(self$clip_loops %in% c("on", TRUE)) # could have stricter validation
-      self$is_flipped <- isTRUE(self$time == "y")
-
-      # We need to adjust the panel parameters so that the scale is zoomed in
-      # on the first region (which we will translate all other regions onto in draw_panel).
-
-      # Calculate the panel parmeters as normal (without cutting)
-      # Need to do this so that user-defined limits, scale limits, expand, etc
-      # are all appropriately taken into account
+      # Calculate the panel parameters as normal (without looping) so that
+      # user-defined limits, scale limits, expand, etc are all taken into
+      # account when working out where to cut.
       uncut_params <- ggproto_parent(coord, self)$setup_panel_params(
         scale_x,
         scale_y,
         params
       )
 
-      # Determine the cutpoints where we will loop
-      if (is_waiver(self$loops)) {
-        time_cuts <- cut_axis_time_loop(
-          uncut_params,
-          self$time_scale,
-          self$time_loops
-        )
-      } else {
-        time_cuts <- sort(unique(self$loops))
-        time_cuts <- c(
-          time_cuts,
-          time_cuts[length(time_cuts)] + 1
-        )
-      }
+      time_cuts <- loop_cuts(
+        uncut_params,
+        self$time_scale,
+        self$loops,
+        self$time_loops
+      )
 
-      # Recalculate the panel parameters zoomed in on the first region.
-      # Doing it this way should apply expand settings, etc, again.
-      # (comment out this line to disable zooming for debugging)
+      # Recalculate the panel parameters zoomed in on the first loop, so that
+      # expansion, breaks and user limits are all applied to the window that is
+      # actually drawn.
       old_limits <- self$limits
       self$limits[[self$time_scale]] <- c(
         # Restart at the first time point
         time_cuts[1],
-        # End at the longest time point in the loop
+        # End at the longest loop in the window
         time_cuts[1] + max(diff(time_cuts))
       )
       cut_params <- ggproto_parent(coord, self)$setup_panel_params(
@@ -217,33 +218,92 @@ CoordLoop <- function(coord) {
       )
       self$limits <- old_limits
 
-      # Use cyclical labels
-      # if (!is_waiver(self$time_loops)) {
-      #   # TODO - A better way to inform scale/transform that labels are cyclical
-      #   trans_env <- environment(cut_params[[self$time]]$scale$trans$inverse)
-      #   cycle <- time_chronon(self$time_loops)
-      #   cycle@n <- cycle@n * as.numeric(self$time_loops)
-      #   trans_env$ptype <- mixtime::new_time(
-      #     chronon = time_chronon(trans_env$ptype),
-      #     cycle = cycle,
-      #     class = "mt_cyclical"
-      #   )
-      # }
-
       cut_params$time_cuts <- time_cuts
-      cut_params$time_rows <- rep.int(1L, length(cut_params$time_cuts) - 1)
-      cut_params$uncut <- uncut_params
+      # Cutting happens in transformed data space, which is what `transform()`
+      # and `distance()` are handed.
+      cut_params$loop_cuts <- as.numeric(
+        cut_params[[self$time_scale]]$get_transformation()$transform(time_cuts)
+      )
       cut_params
     },
 
-    range = function(self, panel_params) {
-      # range needs to consider both the cut and the uncut scale so that (e.g.)
-      # the position of infinities is correct
-      Map(
-        range,
-        ggproto_parent(coord, self)$range(panel_params),
-        ggproto_parent(coord, self)$range(panel_params$uncut)
+    # Reporting as non-linear is what gives us the "is this geometry connected?"
+    # signal: `coord_munch()` (called only by connected geoms) calls
+    # `distance()` immediately before `transform()`, whereas pointwise geoms
+    # reach `transform()` directly. It also gets us `Inf` resolved against the
+    # backtransformed range for free, and makes rects and segments arrive as
+    # rings and paths so that one cutting code path covers them all.
+    is_linear = function() FALSE,
+
+    distance = function(self, x, y, panel_params) {
+      self$munch_connected <- TRUE
+
+      if (self$parent_is_linear) {
+        # Make munching a no-op: a distance of 0 gives `extra = 1`, and
+        # interpolating a segment into one piece returns it unchanged.
+        return(rep(0, max(length(x) - 1L, 0L)))
+      }
+
+      # The parent genuinely needs to munch (e.g. `coord_radial()`). Measure the
+      # unfolded distance: a segment that spans several loops is cut into one
+      # piece per loop, and each of those pieces needs its own vertices. Folding
+      # first would report a segment spanning a whole loop as having travelled
+      # nowhere, and it would be drawn as a straight chord instead of an arc.
+      ggproto_parent(coord, self)$distance(x, y, panel_params)
+    },
+
+    transform = function(self, data, panel_params) {
+      connected <- isTRUE(self$munch_connected)
+      # Reset defensively on every call, so a `transform()` reached without a
+      # preceding `distance()` is never mistaken for connected data.
+      self$munch_connected <- FALSE
+
+      if (isTRUE(self$is_decoration)) {
+        return(ggproto_parent(coord, self)$transform(data, panel_params))
+      }
+
+      cut <- if (connected) cut_connected else cut_pointwise
+      data <- cut(data, self$time, panel_params$loop_cuts)
+      data <- ggproto_parent(coord, self)$transform(data, panel_params)
+      self$arrange_loops(data, panel_params)
+    },
+
+    # Panel decoration is derived from the panel params, whose limits are the
+    # loop window, so it already lives in the folded coordinate space. Cutting
+    # it would fold breaks in the window's overhang (a break sitting exactly on
+    # the next loop's start) back to the start of the panel.
+    train_panel_guides = function(self, panel_params, layers, params = list()) {
+      as_decoration(
+        self,
+        ggproto_parent(coord, self)$train_panel_guides(
+          panel_params,
+          layers,
+          params
+        )
       )
+    },
+
+    render_bg = function(self, panel_params, theme) {
+      as_decoration(
+        self,
+        ggproto_parent(coord, self)$render_bg(panel_params, theme)
+      )
+    },
+
+    render_fg = function(self, panel_params, theme) {
+      as_decoration(
+        self,
+        ggproto_parent(coord, self)$render_fg(panel_params, theme)
+      )
+    },
+
+    # Hook for laying the cut loops out within the panel. `coord_loop()`
+    # superimposes them, so there is nothing to do beyond dropping the loop
+    # index that `cut_*()` attached. `coord_calendar()` overrides this to stack
+    # the loops into rows.
+    arrange_loops = function(self, data, panel_params) {
+      data$.loop <- NULL
+      data
     }
   )
 }
@@ -274,8 +334,11 @@ CoordLoop <- function(coord) {
 #' - `coord$limits`: If the positional scales for this coord are not `x` and `y`
 #'   (so `coord$time_scale` is not `"x"` or `"y"`), you may need to adjust
 #'   `limits` to map limits from `xlim` and `ylim` onto the corresponding scales.
-#' - `coord$transform()` and/or `coord$draw_panel()`: To transform coordinates
-#'   into looped positions and/or transform grobs to create looping.
+#'
+#' Note that the cutting and folding of data is handled generically by
+#' `CoordLoop`, in terms of `coord$time` (the data aesthetic) and
+#' `coord$time_scale` (the panel param). Specializations should not need to
+#' override `transform()` or `draw_panel()`.
 #'
 #' We use a separate specialization function rather than making `CoordLoop()`
 #' generic so that the default method of this generic can be an error
@@ -290,7 +353,32 @@ specialize_coord_loop <- function(coord, ...) {
 #' @export
 specialize_coord_loop.default <- function(coord, ...) {
   cls <- setdiff(class(coord), "CoordLoop")[1L]
-  stop("coord_loop(coord = <", cls, ">) is not supported.")
+  cli::cli_abort(c(
+    "{.fn coord_loop} does not support {.cls {cls}}.",
+    i = "Supported coords are {.fn coord_cartesian} and {.fn coord_radial}."
+  ))
+}
+
+#' Evaluate an expression that draws panel decoration
+#'
+#' Gridlines and axis keys are transformed through `Coord$transform()` just like
+#' layer data is, but they describe the loop *window* rather than data within it,
+#' and are already expressed in its coordinates. They must therefore be passed
+#' through untouched: cutting them would fold a break sitting on the next loop's
+#' start back to the start of the panel, and a layout that places each loop
+#' separately (such as `coord_calendar()`'s rows) would squeeze them all into the
+#' first row instead of replicating them across every row.
+#'
+#' ggplot2 only routes panel decoration through `render_bg()`, `render_fg()` and
+#' `train_panel_guides()`, so wrapping those three covers it.
+#' @param coord A `CoordLoop` ggproto object.
+#' @param expr Expression to evaluate, lazily.
+#' @noRd
+as_decoration <- function(coord, expr) {
+  old <- coord$is_decoration
+  coord$is_decoration <- TRUE
+  on.exit(coord$is_decoration <- old, add = TRUE)
+  expr
 }
 
 #' @export
@@ -298,49 +386,17 @@ specialize_coord_loop.CoordCartesian <- function(coord, ...) {
   force(coord)
 
   if (!isTRUE(coord$time %in% c("x", "y"))) {
-    stop(
-      "coord_loop(coord = <CoordCartesian>, time = ...) requires time %in% c('x', 'y')."
-    )
+    cli::cli_abort(c(
+      "{.fn coord_loop} requires {.arg time} to be {.val x} or {.val y}.",
+      x = "{.arg time} is {.val {coord$time}}."
+    ))
   }
 
   ggplot2::ggproto(
     "CoordLoopCartesian",
     coord,
 
-    time_scale = coord$time,
-
-    transform = function(self, data, panel_params) {
-      reverse <- panel_params$reverse %||% "none"
-      x <- panel_params$x[[switch(reverse, xy = , x = "reverse", "rescale")]]
-      y <- panel_params$y[[switch(reverse, xy = , y = "reverse", "rescale")]]
-      data <- transform_position(data, x, y)
-      # need to use the full range for squish_infinite otherwise segments with
-      # infinite endpoints are not repeated over rows in coord_calendar
-      range <- transform_position(self$backtransform_range(panel_params), x, y)
-      transform_position(
-        data,
-        function(x) scales::squish_infinite(x, range$x),
-        function(y) scales::squish_infinite(y, range$y)
-      )
-    },
-
-    draw_panel = function(self, panel, params, theme) {
-      check_can_clip("coord_loop(clip = 'on')", self$is_clipped)
-
-      # Get cutpoints along the axis for dividing the panel grob into regions
-      cuts <- params[[self$time_scale]]$rescale(as.numeric(params$time_cuts))
-
-      translated_panels <- translate_and_superimpose_grobs(
-        panel,
-        cuts,
-        params$time_rows,
-        self$n_row,
-        self$is_flipped,
-        self$is_clipped
-      )
-
-      ggproto_parent(coord, self)$draw_panel(translated_panels, params, theme)
-    }
+    time_scale = coord$time
   )
 }
 
@@ -349,9 +405,12 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
   force(coord)
 
   if (!isTRUE(coord$time == coord$theta)) {
-    stop(
-      "coord_loop(coord = <CoordRadial>, time = ...) requires time == coord$theta."
-    )
+    cli::cli_abort(c(
+      "{.fn coord_loop} requires {.arg time} to be the angular axis of \\
+       {.fn coord_radial}.",
+      x = "{.arg time} is {.val {coord$time}}, but {.arg theta} is \\
+           {.val {coord$theta}}."
+    ))
   }
 
   ggplot2::ggproto(
@@ -362,231 +421,6 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
     limits = list(
       theta = coord$limits[[coord$theta]] %||% coord$super()$limits$theta,
       r = coord$limits[[coord$r]] %||% coord$super()$limits$r
-    ),
-
-    setup_panel_params = function(self, scale_x, scale_y, params = list()) {
-      params <- ggproto_parent(coord, self)$setup_panel_params(
-        scale_x,
-        scale_y,
-        params
-      )
-
-      # construct a piecewise linear transformation that re-aligns the start of
-      # each cut to the origin
-      time_trans <- params$theta$get_transformation()$transform
-      cuts <- time_trans(params$time_cuts)
-      widths <- diff(cuts)
-      origin <- cuts[1]
-      rest <- cuts[-1]
-      range <- diff(params$theta.range)
-      prev_upper_limits <- origin + (seq_along(rest) - 1) * range + widths
-      next_lower_limits <- origin + seq_along(rest) * range
-
-      # NOTE: This is a hack that should be better. Basically the problem is
-      # that we're trying to move points at the upper limit of a cut region to
-      # the beginning of the next region, but to draw lines in between we need
-      # to also move some munched points (from coord_munch()) that are between
-      # the upper limit and the upper limit - eps where eps < 1 granularity
-      # (cannot be == 1 or we'll move points that are before the upper limit).
-      # Without something like this you just get an ugly straight line from
-      # the end of one loop to the beginning of the next (instead of a curve).
-      # A better solution would be if coord_munch were generic and we could
-      # implement a method for it to insert the needed points to make a curve.
-      #
-      # The upshot is this currently only works properly (ish) if the input
-      # scale transforms to a numeric where the smallest granularity is 1.
-      eps <- 0.99
-
-      time_unaligned <- c(
-        origin - range,
-        origin,
-        vctrs::vec_interleave(rest - eps, rest),
-        rest[length(rest)] + range
-      )
-      time_aligned <- c(
-        origin - range,
-        origin,
-        vctrs::vec_interleave(prev_upper_limits - eps, next_lower_limits),
-        next_lower_limits[length(next_lower_limits)] + range
-      )
-      params$align <- stats::approxfun(
-        time_unaligned,
-        time_aligned,
-        ties = "ordered",
-        rule = 2
-      )
-
-      # since we can't do proper clipping, the hackish solution I've come up
-      # with is to make data in the gaps between loops transparent --- so we
-      # need a function to identify if a value is in the gap
-      in_gap_indicator <- stats::stepfun(
-        vctrs::vec_interleave(
-          prev_upper_limits,
-          next_lower_limits
-        ),
-        c(0, rep(c(1, 0), length(rest))),
-        ties = "min"
-      )
-      params$in_gap <- function(x) {
-        in_gap_indicator(x) %in% 1 # NA => FALSE
-      }
-
-      params
-    },
-
-    transform = function(self, data, panel_params) {
-      # align the starting point of each loop
-      data[[self$theta]] <- panel_params$align(data[[self$theta]])
-
-      # emulate clipping --- this is a hack but I can't see a way to do proper clipping
-      if (self$is_clipped) {
-        in_gap <- panel_params$in_gap(data[[self$theta]])
-        if (any(in_gap)) {
-          data[in_gap, "colour"] = "transparent"
-          data[in_gap, "fill"] = "transparent"
-          data[in_gap, "alpha"] = 0
-        }
-      }
-
-      ggproto_parent(coord, self)$transform(data, panel_params)
-    }
-  )
-}
-
-
-# helpers -----------------------------------------------------------------
-
-#' Check that clipping grobs are supported
-#' @param context string giving the context (e.g. function, arguments, etc)
-#' to use in message in case of failure
-#' @param check if not `TRUE` no check is made
-#' @returns `invisible(NULL)` if clipping is supported or raises an error if not.
-#' @noRd
-#' @keywords internal
-check_can_clip <- function(context, check) {
-  if (check && !ggplot2::check_device("clippingPaths")) {
-    stop(context, " requires R v4.2.0 or higher.")
-  }
-}
-
-#' Translate and superimpose grobs at specified cutpoints along x (or y) axis
-#' @param grobs list of grobs
-#' @param cuts x (or y if `is_flipped`) positions to cut along
-#' @param rows vector with length = `length(cuts) - 1` giving
-#' destination row id of each corresponding cut region (starting from 1).
-#' @param n_row maximum row in the layout
-#' @param is_flipped are the axes flipped? (so `cuts` are `y` positions).
-#' @param is_clipped should output regions be clipped?
-#' @noRd
-translate_and_superimpose_grobs <- function(
-  grobs,
-  cuts,
-  rows,
-  n_row,
-  is_flipped = FALSE,
-  is_clipped = FALSE
-) {
-  origin <- cuts[[1]]
-  xs <- cuts[-length(cuts)]
-  widths <- diff(cuts)
-
-  ys <- 1 - rows / n_row
-  height <- 1 / n_row
-
-  # Translate and superimpose the panel grob on itself repeatedly.
-  # I attempted to use defineGrob() + useGrob() here to improve efficiency
-  # (since theoretically it allows efficient repitition of a single grob
-  # drawn off-screen), I couldn't figure out how to make the grob defined
-  # by defineGrob() not be clipped by the first region it would theoretically
-  # have been drawn into given where it is in the grob tree, which meant
-  # it was always getting clipped. So I stuck to just repeatedly re-drawing
-  # the same grob.
-  .viewport <- flip_grid_fun(viewport, is_flipped)
-  .rectGrob <- flip_grid_fun(rectGrob, is_flipped)
-  grob <- inject(grobTree(!!!grobs))
-  translated_grobs <- .mapply(
-    function(x, y, width) {
-      grobTree(
-        grob,
-        vp = .viewport(
-          x = unit(origin - x, "npc"),
-          y = unit(y, "npc"),
-          height = unit(height, "npc"),
-          just = c(0, 0),
-          clip = if (is_clipped) {
-            .rectGrob(
-              unit(x, "npc"),
-              y = unit(0, "npc"),
-              width = unit(width, "npc"),
-              height = unit(1, "npc"),
-              just = c(0, 0)
-            )
-          } else {
-            "inherit"
-          }
-        )
-      )
-    },
-    list(xs, ys, widths),
-    NULL
-  )
-
-  # # Uncomment for debug info --- region boundaries and centers
-  # centers <- rowMeans(embed(cuts, 2))
-  # translated_grobs <- c(
-  #   translated_grobs,
-  #   list(
-  #     rectGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), width = unit(widths, "npc"), gp = gpar(col = "red", fill = NA)),
-  #     pointsGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), gp = gpar(col = "red"))
-  #   )
-  # )
-
-  translated_grobs
-}
-
-#' Flip the x and y axes of a grid function
-#' @param f a \pkg{grid} function, like [viewport()] or [rectGrob()].
-#' @param is_flipped should it be flipped?
-#' @returns function with the same parameters as `f` but with positional axis
-#' arguments (`x`, `y`, `width`, `height`, ...) swapped.
-#' @noRd
-flip_grid_fun <- function(f, is_flipped) {
-  if (!is_flipped) {
-    return(f)
-  }
-  new_f <- function(x, y, width, height, just, hjust, vjust, ...) {
-    f(
-      x = y,
-      y = x,
-      width = height,
-      height = width,
-      just = rev(just),
-      hjust = vjust,
-      vjust = hjust,
-      ...
     )
-  }
-  formals(new_f)[c("x", "y", "width", "height", "hjust", "vjust")] <-
-    formals(f)[c("y", "x", "height", "width", "vjust", "hjust")]
-  new_f
-}
-
-#' Get cutpoints along a positional axis for creating a time loop
-#' @param panel_params Panel params, e.g. as returned by `Coord$setup_panel_params()`
-#' and passed to `Coord$draw_panel(params = ...)`
-#' @param axis Axis to cut (`"x"` or `"y"`).
-#' @param by Duration to cut by
-#' @returns vector of time cutpoints
-#' @noRd
-cut_axis_time_loop <- function(panel_params, axis, by) {
-  trans <- panel_params[[axis]]$get_transformation()
-  range <- panel_params[[axis]]$limits
-  time_range <- trans$inverse(range)
-  time_range[1] <- mixtime::time_floor(time_range[1], by)
-  time_range[2] <- mixtime::time_ceiling(time_range[2], by)
-  time_cuts <- unique(c(
-    seq(time_range[1], time_range[2] + 1, by = by),
-    time_range[2] + 1
-  ))
-  time_cuts
+  )
 }
