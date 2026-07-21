@@ -169,7 +169,44 @@ scale_x_mixtime <- function(
 }
 
 
-#' @importFrom scales breaks_width
+#' Step through a time range in whole `size` units
+#'
+#' Limits of a mixtime scale are an `<mt_time>` rather than a `Date` or
+#' `POSIXct`, so the sequence has to be built with mixtime's own calendrical
+#' arithmetic. Without this method, [scales::fullseq()] errors with "no
+#' applicable method for 'fullseq'".
+#'
+#' Rounding outwards to whole `size` units matches the `Date` and `POSIXct`
+#' methods, and keeps breaks on calendar boundaries (a "1 day" break lands at
+#' midnight) rather than wherever the panel's expansion happens to fall.
+#' @param range The range to cover, as an `<mt_time>`.
+#' @param size The step size, as a duration or a string such as `"1 day"`.
+#' @param ... Ignored, for compatibility with other [scales::fullseq()] methods.
+#' @noRd
+#' @exportS3Method scales::fullseq
+fullseq.mt_time <- function(range, size, ...) {
+  seq(
+    mixtime::time_floor(range[1], size),
+    mixtime::time_ceiling(range[2], size),
+    by = size
+  )
+}
+
+#' Equally spaced breaks along a time scale
+#'
+#' The mixtime equivalent of [scales::breaks_width()]: a function factory
+#' returning a break function that walks the scale's limits in steps of `width`
+#' via [scales::fullseq()]. Unlike `breaks_width()` there is no `offset`, which
+#' spares mixtime an `offset_by()` method for a shift that is always zero.
+#' @param width The break width, as a duration or a string such as `"1 day"`.
+#' @noRd
+breaks_time_seq <- function(width) {
+  force(width)
+  function(x) {
+    scales::fullseq(x, width)
+  }
+}
+
 #' @keywords internal
 mixtime_scale <- function(
   aesthetics,
@@ -189,21 +226,13 @@ mixtime_scale <- function(
 ) {
   call <- call %||% current_call()
 
-  # Backward compatibility
-  if (is.character(breaks)) {
-    breaks <- breaks_width(breaks)
-  }
-  if (is.character(minor_breaks)) {
-    minor_breaks <- breaks_width(minor_breaks)
-  }
-
   if (!is_waiver(time_breaks)) {
     # TODO: Validate input as <duration>
-    breaks <- breaks_width(time_breaks)
+    breaks <- breaks_time_seq(time_breaks)
   }
   if (!is_waiver(time_minor_breaks)) {
     # TODO: Validate input as <duration>
-    minor_breaks <- breaks_width(time_minor_breaks)
+    minor_breaks <- breaks_time_seq(time_minor_breaks)
   }
   if (!is_waiver(time_labels)) {
     labels <- function(self, x) {
