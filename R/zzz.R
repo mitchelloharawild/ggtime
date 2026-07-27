@@ -1,7 +1,12 @@
 # nocov start
 .onLoad <- function(...) {
   if (getRversion() >= "4.3.0") {
-    register_s3_method("base", "chooseOpsMethod", "gg_tsensemble")
+    register_s3_method(
+      "base",
+      "chooseOpsMethod",
+      "gg_tsensemble",
+      chooseOpsMethod_gg_tsensemble
+    )
   }
 
   S7::methods_register()

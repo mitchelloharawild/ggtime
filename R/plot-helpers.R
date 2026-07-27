@@ -888,7 +888,10 @@ gg_tsresiduals <- function(
   e1
 }
 
-chooseOpsMethod.gg_tsensemble <- function(x, y, mx, my, cl, reverse) {
+# Registered as the `chooseOpsMethod()` method for `gg_tsensemble` by
+# `.onLoad()`, since the generic only exists from R 4.3.0.
+# Named with an underscore rather than a dot to avoid roxygen S3 method noise.
+chooseOpsMethod_gg_tsensemble <- function(x, y, mx, my, cl, reverse) {
   # Always use the gg_tsensemble method
   TRUE
 }
