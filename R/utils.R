@@ -59,20 +59,24 @@ check_gaps <- function(x) {
   }
 }
 
-#' Check that a duration argument describes a single duration
+#' Reduce a duration argument to the granule it steps by
 #'
 #' Durations are used to specify the length of time between breaks or loops,
-#' and must be a single duration. This function produces a helpful error message
-#' if these arguments are not a single duration.
+#' and must be a single duration. This function converts durations to granules,
+#' and produces a helpful error message if this is not possible (e.g. inputs are
+#' not a single duration.)
 #'
-#' @param x The duration to check, or a waiver/`NULL` for no duration.
+#' @param x The duration to reduce: a `<mixtime>` duration, a time granule, a
+#'   string like `"1 day"`, or a waiver/`NULL` for no duration.
 #' @param arg The name of the argument being checked, for the error message.
 #' @param call The environment or call to report the error from.
-#' @returns `x`, invisibly, or raises an error.
+#' @returns A time granule if `x` is a duration, and `x` unchanged otherwise.
 #' @noRd
-check_single_duration <- function(x, arg = caller_arg(x), call = caller_env()) {
-  if (is_waiver(x) || is.null(x)) {
-    return(invisible(x))
+duration_as_granule <- function(x, arg = caller_arg(x), call = caller_env()) {
+  # A granule (e.g. `mixtime::cal_gregorian$year(1L)`) is a scalar rather than a
+  # vector, and is already what this returns.
+  if (is_waiver(x) || is.null(x) || S7::S7_inherits(x, mixtime::mt_unit)) {
+    return(x)
   }
 
   size <- vctrs::vec_size(x)
@@ -86,7 +90,31 @@ check_single_duration <- function(x, arg = caller_arg(x), call = caller_env()) {
     )
   }
 
-  invisible(x)
+  # Anything else (a string, or a plain number for a non-time scale) describes
+  # its own step and is passed along untouched.
+  if (!is_mixtime(x) && !S7::S7_inherits(x, mixtime::mt_duration)) {
+    return(x)
+  }
+
+  if (!all(mixtime::time_is_duration(x))) {
+    cli::cli_abort(
+      c(
+        "{.arg {arg}} must be a duration, not a time point.",
+        i = "A duration measures a length of time, such as
+             {.code mixtime::years(1L)} or {.val 1 year}."
+      ),
+      call = call
+    )
+  }
+
+  # `mixtime::years(2L)` steps by 2 years, which is a 2 year granule. This is
+  # the conversion mixtime's own `seq()` method makes.
+  if (is_mixtime(x)) {
+    x <- vecvec::unvecvec(x)
+  }
+  granule <- attr(x, "chronon")
+  granule@n <- granule@n * as.numeric(x)
+  granule
 }
 
 interval_to_period <- function(interval) {

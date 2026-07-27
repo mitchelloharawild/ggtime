@@ -145,7 +145,7 @@ coord_loop <- function(
   clip = "on",
   coord = coord_cartesian()
 ) {
-  check_single_duration(time_loops)
+  time_loops <- duration_as_granule(time_loops)
 
   specialize_coord_loop(ggplot2::ggproto(
     NULL,

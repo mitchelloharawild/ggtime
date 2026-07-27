@@ -117,4 +117,14 @@ test_that("time_loops must be a single duration", {
   # No looping is not a duration to check.
   expect_no_error(coord_loop(time_loops = NULL))
   expect_no_error(coord_loop())
+
+  # A time point says when, not how long.
+  expect_error(
+    coord_loop(time_loops = mixtime::yearmonth(600L)),
+    "`time_loops` must be a duration, not a time point"
+  )
+  expect_error(
+    coord_calendar(time_rows = mixtime::yearmonth(600L)),
+    "`time_rows` must be a duration, not a time point"
+  )
 })

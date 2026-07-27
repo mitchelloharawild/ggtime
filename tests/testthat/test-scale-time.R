@@ -52,4 +52,28 @@ test_that("break widths must be a single duration", {
     "`time_minor_breaks` must be a single duration"
   )
   expect_no_error(scale_x_mixtime(time_breaks = mixtime::months(1L)))
+
+  # A time point says when, not how long.
+  expect_error(
+    scale_x_mixtime(time_breaks = mixtime::yearmonth(600L)),
+    "`time_breaks` must be a duration, not a time point"
+  )
+})
+
+test_that("break widths can be given as a duration", {
+  df <- tibble::tibble(x = mixtime::yearmonth(600:635), y = 1:36)
+  p <- ggplot(df, aes(x, y)) + geom_line()
+
+  # `mixtime::years()` and friends keep the duration inside a vecvec wrapper,
+  # which `seq()` won't step by. Reducing it to the granule it steps by gives
+  # the same breaks as the equivalent string.
+  expect_equal(
+    scale_labels(p + scale_x_mixtime(time_breaks = mixtime::years(1L))),
+    scale_labels(p + scale_x_mixtime(time_breaks = "1 year"))
+  )
+  # A duration of more than one unit steps by all of it, rather than by one.
+  expect_equal(
+    scale_labels(p + scale_x_mixtime(time_breaks = mixtime::years(2L))),
+    scale_labels(p + scale_x_mixtime(time_breaks = "2 years"))
+  )
 })

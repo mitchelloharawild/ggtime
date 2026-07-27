@@ -122,7 +122,7 @@ coord_calendar <- function(
     )
   }
 
-  check_single_duration(time_rows)
+  time_rows <- duration_as_granule(time_rows)
 
   # A calendar is a loop whose pieces are stacked into rows rather than
   # superimposed, so all of the cutting and folding is inherited from

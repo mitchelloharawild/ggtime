@@ -185,6 +185,7 @@ scale_x_mixtime <- function(
 #' @noRd
 #' @exportS3Method scales::fullseq mixtime::mt_time
 `fullseq.mixtime::mt_time` <- function(range, size, ...) {
+  size <- duration_as_granule(size)
   seq(
     mixtime::time_floor(range[1], size),
     mixtime::time_ceiling(range[2], size),
@@ -227,11 +228,11 @@ mixtime_scale <- function(
   call <- call %||% current_call()
 
   if (!is_waiver(time_breaks)) {
-    check_single_duration(time_breaks, call = call)
+    time_breaks <- duration_as_granule(time_breaks, call = call)
     breaks <- breaks_time_seq(time_breaks)
   }
   if (!is_waiver(time_minor_breaks)) {
-    check_single_duration(time_minor_breaks, call = call)
+    time_minor_breaks <- duration_as_granule(time_minor_breaks, call = call)
     minor_breaks <- breaks_time_seq(time_minor_breaks)
   }
   if (!is_waiver(time_labels)) {

@@ -188,7 +188,8 @@ cut_connected <- function(data, time, cuts) {
 #'   `"theta"`, ...).
 #' @param loops A vector of time points at which to loop, or a waiver.
 #' @param time_loops A duration to loop by (e.g. `"1 year"`), or a waiver.
-#'   Takes precedence over `loops`.
+#'   Takes precedence over `loops`. Already reduced to a step that `seq()`
+#'   accepts by `duration_as_granule()`.
 #' @returns A vector of time cutpoints of the scale's own type. Loop `k` spans
 #'   `[cuts[k], cuts[k + 1])`, so there is always one more cut than loop.
 #'
