@@ -26,6 +26,7 @@ colour.
 }
 \examples{
 \dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+library(dplyr)
 tsibbledata::gafa_stock \%>\%
  autoplot(vars(Close, log(Close)))
 \dontshow{\}) # examplesIf}

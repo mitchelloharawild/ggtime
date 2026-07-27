@@ -54,7 +54,7 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
       # No forward transformation yet, so there is nothing to convert onto.
       return(x)
     }
-    if (!inherits(x, "mt_time")) {
+    if (!S7::S7_inherits(x, mixtime::mt_time)) {
       # Bare numbers are already positions in the common granularity, and need
       # only their class back.
       return(vctrs::vec_restore(vctrs::vec_data(x), ptype))
@@ -71,7 +71,7 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
   }
 
   to_mixtime <- function(x) {
-    if (inherits(x, "mt_time")) {
+    if (S7::S7_inherits(x, mixtime::mt_time)) {
       # Already carries its granularity, no need to convert to common ptype.
       return(x)
     }
@@ -89,7 +89,7 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
   # becoming a position.
   time_breaks <- function(x, n = 5) {
     breaks <- scales::breaks_pretty()(x, n)
-    if (inherits(x, "mt_time")) {
+    if (S7::S7_inherits(x, mixtime::mt_time)) {
       breaks <- vctrs::vec_restore(breaks, x)
     }
     breaks
@@ -180,7 +180,7 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
 #'
 #' # Daily pedestrian counts for the first quarter of 2021: busy on weekdays,
 #' # much quieter at the weekend, drifting upwards over the quarter.
-#' pedestrians <- tibble::tibble(
+#' pedestrians <- data.frame(
 #'   date = mixtime::date("2021-01-01") + 0:89,
 #'   count = round(
 #'     ifelse(seq_along(date) %% 7 %in% c(2, 3), 4500, 12000) +
@@ -215,7 +215,7 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
 transform_warp <- function(warps) {
   # Time warp points may be given at a different granularity to the data, and
   # are converted once the data arrives. Anything else warps on its values as-is.
-  warp_is_time <- is_mixtime(warps) || inherits(warps, "mt_time")
+  warp_is_time <- is_mixtime(warps) || S7::S7_inherits(warps, mixtime::mt_time)
 
   warp_points <- if (is_mixtime(warps)) {
     # Time warp points set the granularity of the warped scale, so there must
@@ -278,7 +278,7 @@ transform_warp <- function(warps) {
       }
 
       # Only `<mt_time>` carries the granularity to convert warp points onto.
-      if (!inherits(x, "mt_time")) {
+      if (!S7::S7_inherits(x, mixtime::mt_time)) {
         cli::cli_abort(
           c(
             "Can't warp {.obj_type_friendly {x}} against time {.arg warps}.",

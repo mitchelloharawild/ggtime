@@ -362,7 +362,7 @@ ScaleContinuousMixtime <- ggproto(
       )
     }
 
-    is_duration <- vapply(x@x, inherits, logical(1L), "mt_duration")
+    is_duration <- vapply(x@x, S7::S7_inherits, logical(1L), mixtime::mt_duration)
     if (any(is_duration) && !all(is_duration)) {
       cli::cli_abort(
         c(
@@ -381,7 +381,7 @@ ScaleContinuousMixtime <- ggproto(
     }
 
     x@x <- lapply(x@x, function(v) {
-      if (inherits(v, "mt_duration")) {
+      if (S7::S7_inherits(v, mixtime::mt_duration)) {
         # The duration mode of time is an exact length rather than a point
         # within a granule, so it needs no `align_discrete` alignment. It must
         # also stay in the duration mode: measuring it from the epoch would

@@ -5,7 +5,7 @@ scale_labels <- function(p, aes = "x") {
 }
 
 test_that("durations are labelled as durations", {
-  df <- tibble::tibble(x = mixtime::days(1:10), y = 1:10)
+  df <- data.frame(x = mixtime::days(1:10), y = 1:10)
   p <- ggplot(df, aes(x, y)) + geom_line()
 
   # Not "1970-01-03", which measures the duration from the epoch as if it were
@@ -14,7 +14,7 @@ test_that("durations are labelled as durations", {
 })
 
 test_that("mixed granularity durations share the finest chronon", {
-  df <- tibble::tibble(
+  df <- data.frame(
     x = c(mixtime::days(1:5), mixtime::hours(c(140, 160))),
     y = 1:7
   )
@@ -24,7 +24,7 @@ test_that("mixed granularity durations share the finest chronon", {
 })
 
 test_that("durations can't be scaled alongside other modes of time", {
-  df <- tibble::tibble(
+  df <- data.frame(
     x = c(mixtime::days(1:3), mixtime::date("2021-01-01")),
     y = 1:4
   )
@@ -34,7 +34,7 @@ test_that("durations can't be scaled alongside other modes of time", {
 })
 
 test_that("time points are unaffected by duration handling", {
-  df <- tibble::tibble(x = mixtime::yearmonth(600:611), y = 1:12)
+  df <- data.frame(x = mixtime::yearmonth(600:611), y = 1:12)
   p <- ggplot(df, aes(x, y)) + geom_line()
 
   expect_match(scale_labels(p), "^20[0-9]{2} [A-Z][a-z]{2}")
@@ -70,7 +70,7 @@ test_that("break widths reject strings", {
 })
 
 test_that("break widths can be given as a granule directly", {
-  df <- tibble::tibble(x = mixtime::yearmonth(600:635), y = 1:36)
+  df <- data.frame(x = mixtime::yearmonth(600:635), y = 1:36)
   p <- ggplot(df, aes(x, y)) + geom_line()
 
   # `mixtime::years()` and friends keep the duration inside a vecvec wrapper,
@@ -85,4 +85,65 @@ test_that("break widths can be given as a granule directly", {
     scale_labels(p + scale_x_mixtime(time_breaks = mixtime::years(2L))),
     scale_labels(p + scale_x_mixtime(time_breaks = mixtime::cal_gregorian$year(2L)))
   )
+})
+
+test_that("time_breaks steps through the limits by a duration", {
+  # `breaks_time_seq()` walks the limits with mixtime's calendrical arithmetic,
+  # since `scales::fullseq()` has no method for the `<mt_time>` that a mixtime
+  # scale's limits arrive as.
+  df <- data.frame(x = mixtime::date("2020-01-06") + 0:60, y = 1:61)
+  p <- ggplot(df, aes(x, y)) +
+    geom_line() +
+    scale_x_mixtime(time_breaks = mixtime::weeks(1L))
+
+  breaks <- ggplot_build(p)$layout$panel_params[[1]]$x$get_breaks()
+  breaks <- breaks[!is.na(breaks)]
+  expect_gt(length(breaks), 1L)
+
+  # Weekly breaks land on Mondays rather than at a fixed stride from the limits.
+  expect_equal(unique(diff(breaks)), 7)
+  expect_equal(
+    unique(weekdays(as.Date(breaks, origin = "1970-01-01"))),
+    weekdays(as.Date("2020-01-06"))
+  )
+})
+
+test_that("time_labels formats breaks with a mixtime format string", {
+  # The weekday of a Gregorian date is a day within an ISO week, so labelling it
+  # crosses calendars -- which is the point of mixtime's format strings.
+  weekday <- "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
+  df <- data.frame(x = mixtime::date("2020-01-06") + 0:6, y = 1:7)
+  p <- ggplot(df, aes(x, y)) +
+    geom_line() +
+    scale_x_mixtime(
+      time_breaks = mixtime::days(1L),
+      time_labels = weekday,
+      align_discrete = 0
+    )
+
+  expect_setequal(
+    setdiff(scale_labels(p), "NA"),
+    weekdays(as.Date("2020-01-06") + 0:6, TRUE)
+  )
+})
+
+test_that("time_labels formats timezone-aware breaks", {
+  tz <- "Australia/Melbourne"
+  df <- data.frame(
+    x = mixtime::datetime(seq(
+      as.POSIXct("2020-01-06 00:00:00", tz = tz),
+      by = "1 day",
+      length.out = 7
+    )),
+    y = 1:7
+  )
+  p <- ggplot(df, aes(x, y)) +
+    geom_line() +
+    scale_x_mixtime(
+      time_breaks = mixtime::days(1L),
+      time_labels = "{cyc(day, month)}",
+      align_discrete = 0
+    )
+
+  expect_setequal(setdiff(scale_labels(p), "NA"), sprintf("%02d", 6:12))
 })

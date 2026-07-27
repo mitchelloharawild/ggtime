@@ -66,7 +66,7 @@ ggplot(data.frame(x = 10:90, y = 10:90), aes(x, y)) +
 
 # Daily pedestrian counts for the first quarter of 2021: busy on weekdays,
 # much quieter at the weekend, drifting upwards over the quarter.
-pedestrians <- tibble::tibble(
+pedestrians <- data.frame(
   date = mixtime::date("2021-01-01") + 0:89,
   count = round(
     ifelse(seq_along(date) \%\% 7 \%in\% c(2, 3), 4500, 12000) +

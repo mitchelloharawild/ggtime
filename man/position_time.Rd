@@ -55,9 +55,13 @@ conference calls.
 \examples{
 
 df_tz_mixed <- data.frame(
-  time = mixtime::mixtime(
-    as.POSIXct("2023-10-01", tz = "Australia/Melbourne") + 0:23 * 3600,
-    as.POSIXct("2023-10-01", tz = "America/New_York") + 0:23 * 3600
+  time = c(
+    mixtime::mixtime(
+      as.POSIXct("2023-10-01", tz = "Australia/Melbourne") + 0:11 * 3600
+    ),
+    mixtime::mixtime(
+      as.POSIXct("2023-10-01", tz = "America/New_York") + 0:11 * 3600
+    )
   ),
   value = c(cumsum(rnorm(12, 2)), cumsum(rnorm(12, -2)))
 )

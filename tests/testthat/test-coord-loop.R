@@ -1,100 +1,155 @@
-test_that("ljust works", {
+lynx_data <- function() {
+  data.frame(
+    year = 1846:1857,
+    lynx = c(
+      45150,
+      49150,
+      39520,
+      21230,
+      8420,
+      5560,
+      5080,
+      10170,
+      19600,
+      32910,
+      34380,
+      29590
+    ),
+    peak = c(
+      FALSE,
+      TRUE,
+      FALSE,
+      FALSE,
+      FALSE,
+      FALSE,
+      FALSE,
+      FALSE,
+      FALSE,
+      FALSE,
+      TRUE,
+      FALSE
+    )
+  )
+}
+
+seasonal_data <- function() {
+  x <- 0:93
+  data.frame(
+    time = as.Date("2025-04-01") + x,
+    sin = sin(x / pi / 31 * 20) + x / 100,
+    month = format(as.Date("2025-04-01") + x, "%m")
+  )
+}
+
+test_that("looping over explicit loop points works", {
   skip_if_no_r42_graphics()
 
-  df <- data.frame(
-    year = c(1846, 1847, 1848, 1849, 1850, 1851, 1852, 1853, 1854, 1855, 1856, 1857),
-    lynx = c(45150, 49150, 39520, 21230, 8420, 5560, 5080, 10170, 19600, 32910, 34380, 29590),
-    peak = c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)
-  )
-
-  p <- df |>
-    ggplot(aes(x = year, y = lynx)) +
+  df <- lynx_data()
+  p <- ggplot(df, aes(x = year, y = lynx)) +
     geom_line(alpha = 0.25) +
     geom_point(aes(color = ordered(year)), size = 3, data = df[df$peak, ]) +
     scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 1))
 
-  vdiffr::expect_doppelganger("loop + ljust = 0",
-    p + coord_loop(loop = df$year[df$peak], ljust = 0, expand = c(TRUE, FALSE)),
+  vdiffr::expect_doppelganger(
+    "loops",
+    p + coord_loop(loops = df$year[df$peak], expand = TRUE),
     writer = write_svg_r42
   )
+})
 
-  vdiffr::expect_doppelganger("loop + ljust = 0.5",
-    p + coord_loop(loop = df$year[df$peak], ljust = 0.5, expand = c(TRUE, FALSE)),
-    writer = write_svg_r42
-  )
+test_that("looping over a duration works", {
+  skip_if_no_r42_graphics()
 
-  vdiffr::expect_doppelganger("loop + ljust = 1",
-    p + coord_loop(loop = df$year[df$peak], ljust = 1, expand = c(TRUE, FALSE)),
-    writer = write_svg_r42
-  )
-
-  x <- 0:93
-  p <- tibble(
-    time = as.Date("2025-04-01") + x,
-    sin = sin(x/pi/31*20) + x/100,
-    month = format(time, "%m")
-  ) |>
-    ggplot(aes(x = time, y = sin,
-      color = month,
-      group = NA)) +
+  p <- ggplot(
+    seasonal_data(),
+    aes(x = time, y = sin, color = month, group = NA)
+  ) +
     geom_path() +
-    geom_point(size = 2) +
-    geom_vline(xintercept = as.Date("2025-04-01"))
+    geom_point(size = 2)
 
-  vdiffr::expect_doppelganger("time_loop + ljust = 0",
-    p + coord_loop(time_loop = "1 month", ljust = 0, expand = c(TRUE, FALSE)),
+  vdiffr::expect_doppelganger(
+    "time_loops",
+    p + coord_loop(time_loops = mixtime::months(1L), expand = TRUE),
     writer = write_svg_r42
   )
+})
 
-  vdiffr::expect_doppelganger("time_loop + ljust = 0.5",
-    p + coord_loop(time_loop = "1 month", ljust = 0.5, expand = c(TRUE, FALSE)),
+test_that("annotations spanning the panel are drawn", {
+  # Panel spanning annotations use `Inf`, which must resolve against the loop
+  # window rather than the uncut range or they are shifted out of view (#11).
+  skip_if_no_r42_graphics()
+
+  p <- ggplot(seasonal_data(), aes(x = time, y = sin, group = NA)) +
+    geom_path() +
+    geom_hline(yintercept = 0.5, colour = "red") +
+    geom_vline(xintercept = as.Date("2025-04-10"), colour = "blue") +
+    annotate("segment", x = -Inf, xend = Inf, y = 1, yend = 1)
+
+  vdiffr::expect_doppelganger(
+    "annotations span the panel",
+    p + coord_loop(time_loops = mixtime::months(1L), expand = TRUE),
     writer = write_svg_r42
   )
+})
 
-  vdiffr::expect_doppelganger("time_loop + ljust = 1",
-    p + coord_loop(time_loop = "1 month", ljust = 1, expand = c(TRUE, FALSE)),
+test_that("geometries crossing a loop boundary are cut into pieces", {
+  skip_if_no_r42_graphics()
+
+  df <- seasonal_data()
+  rects <- data.frame(
+    xmin = as.Date(c("2025-04-20", "2025-06-25")),
+    xmax = as.Date(c("2025-05-10", "2025-07-05")),
+    ymin = -Inf,
+    ymax = Inf
+  )
+
+  p <- ggplot(df, aes(x = time)) +
+    geom_rect(
+      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+      data = rects,
+      inherit.aes = FALSE,
+      fill = "orange",
+      alpha = 0.5
+    ) +
+    geom_ribbon(
+      aes(ymin = sin - 0.3, ymax = sin + 0.3),
+      fill = "steelblue",
+      alpha = 0.5,
+      colour = "navy"
+    ) +
+    geom_line(aes(y = sin))
+
+  vdiffr::expect_doppelganger(
+    "rects and ribbons across boundaries",
+    p + coord_loop(time_loops = mixtime::months(1L), expand = TRUE),
     writer = write_svg_r42
   )
 })
 
 test_that("coord_loop works with coord_radial", {
-  skip_if_not_installed("vdiffr")
+  skip_if_no_r42_graphics()
 
-  x <- 0:93
-  df <- tibble(
-    time = as.Date("2025-04-01") + x,
-    sin = sin(x/pi/31*20) + x/100,
-    g = rep(c("a","b"), 47),
-    month = format(time, "%m")
-  )
-  p <- df |>
-    ggplot(aes(x = time, y = sin, color = month, group = NA)) +
+  p <- ggplot(
+    seasonal_data(),
+    aes(x = time, y = sin, color = month, group = NA)
+  ) +
     geom_path() +
-    geom_point(size = 2) +
-    geom_vline(xintercept = as.Date("2025-04-01"))
+    geom_point(size = 2)
 
-  vdiffr::expect_doppelganger("radial + ljust = 0.5",
-    p + coord_loop(time_loop = "1 month", expand = c(TRUE, FALSE), coord = coord_radial())
+  vdiffr::expect_doppelganger(
+    "radial",
+    p +
+      coord_loop(time_loops = mixtime::months(1L), expand = TRUE, coord = coord_radial()),
+    writer = write_svg_r42
   )
 })
 
-test_that("clip_loops works", {
-  skip_if_not_installed("vdiffr")
-
-  df <- data.frame(
-    year = c(1847, 1848, 1849, 1850, 1851, 1852, 1853, 1854, 1855, 1856),
-    lynx = c(49150, 39520, 21230, 8420, 5560, 5080, 10170, 19600, 32910, 34380),
-    peak = c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)
-  )
-
-  p <- df |>
-    ggplot(aes(x = year, y = lynx)) +
-    geom_line(alpha = 0.25) +
-    geom_point(aes(color = ordered(year)), size = 3, data = df[df$peak, ]) +
-    scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 1))
-
-  vdiffr::expect_doppelganger("time_loops + clip_loops = off",
-    p + coord_loop(time_loops = 9, expand = c(TRUE, FALSE), clip_loops = "off")
+test_that("coord_loop rejects unsupported coords", {
+  expect_error(coord_loop(coord = coord_transform()), "does not support")
+  expect_error(coord_loop(time = "z"), "requires .*time")
+  expect_error(
+    coord_loop(coord = coord_radial(theta = "y"), time = "x"),
+    "angular axis"
   )
 })
 
@@ -105,7 +160,7 @@ test_that("looped axes are labelled cyclically", {
     labels[!is.na(labels)]
   }
 
-  df <- tibble::tibble(
+  df <- data.frame(
     time = mixtime::yearmonth(36L + 0:71),
     value = as.numeric(USAccDeaths)
   )
@@ -144,7 +199,7 @@ test_that("looped axes are labelled cyclically", {
 })
 
 test_that("time_loops can be given as a granule directly", {
-  df <- tibble::tibble(
+  df <- data.frame(
     time = mixtime::yearmonth(36L + 0:71),
     value = as.numeric(USAccDeaths)
   )
@@ -223,7 +278,7 @@ test_that("the cycle of a looped axis follows the data's chronon", {
     labels[!is.na(labels)]
   }
 
-  daily <- tibble::tibble(
+  daily <- data.frame(
     time = mixtime::date("2015-01-01") + 0:27,
     value = seq_len(28)
   )
@@ -240,7 +295,7 @@ test_that("the cycle of a looped axis follows the data's chronon", {
     "^D[0-9]{2}"
   )
 
-  quarterly <- tibble::tibble(
+  quarterly <- data.frame(
     time = mixtime::yearquarter(180L + 0:15),
     value = seq_len(16)
   )
@@ -252,4 +307,23 @@ test_that("the cycle of a looped axis follows the data's chronon", {
     ),
     c("Q1", "Q2", "Q3", "Q4", "Q1")
   )
+})
+
+test_that("looping does not depend on clipping path support", {
+  # Cutting the data means everything already lies inside the loop window, so
+  # no clipping paths (and therefore no device or R version requirement) are
+  # involved.
+  uad <- tsibble::as_tsibble(USAccDeaths)
+  uad$index <- as.Date(uad$index)
+  p <- ggplot(uad, aes(x = index, y = value)) +
+    geom_line() +
+    coord_loop(time_loops = mixtime::years(1L))
+
+  file <- tempfile(fileext = ".png")
+  on.exit(unlink(file), add = TRUE)
+  expect_no_error({
+    grDevices::png(file, width = 400, height = 300)
+    on.exit(grDevices::dev.off(), add = TRUE)
+    print(p)
+  })
 })

@@ -1,30 +1,93 @@
-test_that("inf works", {
-  skip_if_not_installed("vdiffr")
-
-  df <- data.frame(
-    year = c(1845, 1846, 1847, 1848, 1849, 1850, 1851,
-      1852, 1853, 1854, 1855, 1856, 1857, 1858, 1859, 1860, 1861, 1862,
-      1863, 1864, 1865, 1866, 1867, 1868, 1869, 1870, 1871, 1872, 1873,
-      1874, 1875, 1876, 1877),
-    lynx = c(30090, 45150, 49150, 39520,
-      21230, 8420, 5560, 5080, 10170, 19600, 32910, 34380, 29590, 21300,
-      13690, 7650, 4080, 4090, 14330, 38220, 60780, 70770, 72770, 42680,
-      16390, 9830, 5800, 5260, 18910, 30950, 31180, 46340, 45770),
-    peak = c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE,
-      FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE,
-      FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE,
-      FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)
+calendar_data <- function() {
+  x <- 0:41
+  data.frame(
+    time = as.Date("2025-04-07") + x,
+    value = sin(x / 7 * 2 * pi) + x / 40
   )
+}
 
-  p <- df |>
-    ggplot(aes(x = year, y = lynx)) +
-    geom_line(alpha = 0.25) +
-    geom_hline(yintercept = 40000, color = "red") +
-    geom_vline(xintercept = 1848) +
-    annotate("segment", x = -Inf, xend = Inf, y = 30000, yend = 30000) +
-    scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 1))
+test_that("rows are laid out from cut loops", {
+  skip_if_no_r42_graphics()
 
-  vdiffr::expect_doppelganger("inf segment and hline",
-    p + coord_calendar(rows = df$year[df$peak], expand = FALSE, clip_rows = FALSE)
+  p <- ggplot(calendar_data(), aes(x = time, y = value)) +
+    geom_line() +
+    scale_x_date(date_breaks = "1 day", date_labels = "%a")
+
+  vdiffr::expect_doppelganger(
+    "weekly rows",
+    p + coord_calendar(time_rows = mixtime::weeks(1L)),
+    writer = write_svg_r42
   )
+})
+
+test_that("gridlines and axes are not folded into a single row", {
+  # Panel decoration describes the row window rather than data within it, so it
+  # is replicated across rows as grobs. Applying the row placement to it would
+  # squeeze the vertical gridlines and axis labels into the top row.
+  df <- calendar_data()
+  p <- ggplot(df, aes(x = time, y = value)) +
+    geom_line() +
+    coord_calendar(time_rows = mixtime::weeks(1L))
+
+  built <- ggplot_build(p)
+  coord <- built$plot$coordinates
+  params <- built$layout$panel_params[[1]]
+  bg <- coord$render_bg(params, theme_grey())
+
+  # Each row's grill is drawn in its own viewport, and within that viewport the
+  # x gridlines must still span the full height.
+  grill <- bg$children[[1]]$children[[1]]
+  vgrid <- grill$children[[grep("panel.grid.major.x", names(grill$children))]]
+  expect_equal(range(as.numeric(vgrid$y)), c(0, 1))
+})
+
+test_that("row layout stacks loops without overlapping", {
+  df <- calendar_data()
+  p <- ggplot(df, aes(x = time, y = value)) +
+    geom_line() +
+    coord_calendar(time_rows = mixtime::weeks(1L))
+
+  built <- ggplot_build(p)
+  coord <- built$plot$coordinates
+  params <- built$layout$panel_params[[1]]
+
+  # Six weekly cuts over six weeks of data.
+  n_row <- coord$.n_row
+  expect_gt(n_row, 1L)
+
+  transformed <- coord$transform(built$data[[1]], params)
+  # Every point lies within its own row's horizontal band.
+  expect_true(all(transformed$y >= 0 & transformed$y <= 1))
+  expect_lt(diff(range(transformed$y)), 1)
+})
+
+test_that("the derived row count does not leak between builds", {
+  # The coord object outlives a single build, so deriving the row count by
+  # accumulating a maximum must be reset each time or a reused coord keeps the
+  # largest row count it has ever seen.
+  df <- calendar_data()
+  coord <- coord_calendar(time_rows = mixtime::weeks(1L))
+
+  invisible(ggplot_build(
+    ggplot(df, aes(x = time, y = value)) + geom_line() + coord
+  ))
+  many <- coord$.n_row
+
+  invisible(ggplot_build(
+    ggplot(df[1:5, ], aes(x = time, y = value)) + geom_line() + coord
+  ))
+  expect_lt(coord$.n_row, many)
+})
+
+test_that("coord_calendar rejects unsupported arguments", {
+  expect_error(coord_calendar(cols = 1:3), "not yet supported")
+  expect_error(coord_calendar(time_cols = "1 week"), "not yet supported")
+})
+
+test_that("coord_calendar is unsupported for non-cartesian coords", {
+  p <- ggplot(calendar_data(), aes(x = time, y = value)) +
+    geom_line() +
+    coord_calendar(time_rows = mixtime::weeks(1L), coord = coord_radial())
+
+  expect_error(ggplot_build(p), "does not support")
 })

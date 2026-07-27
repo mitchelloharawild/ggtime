@@ -11,6 +11,7 @@
 #' @return A ggplot object showing a time plot of a time series.
 #'
 #' @examplesIf requireNamespace("tsibbledata", quietly = TRUE)
+#' library(dplyr)
 #' tsibbledata::gafa_stock %>%
 #'  autoplot(vars(Close, log(Close)))
 #'
