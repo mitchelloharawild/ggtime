@@ -39,3 +39,17 @@ test_that("time points are unaffected by duration handling", {
 
   expect_match(scale_labels(p), "^20[0-9]{2} [A-Z][a-z]{2}")
 })
+
+test_that("break widths must be a single duration", {
+  # `fullseq()` steps by the width, and `seq()` would silently use only the
+  # first of several.
+  expect_error(
+    scale_x_mixtime(time_breaks = c("1 month", "1 year")),
+    "`time_breaks` must be a single duration"
+  )
+  expect_error(
+    scale_x_mixtime(time_minor_breaks = mixtime::months(1:2)),
+    "`time_minor_breaks` must be a single duration"
+  )
+  expect_no_error(scale_x_mixtime(time_breaks = mixtime::months(1L)))
+})

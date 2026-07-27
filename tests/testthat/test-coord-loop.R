@@ -97,3 +97,24 @@ test_that("clip_loops works", {
     p + coord_loop(time_loops = 9, expand = c(TRUE, FALSE), clip_loops = "off")
   )
 })
+
+test_that("time_loops must be a single duration", {
+  # Several loop widths would be ambiguous, and both `unvecvec()` and `seq()`
+  # would silently use only the first.
+  expect_error(
+    coord_loop(time_loops = c("1 year", "2 days")),
+    "`time_loops` must be a single duration"
+  )
+  expect_error(
+    coord_loop(time_loops = mixtime::years(1:2)),
+    "`time_loops` must be a single duration"
+  )
+  # `coord_calendar()` names the argument the user passed.
+  expect_error(
+    coord_calendar(time_rows = c("1 year", "2 days")),
+    "`time_rows` must be a single duration"
+  )
+  # No looping is not a duration to check.
+  expect_no_error(coord_loop(time_loops = NULL))
+  expect_no_error(coord_loop())
+})

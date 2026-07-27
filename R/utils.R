@@ -59,6 +59,36 @@ check_gaps <- function(x) {
   }
 }
 
+#' Check that a duration argument describes a single duration
+#'
+#' Durations are used to specify the length of time between breaks or loops,
+#' and must be a single duration. This function produces a helpful error message
+#' if these arguments are not a single duration.
+#'
+#' @param x The duration to check, or a waiver/`NULL` for no duration.
+#' @param arg The name of the argument being checked, for the error message.
+#' @param call The environment or call to report the error from.
+#' @returns `x`, invisibly, or raises an error.
+#' @noRd
+check_single_duration <- function(x, arg = caller_arg(x), call = caller_env()) {
+  if (is_waiver(x) || is.null(x)) {
+    return(invisible(x))
+  }
+
+  size <- vctrs::vec_size(x)
+  if (size != 1L) {
+    cli::cli_abort(
+      c(
+        "{.arg {arg}} must be a single duration, not {size}.",
+        i = "A duration gives one step, which is used for every interval."
+      ),
+      call = call
+    )
+  }
+
+  invisible(x)
+}
+
 interval_to_period <- function(interval) {
   with(
     interval,

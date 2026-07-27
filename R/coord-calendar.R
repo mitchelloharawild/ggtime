@@ -122,6 +122,8 @@ coord_calendar <- function(
     )
   }
 
+  check_single_duration(time_rows)
+
   # A calendar is a loop whose pieces are stacked into rows rather than
   # superimposed, so all of the cutting and folding is inherited from
   # `coord_loop()` and only the layout of the pieces is overridden.

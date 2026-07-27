@@ -227,11 +227,11 @@ mixtime_scale <- function(
   call <- call %||% current_call()
 
   if (!is_waiver(time_breaks)) {
-    # TODO: Validate input as <duration>
+    check_single_duration(time_breaks, call = call)
     breaks <- breaks_time_seq(time_breaks)
   }
   if (!is_waiver(time_minor_breaks)) {
-    # TODO: Validate input as <duration>
+    check_single_duration(time_minor_breaks, call = call)
     minor_breaks <- breaks_time_seq(time_minor_breaks)
   }
   if (!is_waiver(time_labels)) {
