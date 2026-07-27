@@ -349,7 +349,7 @@ ScaleContinuousMixtime <- ggproto(
       x <- mixtime::mixtime(x)
     }
 
-    if (any(mixtime::is_time_cyclical(x))) {
+    if (any(mixtime::time_is_cyclical(x))) {
       # For now, focus on linear arrangements of time.
       cli::cli_abort(
         c(
