@@ -98,6 +98,50 @@ test_that("clip_loops works", {
   )
 })
 
+test_that("looped axes are labelled cyclically", {
+  loop_labels <- function(p, aes = "x") {
+    params <- ggplot_build(p)$layout$panel_params[[1]][[aes]]
+    labels <- params$get_labels()
+    labels[!is.na(labels)]
+  }
+
+  df <- tibble::tibble(
+    time = mixtime::yearmonth(36L + 0:71),
+    value = as.numeric(USAccDeaths)
+  )
+  p <- ggplot(df, aes(x = time, y = value)) + geom_line()
+
+  # Monthly data looped over years shows months of the year, so the year in
+  # which each month fell is no longer meaningful.
+  expect_equal(
+    loop_labels(p + coord_loop(time_loops = mixtime::years(1L))),
+    c("Jan", "Mar", "May", "Jul", "Sep", "Nov", "Jan")
+  )
+  expect_equal(
+    loop_labels(
+      p + coord_loop(time_loops = mixtime::years(1L), coord = coord_radial()),
+      "theta"
+    ),
+    c("Jan", "Mar", "May", "Jul", "Sep", "Nov", "Jan")
+  )
+  expect_equal(
+    loop_labels(p + coord_calendar(time_rows = mixtime::years(1L))),
+    c("Jan", "Mar", "May", "Jul", "Sep", "Nov", "Jan")
+  )
+
+  # Without a loop, time is linear and labelled as points in time.
+  expect_match(loop_labels(p + coord_loop()), "^19[0-9]{2} [A-Z][a-z]{2}")
+
+  # Labels the user asked for are not overridden.
+  expect_equal(
+    loop_labels(
+      p +
+        coord_loop(time_loops = mixtime::years(1L)) +
+        scale_x_mixtime(time_labels = "{lin(year)}-{cyc(month, year)}")
+    ),
+    c("1973-01", "1973-03", "1973-05", "1973-07", "1973-09", "1973-11", "1974-01")
+  )
+})
 
 test_that("time_loops can be given as a granule directly", {
   df <- tibble::tibble(
@@ -169,5 +213,43 @@ test_that("time_loops rejects strings", {
   expect_error(
     coord_calendar(time_rows = "1 week"),
     "`time_rows` must be a duration or a granule"
+  )
+})
+
+test_that("the cycle of a looped axis follows the data's chronon", {
+  loop_labels <- function(p) {
+    params <- ggplot_build(p)$layout$panel_params[[1]]$x
+    labels <- params$get_labels()
+    labels[!is.na(labels)]
+  }
+
+  daily <- tibble::tibble(
+    time = mixtime::date("2015-01-01") + 0:27,
+    value = seq_len(28)
+  )
+  p <- ggplot(daily, aes(x = time, y = value)) + geom_line()
+
+  # Daily data looped over weeks shows days of the week.
+  expect_equal(
+    loop_labels(p + coord_loop(time_loops = mixtime::weeks(1L))),
+    c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon")
+  )
+  # The same data looped over months shows days of the month.
+  expect_match(
+    loop_labels(p + coord_loop(time_loops = mixtime::months(1L))),
+    "^D[0-9]{2}"
+  )
+
+  quarterly <- tibble::tibble(
+    time = mixtime::yearquarter(180L + 0:15),
+    value = seq_len(16)
+  )
+  expect_equal(
+    loop_labels(
+      ggplot(quarterly, aes(x = time, y = value)) +
+        geom_line() +
+        coord_loop(time_loops = mixtime::years(1L))
+    ),
+    c("Q1", "Q2", "Q3", "Q4", "Q1")
   )
 })

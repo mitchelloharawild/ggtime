@@ -44,7 +44,7 @@ loop_index <- function(t, cuts) {
 
 #' Fold time values into the first loop window
 #' @inheritParams loop_index
-#' @param loop Loop index of each value, from [loop_index()].
+#' @param loop Loop index of each value, from `loop_index()`.
 #' @returns Numeric time values translated into `[cuts[1], cuts[2])`.
 #' @noRd
 fold_time <- function(t, loop, cuts) {
@@ -197,7 +197,7 @@ cut_connected <- function(data, time, cuts) {
 #'   right: a trailing cut beyond the data would add a loop containing nothing,
 #'   which `coord_calendar()` would then lay out as an empty row. A time value
 #'   landing exactly on the final cut is clamped into the last loop by
-#'   [loop_index()], drawing it at the right edge of the window rather than
+#'   `loop_index()`, drawing it at the right edge of the window rather than
 #'   opening an otherwise empty loop for it.
 #' @noRd
 loop_cuts <- function(

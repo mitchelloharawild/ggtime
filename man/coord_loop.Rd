@@ -84,6 +84,17 @@ preserved. This is otherwise lost when time is discretised into ordered
 factors (e.g. months of the year, or days of week). This allows lines and
 other geometries to be drawn across seasonal boundaries, such as a line that
 connects December to January when plotting annual seasonality.
+
+Looping arranges time cyclically, so the time axis describes a position
+within the loop rather than the passage of time. The axis is labelled to
+match: monthly data looped over years is labelled with months of the year
+("Jan", "Feb", ...), and daily data looped over weeks with days of the week
+("Mon", "Tue", ...). Which labels are appropriate depends on both the chronon
+of the data and the loop's cycle, and is determined by the calendar being
+used. Labels given with the \code{labels} or \code{time_labels} options of
+\code{\link[=scale_x_mixtime]{scale_x_mixtime()}} are used unchanged, since they say how the user wants
+time written.
+
 The justification of looping can be controlled using the \code{align_discrete} option
 of \code{\link[=scale_x_mixtime]{scale_x_mixtime()}}, where values from 0 to 1 specify the alignment.
 Left alignment (\code{align_discrete = 0}) places inter-seasonal connections on the

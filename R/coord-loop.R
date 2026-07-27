@@ -53,6 +53,17 @@
 #' factors (e.g. months of the year, or days of week). This allows lines and
 #' other geometries to be drawn across seasonal boundaries, such as a line that
 #' connects December to January when plotting annual seasonality.
+#'
+#' Looping arranges time cyclically, so the time axis describes a position
+#' within the loop rather than the passage of time. The axis is labelled to
+#' match: monthly data looped over years is labelled with months of the year
+#' ("Jan", "Feb", ...), and daily data looped over weeks with days of the week
+#' ("Mon", "Tue", ...). Which labels are appropriate depends on both the chronon
+#' of the data and the loop's cycle, and is determined by the calendar being
+#' used. Labels given with the `labels` or `time_labels` options of
+#' [scale_x_mixtime()] are used unchanged, since they say how the user wants
+#' time written.
+#'
 #' The justification of looping can be controlled using the `align_discrete` option
 #' of [scale_x_mixtime()], where values from 0 to 1 specify the alignment.
 #' Left alignment (`align_discrete = 0`) places inter-seasonal connections on the
@@ -203,6 +214,15 @@ CoordLoop <- function(coord) {
         self$time_loops
       )
 
+      # A looped axis measures time within the loop rather than time itself, so
+      # its labels should name positions in the cycle ("Jan") rather than points
+      # in time ("1973 Jan").
+      if (identical(self$time, "x")) {
+        scale_x <- as_cyclical_scale(scale_x, self$time_loops)
+      } else {
+        scale_y <- as_cyclical_scale(scale_y, self$time_loops)
+      }
+
       # Recalculate the panel parameters zoomed in on the first loop, so that
       # expansion, breaks and user limits are all applied to the window that is
       # actually drawn.
@@ -308,6 +328,83 @@ CoordLoop <- function(coord) {
       data
     }
   )
+}
+
+# cyclical labels ---------------------------------------------------------
+
+#' Label a time scale by position within the loop
+#'
+#' Looping arranges time cyclically, so the time axis no longer describes the
+#' passage of time but a position within the cycle: monthly data looped over
+#' years is showing months of the year, and should be labelled "Jan", "Feb", ...
+#' rather than "1973 Jan", "1973 Feb", .... Which labels are appropriate depends
+#' on both the chronon of the data and the cycle it is looped over, and mixtime
+#' already knows how to format a time point that way. Attaching the loop's cycle
+#' to the break values and formatting them therefore gives suitable labels for
+#' any chronon and cycle, in any calendar.
+#'
+#' Only the labels are replaced. Where the breaks fall is unchanged, so
+#' `breaks`, `time_breaks` and the panel's expansion all behave as they do
+#' without looping.
+#' @param scale The positional `Scale` handling the time aesthetic.
+#' @param time_loops The loop duration given to [coord_loop()], as reduced by
+#'   `duration_as_granule()`.
+#' @returns `scale` labelled cyclically, or unchanged when the cycle is unknown
+#'   or the user has specified labels of their own.
+#' @noRd
+as_cyclical_scale <- function(scale, time_loops) {
+  cycle <- loop_cycle(time_loops)
+  if (is.null(cycle)) {
+    return(scale)
+  }
+  # `labels` (and `time_labels`, which sets it) says how the user wants time
+  # written, which looping has no business overriding.
+  if (!is_waiver(scale$labels)) {
+    return(scale)
+  }
+
+  # A child of the scale rather than a mutation of it: the view scale keeps hold
+  # of the scale and formats its labels when the panel is drawn, long after
+  # `setup_panel_params()` has returned.
+  ggplot2::ggproto(NULL, scale, labels = function(x) loop_labels(x, cycle))
+}
+
+#' The cycle that a looped time axis repeats over
+#' @inheritParams as_cyclical_scale
+#' @returns A time granule describing the cycle, or `NULL` if the axis has no
+#'   cycle of a known length. Loops given as time points (`loops`) are the
+#'   latter: their spacing is a number of chronons rather than a granule of the
+#'   calendar, which is not enough to know which granule is being cycled over.
+#' @noRd
+loop_cycle <- function(time_loops) {
+  # `duration_as_granule()` has already reduced a duration to the granule it
+  # steps by. Anything else (a waiver, or `loops` given as time points) names
+  # no granule of the calendar.
+  if (S7::S7_inherits(time_loops, mixtime::mt_unit)) time_loops else NULL
+}
+
+#' Format break values as positions within the loop's cycle
+#' @param x Break values, as handed to a scale's `labels` function.
+#' @param cycle The cycle granule, from `loop_cycle()`.
+#' @returns A character vector of labels.
+#' @noRd
+loop_labels <- function(x, cycle) {
+  if (is_mixtime(x)) {
+    x <- vecvec::unvecvec(x)
+  }
+
+  labels <- rep(NA_character_, vctrs::vec_size(x))
+  # Breaks falling outside the panel are censored to `NA`, and have no position
+  # within the cycle to name.
+  finite <- is.finite(vctrs::vec_data(x))
+
+  # Breaks are continuous positions on the time scale, but a label naming the
+  # granule they fall in ("Jan") is more use than one measuring how far through
+  # it they are ("Jan 0.0%"), so they are labelled discretely.
+  labels[finite] <- format(
+    mixtime::mixtime(x[finite], cycle = cycle, discrete = TRUE)
+  )
+  labels
 }
 
 # specialization ----------------------------------------------------------
