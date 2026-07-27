@@ -62,14 +62,12 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
 
     # An `<mt_time>` carries a `chronon` which may be coarser than the data's.
     # e.g. monthly breaks on a daily series - convert to the ptype granularity.
-    target <- attr(ptype, "chronon")
-    if (identical(attr(x, "chronon"), target)) {
+    if (identical(attr(x, "chronon"), attr(ptype, "chronon"))) {
       return(x)
     }
-    # `chronon_convert()` returns a bare numeric, so the time attributes are
-    # restored from `ptype` - which already carries the target chronon, and
-    # keeps a duration a duration rather than making it a time point.
-    vctrs::vec_restore(mixtime:::chronon_convert(x, target), ptype)
+    # `vec_cast()` to `ptype` converts onto its chronon and keeps a duration a
+    # duration rather than making it a time point.
+    vctrs::vec_cast(x, ptype)
   }
 
   to_mixtime <- function(x) {
@@ -293,7 +291,9 @@ transform_warp <- function(warps) {
       }
 
       # So that (say) monthly warp points can position daily observations.
-      warp_at <- mixtime:::chronon_convert(warp_points, attr(x, "chronon"))
+      warp_target <- vctrs::vec_ptype(warp_points)
+      attr(warp_target, "chronon") <- attr(x, "chronon")
+      warp_at <- vctrs::vec_data(vctrs::vec_cast(warp_points, warp_target))
     }
 
     values <- vctrs::vec_data(x)

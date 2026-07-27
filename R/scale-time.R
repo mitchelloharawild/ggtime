@@ -387,8 +387,9 @@ ScaleContinuousMixtime <- ggproto(
         # also stay in the duration mode: measuring it from the epoch would
         # make "2 days" an absolute time point ("1970-01-03").
         return(mixtime::duration(
-          mixtime:::chronon_convert(v, self$time_chronon),
-          chronon = self$time_chronon
+          v,
+          chronon = self$time_chronon,
+          discrete = FALSE
         )@x[[1L]])
       }
 
@@ -396,8 +397,7 @@ ScaleContinuousMixtime <- ggproto(
       if (is.integer(v)) {
         v <- v + align_nudge
       }
-      # TODO - Better conversion in mixtime to a different chronon
-      # mixtime:::chronon_convert(v, self$time_chronon)
+
       v <- mixtime::mixtime(v, chronon = self$time_chronon, discrete = FALSE)
       v@x[[1L]]
     })
