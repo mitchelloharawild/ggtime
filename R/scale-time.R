@@ -183,8 +183,8 @@ scale_x_mixtime <- function(
 #' @param size The step size, as a duration or a string such as `"1 day"`.
 #' @param ... Ignored, for compatibility with other [scales::fullseq()] methods.
 #' @noRd
-#' @exportS3Method scales::fullseq
-fullseq.mt_time <- function(range, size, ...) {
+#' @exportS3Method scales::fullseq mixtime::mt_time
+`fullseq.mixtime::mt_time` <- function(range, size, ...) {
   seq(
     mixtime::time_floor(range[1], size),
     mixtime::time_ceiling(range[2], size),
