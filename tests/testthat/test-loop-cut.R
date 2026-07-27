@@ -207,7 +207,7 @@ test_that("loop_cuts() does not add an empty trailing loop", {
   built <- ggplot_build(
     ggplot(df, aes(time, value)) +
       geom_line() +
-      coord_loop(time_loops = "1 year")
+      coord_loop(time_loops = mixtime::years(1L))
   )
   cuts <- built$layout$panel_params[[1]]$time_cuts
 

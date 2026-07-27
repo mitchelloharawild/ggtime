@@ -44,7 +44,7 @@ test_that("break widths must be a single duration", {
   # `fullseq()` steps by the width, and `seq()` would silently use only the
   # first of several.
   expect_error(
-    scale_x_mixtime(time_breaks = c("1 month", "1 year")),
+    scale_x_mixtime(time_breaks = c(mixtime::months(1L), mixtime::years(1L))),
     "`time_breaks` must be a single duration"
   )
   expect_error(
@@ -60,20 +60,29 @@ test_that("break widths must be a single duration", {
   )
 })
 
-test_that("break widths can be given as a duration", {
+test_that("break widths reject strings", {
+  # Parsing a string like "1 year" into a duration would need mixtime's own
+  # (unexported) parser. For now, only durations and granules are accepted.
+  expect_error(
+    scale_x_mixtime(time_breaks = "1 year"),
+    "`time_breaks` must be a duration or a granule"
+  )
+})
+
+test_that("break widths can be given as a granule directly", {
   df <- tibble::tibble(x = mixtime::yearmonth(600:635), y = 1:36)
   p <- ggplot(df, aes(x, y)) + geom_line()
 
   # `mixtime::years()` and friends keep the duration inside a vecvec wrapper,
   # which `seq()` won't step by. Reducing it to the granule it steps by gives
-  # the same breaks as the equivalent string.
+  # the same breaks as passing that granule directly.
   expect_equal(
     scale_labels(p + scale_x_mixtime(time_breaks = mixtime::years(1L))),
-    scale_labels(p + scale_x_mixtime(time_breaks = "1 year"))
+    scale_labels(p + scale_x_mixtime(time_breaks = mixtime::cal_gregorian$year(1L)))
   )
   # A duration of more than one unit steps by all of it, rather than by one.
   expect_equal(
     scale_labels(p + scale_x_mixtime(time_breaks = mixtime::years(2L))),
-    scale_labels(p + scale_x_mixtime(time_breaks = "2 years"))
+    scale_labels(p + scale_x_mixtime(time_breaks = mixtime::cal_gregorian$year(2L)))
   )
 })

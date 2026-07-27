@@ -187,9 +187,9 @@ cut_connected <- function(data, time, cuts) {
 #' @param scale Name of the time scale within `panel_params` (`"x"`, `"y"`,
 #'   `"theta"`, ...).
 #' @param loops A vector of time points at which to loop, or a waiver.
-#' @param time_loops A duration to loop by (e.g. `"1 year"`), or a waiver.
-#'   Takes precedence over `loops`. Already reduced to a step that `seq()`
-#'   accepts by `duration_as_granule()`.
+#' @param time_loops A duration to loop by (e.g. `mixtime::years(1L)`), or a
+#'   waiver. Takes precedence over `loops`. Already reduced to a granule by
+#'   `duration_as_granule()`.
 #' @returns A vector of time cutpoints of the scale's own type. Loop `k` spans
 #'   `[cuts[k], cuts[k + 1])`, so there is always one more cut than loop.
 #'
@@ -210,14 +210,15 @@ loop_cuts <- function(
   time_range <- trans$inverse(panel_params[[scale]]$limits)
 
   if (!is_waiver(time_loops) && !is.null(time_loops)) {
+    step <- granule_seq_by(time_range, time_loops)
     from <- mixtime::time_floor(time_range[1], time_loops)
     # `time_ceiling()` has already rounded past the end of the data, so this
     # sequence closes the last loop without extending beyond it.
     to <- mixtime::time_ceiling(time_range[2], time_loops)
-    cuts <- seq(from, to, by = time_loops)
+    cuts <- seq(from, to, by = step)
     if (length(cuts) < 2L) {
       # All of the data sits at a single instant on a loop boundary.
-      cuts <- seq(from, by = time_loops, length.out = 2L)
+      cuts <- seq(from, by = step, length.out = 2L)
     }
     unique(cuts)
   } else if (!is_waiver(loops) && !is.null(loops)) {
@@ -236,6 +237,26 @@ loop_cuts <- function(
     # No looping: a single window spanning the whole range.
     c(time_range[1], time_range[2])
   }
+}
+
+#' A `seq()` step usable for the axis's own time type
+#'
+#' `seq.mixtime::mt_time` steps by a granule directly, but plain `Date` and
+#' `POSIXct` axes (both supported by [coord_loop()] alongside mixtime) dispatch
+#' to base R's `seq.Date()`/`seq.POSIXct()`, which only step by a duration
+#' given as a string such as `"2 quarters"`. Building that string from the
+#' granule's own count and unit name keeps those axes working without going
+#' through mixtime's own (unexported) string parser.
+#' @param x A value of the axis's time type, used only to dispatch on class.
+#' @param granule The step, as reduced by `duration_as_granule()`.
+#' @returns `granule` unchanged for a mixtime axis, or a string `seq()` step
+#'   for a `Date`/`POSIXct` axis.
+#' @noRd
+granule_seq_by <- function(x, granule) {
+  if (is_mixtime(x)) {
+    return(granule)
+  }
+  paste(granule@n, mixtime::time_unit_plural(granule))
 }
 
 # helpers -----------------------------------------------------------------

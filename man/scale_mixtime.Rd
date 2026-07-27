@@ -38,9 +38,9 @@ omitted.}
 \item A function that takes the limits as input and returns breaks as output
 }}
 
-\item{time_breaks}{A duration giving the distance between breaks like
-"2 weeks", or "10 years". If both \code{breaks} and \code{time_breaks} are specified,
-\code{time_breaks} wins.}
+\item{time_breaks}{A duration giving the distance between breaks, such as
+\code{mixtime::weeks(2L)} or \code{mixtime::years(10L)}. If both \code{breaks} and
+\code{time_breaks} are specified, \code{time_breaks} wins.}
 
 \item{minor_breaks}{One of:
 \itemize{
@@ -51,9 +51,10 @@ omitted.}
 output
 }}
 
-\item{time_minor_breaks}{A duration giving the distance between minor breaks like
-"2 weeks", or "10 years". If both \code{minor_breaks} and \code{time_minor_breaks} are
-specified, \code{time_minor_breaks} wins.}
+\item{time_minor_breaks}{A duration giving the distance between minor
+breaks, such as \code{mixtime::weeks(2L)} or \code{mixtime::years(10L)}. If both
+\code{minor_breaks} and \code{time_minor_breaks} are specified, \code{time_minor_breaks}
+wins.}
 
 \item{labels}{One of the options below. Please note that when \code{labels} is a
 vector, it is highly recommended to also set the \code{breaks} argument as a
@@ -163,9 +164,8 @@ Similarly to the temporal scales in ggplot2 (\code{\link[ggplot2:scale_x_date]{g
 using duration-based intervals and time formatting. These time aware
 options are prefixed with \code{time_} (e.g. \code{time_breaks} and \code{time_labels}),
 and take precedence over the non-time aware options (e.g. \code{breaks} and
-\code{labels}). The scale's breaks can be specified with \code{\link[mixtime:duration]{mixtime::duration()}}
-objects (e.g. \code{time_breaks = mixtime::months(1L)}), or with strings that can
-be parsed into durations (e.g. \code{time_breaks = "1 month"}).
+\code{labels}). The scale's breaks are specified with \code{\link[mixtime:duration]{mixtime::duration()}}
+objects (e.g. \code{time_breaks = mixtime::months(1L)}) or a time granule.
 
 Labels are specified with mixtime format strings, which describe a time point
 as glue-style \code{{}} placeholders holding the granules to show. Since the

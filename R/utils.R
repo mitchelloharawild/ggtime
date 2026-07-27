@@ -66,8 +66,8 @@ check_gaps <- function(x) {
 #' and produces a helpful error message if this is not possible (e.g. inputs are
 #' not a single duration.)
 #'
-#' @param x The duration to reduce: a `<mixtime>` duration, a time granule, a
-#'   string like `"1 day"`, or a waiver/`NULL` for no duration.
+#' @param x The duration to reduce: a `<mixtime>` duration, a time granule, or
+#'   a waiver/`NULL` for no duration.
 #' @param arg The name of the argument being checked, for the error message.
 #' @param call The environment or call to report the error from.
 #' @returns A time granule if `x` is a duration, and `x` unchanged otherwise.
@@ -79,6 +79,16 @@ duration_as_granule <- function(x, arg = caller_arg(x), call = caller_env()) {
     return(x)
   }
 
+  if (!is_mixtime(x) && !S7::S7_inherits(x, mixtime::mt_duration)) {
+    cli::cli_abort(
+      c(
+        "{.arg {arg}} must be a duration or a granule, not {.obj_type_friendly {x}}.",
+        i = "A duration measures a length of time, such as {.code mixtime::days(1L)}."
+      ),
+      call = call
+    )
+  }
+
   size <- vctrs::vec_size(x)
   if (size != 1L) {
     cli::cli_abort(
@@ -88,12 +98,6 @@ duration_as_granule <- function(x, arg = caller_arg(x), call = caller_env()) {
       ),
       call = call
     )
-  }
-
-  # Anything else (a string, or a plain number for a non-time scale) describes
-  # its own step and is passed along untouched.
-  if (!is_mixtime(x) && !S7::S7_inherits(x, mixtime::mt_duration)) {
-    return(x)
   }
 
   if (!all(mixtime::time_is_duration(x))) {

@@ -12,17 +12,17 @@
 #'   - `NULL` or `waiver()` for no rows (the default)
 #'   - A `mixtime` vector giving time points at which the `time` axis should layout into rows
 #'   - A function that takes the limits as input and returns row layout points as output
-#' @param time_rows A duration giving the distance between calendar rows like
-#' "1 weeks", or "1 month". If both `rows` and `time_rows` are
-#' specified, `time_rows` wins.
+#' @param time_rows A duration giving the distance between calendar rows,
+#' such as `mixtime::weeks(1L)` or `mixtime::months(1L)`. If both `rows` and
+#' `time_rows` are specified, `time_rows` wins.
 #' @param cols,time_cols Not yet supported.
 # @param cols Layout the time scale into calendar columns, one of:
 #   - `NULL` or `waiver()` for no columns (the default)
 #   - A `mixtime` vector giving time points at which the `time` axis should layout into columns
 #   - A function that takes the limits as input and returns column layout points as output
-# @param time_cols A duration giving the distance between calendar columns like
-# "1 weeks", or "1 month". If both `cols` and `time_cols` are
-# specified, `time_cols` wins.
+# @param time_cols A duration giving the distance between calendar columns,
+# such as `mixtime::weeks(1L)` or `mixtime::months(1L)`. If both `cols` and
+# `time_cols` are specified, `time_cols` wins.
 #'
 #' @details
 #' This coordinate system is particularly useful for visualizing long time spans
@@ -78,9 +78,9 @@
 #'   dplyr::filter(Time < datetime("2015-02-01 00:00:00")) |>
 #'   ggplot(aes(x = Time, y = Count, color = Sensor)) +
 #'   geom_line() +
-#'   coord_calendar(time_rows = "1 week") +
+#'   coord_calendar(time_rows = mixtime::weeks(1L)) +
 #'   scale_x_mixtime(
-#'     time_breaks = "1 day",
+#'     time_breaks = mixtime::days(1L),
 #'     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
 #'   ) +
 #'   theme(legend.position = "bottom")
@@ -90,10 +90,10 @@
 #'   dplyr::filter(year(Time) == year(2015)) |>
 #'   ggplot(aes(x = Time, y = Count, color = Sensor)) +
 #'   geom_line() +
-#'   coord_calendar(time_rows = "1 week") +
+#'   coord_calendar(time_rows = mixtime::weeks(1L)) +
 #'   facet_wrap(vars(yearmonth(Time)), ncol = 4, scales = "free_x") +
 #'   scale_x_mixtime(
-#'     time_breaks = "1 day",
+#'     time_breaks = mixtime::days(1L),
 #'     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
 #'   ) +
 #'   theme(
@@ -142,8 +142,7 @@ coord_calendar <- function(
   ggplot2::ggproto(NULL, CoordCalendar(base_coord))
 }
 
-#' @rdname ggplot2-ggproto
-#' @keywords internal
+#' @noRd
 CoordCalendar <- function(coord) {
   force(coord)
   ggplot2::ggproto(

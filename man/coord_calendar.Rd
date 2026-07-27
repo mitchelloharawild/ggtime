@@ -26,9 +26,9 @@ coord_calendar(
 \item A function that takes the limits as input and returns row layout points as output
 }}
 
-\item{time_rows}{A duration giving the distance between calendar rows like
-"1 weeks", or "1 month". If both \code{rows} and \code{time_rows} are
-specified, \code{time_rows} wins.}
+\item{time_rows}{A duration giving the distance between calendar rows,
+such as \code{mixtime::weeks(1L)} or \code{mixtime::months(1L)}. If both \code{rows} and
+\code{time_rows} are specified, \code{time_rows} wins.}
 
 \item{cols, time_cols}{Not yet supported.}
 
@@ -111,9 +111,9 @@ pedestrian |>
   dplyr::filter(Time < datetime("2015-02-01 00:00:00")) |>
   ggplot(aes(x = Time, y = Count, color = Sensor)) +
   geom_line() +
-  coord_calendar(time_rows = "1 week") +
+  coord_calendar(time_rows = mixtime::weeks(1L)) +
   scale_x_mixtime(
-    time_breaks = "1 day",
+    time_breaks = mixtime::days(1L),
     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
   ) +
   theme(legend.position = "bottom")
@@ -123,10 +123,10 @@ pedestrian |>
   dplyr::filter(year(Time) == year(2015)) |>
   ggplot(aes(x = Time, y = Count, color = Sensor)) +
   geom_line() +
-  coord_calendar(time_rows = "1 week") +
+  coord_calendar(time_rows = mixtime::weeks(1L)) +
   facet_wrap(vars(yearmonth(Time)), ncol = 4, scales = "free_x") +
   scale_x_mixtime(
-    time_breaks = "1 day",
+    time_breaks = mixtime::days(1L),
     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
   ) +
   theme(

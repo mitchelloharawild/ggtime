@@ -11,12 +11,13 @@
 #' `time_chronon` argument.
 #'
 #' @inheritParams ggplot2::scale_x_date
-#' @param time_breaks A duration giving the distance between breaks like
-#' "2 weeks", or "10 years". If both `breaks` and `time_breaks` are specified,
-#' `time_breaks` wins.
-#' @param time_minor_breaks A duration giving the distance between minor breaks like
-#' "2 weeks", or "10 years". If both `minor_breaks` and `time_minor_breaks` are
-#' specified, `time_minor_breaks` wins.
+#' @param time_breaks A duration giving the distance between breaks, such as
+#' `mixtime::weeks(2L)` or `mixtime::years(10L)`. If both `breaks` and
+#' `time_breaks` are specified, `time_breaks` wins.
+#' @param time_minor_breaks A duration giving the distance between minor
+#' breaks, such as `mixtime::weeks(2L)` or `mixtime::years(10L)`. If both
+#' `minor_breaks` and `time_minor_breaks` are specified, `time_minor_breaks`
+#' wins.
 #' @param time_chronon A time granule that defines the common chronon to use for
 #' mixed granularity (e.g. `mixtime::tu_day(1L)`). The default automatically
 #' selects it as the finest chronon that all time points can be represented in.
@@ -57,9 +58,8 @@
 #' using duration-based intervals and time formatting. These time aware
 #' options are prefixed with `time_` (e.g. `time_breaks` and `time_labels`),
 #' and take precedence over the non-time aware options (e.g. `breaks` and
-#' `labels`). The scale's breaks can be specified with [mixtime::duration()]
-#' objects (e.g. `time_breaks = mixtime::months(1L)`), or with strings that can
-#' be parsed into durations (e.g. `time_breaks = "1 month"`).
+#' `labels`). The scale's breaks are specified with [mixtime::duration()]
+#' objects (e.g. `time_breaks = mixtime::months(1L)`) or a time granule.
 #'
 #' Labels are specified with mixtime format strings, which describe a time point
 #' as glue-style `{}` placeholders holding the granules to show. Since the
@@ -180,7 +180,7 @@ scale_x_mixtime <- function(
 #' methods, and keeps breaks on calendar boundaries (a "1 day" break lands at
 #' midnight) rather than wherever the panel's expansion happens to fall.
 #' @param range The range to cover, as an `<mt_time>`.
-#' @param size The step size, as a duration or a string such as `"1 day"`.
+#' @param size The step size, as a duration or a time granule.
 #' @param ... Ignored, for compatibility with other [scales::fullseq()] methods.
 #' @noRd
 #' @exportS3Method scales::fullseq mixtime::mt_time
@@ -199,7 +199,7 @@ scale_x_mixtime <- function(
 #' returning a break function that walks the scale's limits in steps of `width`
 #' via [scales::fullseq()]. Unlike `breaks_width()` there is no `offset`, which
 #' spares mixtime an `offset_by()` method for a shift that is always zero.
-#' @param width The break width, as a duration or a string such as `"1 day"`.
+#' @param width The break width, as a duration or a time granule.
 #' @noRd
 breaks_time_seq <- function(width) {
   force(width)

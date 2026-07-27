@@ -25,8 +25,8 @@ coord_loop(
 }}
 
 \item{time_loops}{A duration giving the distance between temporal
-loops like "2 weeks", or "10 years". If both \code{loops} and \code{time_loops} are
-specified, \code{time_loops} wins.}
+loops, such as \code{mixtime::weeks(2L)} or \code{mixtime::years(10L)}. If both
+\code{loops} and \code{time_loops} are specified, \code{time_loops} wins.}
 
 \item{time}{A string specifying which aesthetic contains the time variable that
 should be looped over. Default is \code{"x"}.}
@@ -129,7 +129,8 @@ seasonality across data at daily and hourly frequencies, both day of week
 and hour of week are needed. Since these factors have different levels, they
 cannot be plotted on the same axis. In contrast, it is possible to plot both
 daily and hourly data on the same axis using \code{\link[=scale_x_mixtime]{scale_x_mixtime()}}, which can
-then be looped over weekly periods with \code{coord_loop(time_loops = "1 week")}.
+then be looped over weekly periods with
+\code{coord_loop(time_loops = mixtime::weeks(1L))}.
 
 Another subtle issue of using factors instead of continuous time is that
 spacing between time points is regularized. For example, when plotting the
@@ -155,7 +156,7 @@ library(mixtime)
 # Basic usage with US accidental deaths data
 uad <- tsibble::as_tsibble(USAccDeaths)
 # Requires mixtime, POSIXct, or Date time types
-uad$index <- yearmonth(uad$index)
+uad$index <- mixtime::yearmonth(uad$index)
 
 p <- ggplot(uad, aes(x = index, y = value)) +
   geom_line()
@@ -164,6 +165,6 @@ p <- ggplot(uad, aes(x = index, y = value)) +
 p
 
 # With yearly looping to show seasonal patterns
-p + coord_loop(time_loops = "1 year")
+p + coord_loop(time_loops = mixtime::years(1L))
 
 }

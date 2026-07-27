@@ -98,11 +98,41 @@ test_that("clip_loops works", {
   )
 })
 
+
+test_that("time_loops can be given as a granule directly", {
+  df <- tibble::tibble(
+    time = mixtime::yearmonth(36L + 0:71),
+    value = as.numeric(USAccDeaths)
+  )
+  p <- ggplot(df, aes(x = time, y = value)) + geom_line()
+
+  # `mixtime::years()` and friends return a `<mixtime>`, which keeps the
+  # duration inside its vecvec wrapper. Stepping the time axis reads the
+  # duration's chronon directly, so the wrapper has to come off first. Passing
+  # that same granule directly should skip the reduction and give identical
+  # results.
+  expect_equal(
+    ggplot_build(p + coord_loop(time_loops = mixtime::years(1L)))$data,
+    ggplot_build(p + coord_loop(time_loops = mixtime::cal_gregorian$year(1L)))$data
+  )
+  # A duration of more than one unit steps by all of it, rather than by one.
+  expect_equal(
+    ggplot_build(p + coord_loop(time_loops = mixtime::years(2L)))$data,
+    ggplot_build(p + coord_loop(time_loops = mixtime::cal_gregorian$year(2L)))$data
+  )
+  expect_equal(
+    ggplot_build(p + coord_calendar(time_rows = mixtime::years(1L)))$data,
+    ggplot_build(
+      p + coord_calendar(time_rows = mixtime::cal_gregorian$year(1L))
+    )$data
+  )
+})
+
 test_that("time_loops must be a single duration", {
   # Several loop widths would be ambiguous, and both `unvecvec()` and `seq()`
   # would silently use only the first.
   expect_error(
-    coord_loop(time_loops = c("1 year", "2 days")),
+    coord_loop(time_loops = c(mixtime::years(1L), mixtime::days(2L))),
     "`time_loops` must be a single duration"
   )
   expect_error(
@@ -111,7 +141,7 @@ test_that("time_loops must be a single duration", {
   )
   # `coord_calendar()` names the argument the user passed.
   expect_error(
-    coord_calendar(time_rows = c("1 year", "2 days")),
+    coord_calendar(time_rows = c(mixtime::years(1L), mixtime::days(2L))),
     "`time_rows` must be a single duration"
   )
   # No looping is not a duration to check.
@@ -126,5 +156,18 @@ test_that("time_loops must be a single duration", {
   expect_error(
     coord_calendar(time_rows = mixtime::yearmonth(600L)),
     "`time_rows` must be a duration, not a time point"
+  )
+})
+
+test_that("time_loops rejects strings", {
+  # Parsing a string like "1 year" into a duration would need mixtime's own
+  # (unexported) parser. For now, only durations and granules are accepted.
+  expect_error(
+    coord_loop(time_loops = "1 year"),
+    "`time_loops` must be a duration or a granule"
+  )
+  expect_error(
+    coord_calendar(time_rows = "1 week"),
+    "`time_rows` must be a duration or a granule"
   )
 })

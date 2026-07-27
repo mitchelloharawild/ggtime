@@ -10,8 +10,8 @@
 #'   - A `mixtime` vector giving time points at which the `time` axis should loop
 #'   - A function that takes the limits as input and returns loop points as output
 #' @param time_loops A duration giving the distance between temporal
-#' loops like "2 weeks", or "10 years". If both `loops` and `time_loops` are
-#' specified, `time_loops` wins.
+#' loops, such as `mixtime::weeks(2L)` or `mixtime::years(10L)`. If both
+#' `loops` and `time_loops` are specified, `time_loops` wins.
 #' @param time A string specifying which aesthetic contains the time variable that
 #'   should be looped over. Default is `"x"`.
 #' @param xlim,ylim Limits for the x and y axes. `NULL` means use the default limits.
@@ -97,7 +97,8 @@
 #' and hour of week are needed. Since these factors have different levels, they
 #' cannot be plotted on the same axis. In contrast, it is possible to plot both
 #' daily and hourly data on the same axis using [scale_x_mixtime()], which can
-#' then be looped over weekly periods with `coord_loop(time_loops = "1 week")`.
+#' then be looped over weekly periods with
+#' `coord_loop(time_loops = mixtime::weeks(1L))`.
 #'
 #' Another subtle issue of using factors instead of continuous time is that
 #' spacing between time points is regularized. For example, when plotting the
@@ -122,7 +123,7 @@
 #' # Basic usage with US accidental deaths data
 #' uad <- tsibble::as_tsibble(USAccDeaths)
 #' # Requires mixtime, POSIXct, or Date time types
-#' uad$index <- yearmonth(uad$index)
+#' uad$index <- mixtime::yearmonth(uad$index)
 #'
 #' p <- ggplot(uad, aes(x = index, y = value)) +
 #'   geom_line()
@@ -131,7 +132,7 @@
 #' p
 #'
 #' # With yearly looping to show seasonal patterns
-#' p + coord_loop(time_loops = "1 year")
+#' p + coord_loop(time_loops = mixtime::years(1L))
 #'
 #' @export
 coord_loop <- function(
@@ -161,8 +162,7 @@ coord_loop <- function(
   ))
 }
 
-#' @rdname ggplot2-ggproto
-#' @keywords internal
+#' @noRd
 CoordLoop <- function(coord) {
   force(coord)
   ggplot2::ggproto(
