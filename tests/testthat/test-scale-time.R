@@ -127,6 +127,35 @@ test_that("time_labels formats breaks with a mixtime format string", {
   )
 })
 
+test_that("default labels drop the within-chronon position when breaks are whole", {
+  # Daily breaks land at midnight, so every break's within-day position is
+  # 0.0% -- format that as a plain date rather than "2024-01-08 0.0%".
+  df <- data.frame(x = mixtime::date("2024-01-01") + 0:20, y = 1:21)
+  p <- ggplot(df, aes(x, y)) + geom_line() + scale_x_mixtime()
+
+  labels <- setdiff(scale_labels(p), "NA")
+  expect_true(length(labels) > 0)
+  expect_false(any(grepl("%", labels, fixed = TRUE)))
+  expect_match(labels, "^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+})
+
+test_that("fractional within-chronon positions are still shown", {
+  # A warp can place breaks partway through a chronon; that fractional
+  # position should still be reported rather than always dropped.
+  month_starts <- mixtime::yearmonth("2020-12-01") + 0:5
+  df <- data.frame(x = mixtime::date("2021-01-01") + 0:89, y = 1:90)
+  p <- ggplot(df, aes(x, y)) +
+    geom_line() +
+    scale_x_mixtime(
+      breaks = mixtime::date("2021-01-15") + c(0, 30, 60),
+      transform = transform_warp(month_starts + 0)
+    )
+
+  labels <- setdiff(scale_labels(p), "NA")
+  expect_true(length(labels) > 0)
+  expect_true(all(grepl("%", labels, fixed = TRUE)))
+})
+
 test_that("time_labels formats timezone-aware breaks", {
   tz <- "Australia/Melbourne"
   df <- data.frame(

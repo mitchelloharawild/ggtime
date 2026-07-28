@@ -95,6 +95,28 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
     breaks
   }
 
+  # Breaks land on continuous (double) positions even when every one of them
+  # falls exactly on a chronon boundary (e.g. daily breaks at midnight), so the
+  # default format would print a "0.0%" within-chronon position that is always
+  # zero. Recognising a whole-number break set and formatting it as discrete
+  # time gives a plain date instead. Only applies when `time_labels` hasn't
+  # already supplied its own formatting function.
+  format_breaks <- function(x) {
+    if (S7::S7_inherits(x, mixtime::mt_time)) {
+      xd <- S7::S7_data(x)
+      whole <- is.finite(xd) & xd == floor(xd)
+      if (is.double(xd) && all(whole | is.na(xd))) {
+        S7::S7_data(x) <- as.integer(xd)
+      }
+    }
+    # Mirrors `scales::format_format()`, the default this replaces, which
+    # restores `NA` breaks (out-of-range labels) after `format()` turns them
+    # into the string `"NA"`.
+    ret <- format(x, trim = TRUE, justify = "left")
+    ret[is.na(x)] <- NA
+    ret
+  }
+
   scales::new_transform(
     name = if (is.null(transform)) {
       "mixtime"
@@ -119,6 +141,7 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
       to_mixtime(x)
     },
     breaks = time_breaks,
+    format = format_breaks,
     # Much like `scales::transform_compose()`
     domain = transform$domain %||% c(-Inf, Inf)
   )
