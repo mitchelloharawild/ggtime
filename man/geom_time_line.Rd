@@ -8,7 +8,7 @@ geom_time_line(
   mapping = NULL,
   data = NULL,
   stat = "identity",
-  position = "time_civil",
+  position = "identity",
   na.rm = FALSE,
   orientation = NA,
   show.legend = NA,
@@ -93,8 +93,9 @@ duplicated values.
 The geometry helps to visualise time with changing time offsets provided by the
 \verb{[x/y]timeoffset} aesthetics. Changes in time offsets are drawn using dashed lines,
 which are most commonly used for timezone changes and daylight savings time transitions.
-Timezone offsets are automatically used when times from the \code{mixtime} package are used
-in conjunction with \code{\link[=position_time_civil]{position_time_civil()}} positioning (the default).
+Timezone offsets are automatically used when times from the \code{mixtime} package are
+plotted in local time, which is the scale's default behaviour (see the \code{time_chronon}
+argument of \code{\link[=scale_x_mixtime]{scale_x_mixtime()}}).
 
 This geometry also respects implicit missing values in regular time series, and will
 not connect temporal observations separated by gaps.
@@ -108,17 +109,22 @@ The \code{geom_time_line()} geometry extends \code{\link[ggplot2:geom_line]{ggpl
 semantics that ensure the line's slope accurately reflects rates of change in
 the measurements over time.
 
-Most notably, \code{geom_time_line()} works closely with \code{\link[=position_time_civil]{position_time_civil()}}
-and \code{\link[=position_time_absolute]{position_time_absolute()}} to correctly display time in civil and
-absolute time formats, respectively. Civil time positioning (the default)
-shows time as experienced in a specific timezone (also known as 'local time',
-it is the time on clocks in that timezone). Absolute time positioning shows
-time as a continuous timeline without timezone adjustments.
+Most notably, \code{geom_time_line()} works closely with the time scale
+(\code{\link[=scale_x_mixtime]{scale_x_mixtime()}}) to correctly display time in local
+and absolute time formats. Local time (the scale's default whenever all
+time points share a timezone) shows time as experienced in that timezone, it
+is the time on clocks in that timezone. Absolute time shows time as a
+continuous timeline without timezone adjustments. Which of these is shown is
+controlled by the scale's \code{time_chronon}: a chronon with \code{tz = NA} combines
+time points by their local wall-clock reading (local time), while a chronon
+with a fixed timezone (such as UTC, the default when a common chronon must
+be identified across timezones) aligns them by the instant they occurred
+(absolute time).
 
-When time series are visualised in civil time, timezone offset changes (e.g.
+When time series are visualised in local time, timezone offset changes (e.g.
 due to daylight saving time) cause 'jumps' in time which are indicated with
 dashed lines. This preserves the integrity of the line's slope across these
-transitions. Another benefit of visualising time series in civil time is to
+transitions. Another benefit of visualising time series in local time is to
 compare time series across different timezones, as the time axis is better
 aligned with human behaviour in their local timezone (e.g. working hours,
 sleep patterns, etc). Plotting time series in \emph{absolute time} shows the exact
@@ -147,10 +153,12 @@ sections.
 The \code{xtimeoffset} and \code{ytimeoffset} aesthetics allow for visualization of time
 offset changes, such as timezone transitions or daylight saving time changes.
 When successive time offsets differ, a dashed line segment is drawn to show
-the offset transition. These aesthetics are automatically set when using
-\code{position} = \code{\link[=position_time_civil]{position_time_civil()}} (the default), however the offsets can
-also be set manually to show other types of time offsets. One example of when
-it is useful to set the offsets manually is when showing measurements from a
+the offset transition. These aesthetics are automatically set when time
+points are plotted in local time, which is the scale's default behaviour
+(see the \code{time_chronon} argument of \code{\link[=scale_x_mixtime]{scale_x_mixtime()}}), however the
+offsets can also be set manually to show other types of time offsets. One
+example of when it is useful to set the offsets manually is when showing
+measurements from a
 sensor with a known time drift (e.g. a clock that runs fast or slow) that is
 re-calibrated at known times.
 }
@@ -196,10 +204,14 @@ df_tz_back <- data.frame(
   time = as.POSIXct("2023-04-02", tz = "Australia/Melbourne") + 0:11 * 3600,
   value = cumsum(rnorm(12, 2))
 )
+# Naive/local time (`tz = NA`) shows the DST transition as a dashed jump
 ggplot(df_tz_back, aes(time, value)) +
-  geom_time_line()
+  geom_time_line() +
+  scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = NA))
+# Absolute time aligns to a single fixed timezone, removing the jump
 ggplot(df_tz_back, aes(time, value)) +
-  geom_time_line(position = position_time_absolute())
+  geom_time_line() +
+  scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = "UTC"))
 
 # Random walk with a forward timezone change (DST starts)
 df_tz_forward <- data.frame(
@@ -207,14 +219,16 @@ df_tz_forward <- data.frame(
   value = cumsum(rnorm(12, 2))
 )
 ggplot(df_tz_forward, aes(time, value)) +
-  geom_time_line()
+  geom_time_line() +
+  scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = NA))
 ggplot(df_tz_forward, aes(time, value)) +
- geom_time_line(position = position_time_absolute())
+  geom_time_line() +
+  scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = "UTC"))
 
 
 }
 \seealso{
-\code{\link[=position_time_civil]{position_time_civil()}}/\code{\link[=position_time_absolute]{position_time_absolute()}} for civil and absolute time positioning.
+\link{scale_mixtime} for defining local and absolute time using \code{time_chronon}.
 
 \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}/\code{\link[ggplot2:geom_path]{ggplot2::geom_path()}} for standard line/path geoms in ggplot2.
 }
@@ -229,7 +243,9 @@ ggplot(df_tz_forward, aes(time, value)) +
  • \tab \code{\link[ggplot2:aes_group_order]{group}} \tab → inferred \cr
  • \tab \code{\link[ggplot2:aes_linetype_size_shape]{linetype}} \tab → via \code{theme()} \cr
  • \tab \code{\link[ggplot2:aes_linetype_size_shape]{linewidth}} \tab → via \code{theme()} \cr
+ • \tab \code{xtimeid} \tab   \cr
  • \tab \code{xtimeoffset} \tab   \cr
+ • \tab \code{ytimeid} \tab   \cr
  • \tab \code{ytimeoffset} \tab   \cr
 }
 

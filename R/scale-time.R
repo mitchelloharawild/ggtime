@@ -309,12 +309,6 @@ ScaleContinuousMixtime <- ggproto(
     )
     names(df) <- aesthetics
 
-    # HACK
-    # Add offsets for PositionTime[Civil/Absolute] here as "after_stat" since
-    # Position$default_aes = aes(xoffset = stage(after_stat = f(x))) isn't
-    # currently working in ggplot2
-    # missing_aes <- setdiff(names(PositionTimeCivil$default_aes), names(df))
-
     # Add gap filling for implicit missing values
     # DESIGN: should this be in position? Position may be too late to have access to enough data.
     # df <- as_tibble(tsibble::fill_gaps(as_tsibble(
@@ -322,15 +316,6 @@ ScaleContinuousMixtime <- ggproto(
     #   index = x,
     #   key = c(PANEL, group)
     # )))
-
-    # Match missing_aes offset positions to transformed scales
-    # missing_aes_i <- match(missing_aes, paste0(names(df), "offset"))
-    # missing_aes_i <- missing_aes_i[!is.na(missing_aes_i)]
-
-    # df[missing_aes[missing_aes_i]] <- lapply(
-    #   df[missing_aes_i],
-    #   mixtime::tz_offset
-    # )
 
     df
   },

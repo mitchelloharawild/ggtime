@@ -58,5 +58,4 @@ reference:
     - starts_with("coord_")
     - starts_with("facet_")
     - starts_with("theme_")
-    - starts_with("position_")
     - starts_with("range_")
