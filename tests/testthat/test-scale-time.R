@@ -78,12 +78,16 @@ test_that("break widths can be given as a granule directly", {
   # the same breaks as passing that granule directly.
   expect_equal(
     scale_labels(p + scale_x_mixtime(time_breaks = mixtime::years(1L))),
-    scale_labels(p + scale_x_mixtime(time_breaks = mixtime::cal_gregorian$year(1L)))
+    scale_labels(
+      p + scale_x_mixtime(time_breaks = mixtime::cal_gregorian$year(1L))
+    )
   )
   # A duration of more than one unit steps by all of it, rather than by one.
   expect_equal(
     scale_labels(p + scale_x_mixtime(time_breaks = mixtime::years(2L))),
-    scale_labels(p + scale_x_mixtime(time_breaks = mixtime::cal_gregorian$year(2L)))
+    scale_labels(
+      p + scale_x_mixtime(time_breaks = mixtime::cal_gregorian$year(2L))
+    )
   )
 })
 
@@ -175,4 +179,144 @@ test_that("time_labels formats timezone-aware breaks", {
     )
 
   expect_setequal(setdiff(scale_labels(p), "NA"), sprintf("%02d", 6:12))
+})
+
+test_that("default labels leave the axis's timezone out", {
+  # Every break of an axis shares its timezone, so naming it on each label
+  # repeats what the axis as a whole says once.
+  tz <- "Australia/Melbourne"
+  df <- data.frame(
+    x = mixtime::datetime(seq(
+      as.POSIXct("2020-01-06 00:00:00", tz = tz),
+      by = "1 hour",
+      length.out = 72
+    )),
+    y = 1:72
+  )
+  p <- ggplot(df, aes(x, y)) + geom_line()
+
+  # Breaks labelled at their own (second) chronon, ...
+  expect_match(
+    scale_labels(p),
+    "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$"
+  )
+  # ... and breaks labelled at the granule they step by.
+  expect_match(
+    scale_labels(p + scale_x_mixtime(time_breaks = mixtime::days(1L))),
+    "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+  )
+
+  # `time_labels` can still ask for it.
+  expect_match(
+    setdiff(
+      scale_labels(
+        p + scale_x_mixtime(time_labels = "{cyc(day, month)} {tz(.time)}")
+      ),
+      "NA"
+    ),
+    "^[0-9]{2} AEDT$"
+  )
+})
+
+test_that("time_breaks labels name the granule the breaks step by", {
+  df <- data.frame(
+    x = mixtime::datetime("2015-01-01 00:00:00") + 3600 * (0:200),
+    y = 1:201
+  )
+  p <- ggplot(df, aes(x, y)) + geom_line()
+
+  # A break stepped by a granule lands at the start of one of that granule's
+  # instances, so the label names the instance ("2015-01-01") rather than the
+  # instant it sits at in the scale's own chronon ("2015-01-01 00:00:00").
+  expect_match(
+    scale_labels(p + scale_x_mixtime(time_breaks = mixtime::days(1L))),
+    "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+  )
+  expect_match(
+    scale_labels(p + scale_x_mixtime(time_breaks = mixtime::months(1L))),
+    "^[0-9]{4} [A-Z][a-z]{2}$"
+  )
+  # Breaks the scale did not step by a granule are labelled as before.
+  expect_match(scale_labels(p), "^[0-9]{4}-[0-9]{2}-[0-9]{2} ")
+
+  # Labels the user asked for are not overridden.
+  expect_equal(
+    setdiff(
+      scale_labels(
+        p +
+          scale_x_mixtime(
+            time_breaks = mixtime::days(1L),
+            time_labels = "{cyc(day, month)}"
+          )
+      ),
+      "NA"
+    ),
+    sprintf("%02d", 1:9)
+  )
+})
+
+test_that("break granules finer than the chronon fall within it", {
+  # Daily breaks on monthly data ask for breaks the data's own chronon cannot
+  # land on: casting them onto it would put every break within a month at that
+  # month, giving a year's worth of breaks but only twelve positions to draw
+  # them at, each labelled with the same month over and over. Placing them
+  # continuously puts each break at its position *within* the month instead.
+  df <- data.frame(x = mixtime::yearmonth(600:611), y = 1:12)
+  p <- ggplot(df, aes(x, y)) +
+    geom_line() +
+    scale_x_mixtime(time_breaks = mixtime::days(1L))
+
+  labels <- scale_labels(p)
+  expect_match(labels, "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$")
+  expect_equal(anyDuplicated(labels), 0L)
+  # A year of monthly points, broken a day apart: as many labels as the panel
+  # has days, rather than as many as it has months.
+  expect_gt(length(labels), 300)
+
+  # The breaks are a day apart on a scale still counted in months: the first
+  # day of a 31 day January is a thirty-first of the way through it.
+  breaks <- ggplot_build(p)$layout$panel_params[[1]]$x$get_breaks()
+  breaks <- breaks[!is.na(breaks)]
+  expect_equal(min(diff(breaks)), 1 / 31)
+
+  # Which is the point of placing them this way: the data does not move for
+  # them, so the months stay evenly spaced however the axis is broken.
+  positions <- function(p) ggplot_build(p)$data[[1]]$x
+  expect_equal(positions(p), positions(ggplot(df, aes(x, y)) + geom_line()))
+  expect_equal(unique(diff(positions(p))), 1)
+
+  # `time_minor_breaks` places its breaks the same way.
+  p_minor <- ggplot(df, aes(x, y)) +
+    geom_line() +
+    scale_x_mixtime(time_minor_breaks = mixtime::days(1L))
+  minor <- ggplot_build(p_minor)$layout$panel_params[[1]]$x$get_breaks_minor()
+  expect_equal(anyDuplicated(minor), 0L)
+
+  # A coarser granule than the data's needs no such placing: its breaks land
+  # on whole months (600 is 2020 Jan).
+  p_coarse <- ggplot(df, aes(x, y)) +
+    geom_line() +
+    scale_x_mixtime(time_breaks = mixtime::years(1L))
+  breaks <- ggplot_build(p_coarse)$layout$panel_params[[1]]$x$get_breaks()
+  expect_equal(breaks[!is.na(breaks)], c(600, 612))
+  expect_equal(scale_labels(p_coarse), c("2020", "2021"))
+})
+
+test_that("chronons measured from a non-zero epoch keep their own time", {
+  # `mixtime::mixtime()` reads a bare `<mt_time>` as raw numbers to be measured
+  # from the target chronon's epoch rather than as time to convert onto it, and
+  # a year chronon's epoch is 1970 -- so year 2020 (stored as 50) was drawn at
+  # -1920 and labelled 51. Chronons whose epoch is zero (day, month, second)
+  # were unharmed, which is why only yearly axes showed it.
+  df <- data.frame(x = mixtime::year(2020:2025), y = 1:6)
+  p <- ggplot(df, aes(x, y)) + geom_line()
+
+  # 2020 is 50 years after the epoch, drawn mid-year by `align_discrete`.
+  expect_equal(ggplot_build(p)$data[[1]]$x, 50:55 + 0.5)
+  expect_match(scale_labels(p), "^20[0-9]{2}$")
+
+  # Quarters are measured from a zero epoch, and were right all along.
+  df <- data.frame(x = mixtime::yearquarter(200:207), y = 1:8)
+  p <- ggplot(df, aes(x, y)) + geom_line()
+  expect_equal(ggplot_build(p)$data[[1]]$x, 200:207 + 0.5)
 })

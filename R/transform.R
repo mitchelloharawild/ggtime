@@ -65,9 +65,21 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
     if (identical(attr(x, "chronon"), attr(ptype, "chronon"))) {
       return(x)
     }
-    # `vec_cast()` to `ptype` converts onto its chronon and keeps a duration a
-    # duration rather than making it a time point.
-    vctrs::vec_cast(x, ptype)
+
+    if (S7::S7_inherits(x, mixtime::mt_duration)) {
+      # `vec_cast()` keeps a duration a duration rather than making it a time
+      # point, which measuring it from the epoch would.
+      return(vctrs::vec_cast(x, ptype))
+    }
+
+    # TODO: merge with above vec_cast (needs mixtime::chronon_convert or
+    # similar, which does continuous time granule conversions (not truncated))
+    x <- mixtime::mixtime(
+      wrap_mixtime(x),
+      chronon = attr(ptype, "chronon"),
+      discrete = FALSE
+    )
+    vctrs::vec_restore(vctrs::vec_data(vecvec::unvecvec(x)), ptype)
   }
 
   to_mixtime <- function(x) {
@@ -111,8 +123,9 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
     }
     # Mirrors `scales::format_format()`, the default this replaces, which
     # restores `NA` breaks (out-of-range labels) after `format()` turns them
-    # into the string `"NA"`.
-    ret <- format(x, trim = TRUE, justify = "left")
+    # into the string `"NA"`. `attr = FALSE` drops the chronon's attribute
+    # suffix (the time zone of a zoned axis, the coordinates of a located one).
+    ret <- format(x, trim = TRUE, justify = "left", attr = FALSE)
     ret[is.na(x)] <- NA
     ret
   }

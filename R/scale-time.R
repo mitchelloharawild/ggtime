@@ -186,6 +186,15 @@ scale_x_mixtime <- function(
 #' @exportS3Method scales::fullseq mixtime::mt_time
 `fullseq.mixtime::mt_time` <- function(range, size, ...) {
   size <- duration_as_granule(size)
+
+  # One unit at a time, to reduce risk surface for unsupported conversion to
+  # the scale's common chronon.
+  unit <- size
+  unit@n <- 1L
+  range <- vecvec::unvecvec(
+    mixtime::mixtime(wrap_mixtime(range), chronon = unit, discrete = FALSE)
+  )
+
   seq(
     mixtime::time_floor(range[1], size),
     mixtime::time_ceiling(range[2], size),
@@ -206,6 +215,45 @@ breaks_time_seq <- function(width) {
   function(x) {
     scales::fullseq(x, width)
   }
+}
+
+#' Label time values by the granule they fall in
+#'
+#' Breaks are continuous positions on a time scale, but a label naming the
+#' granule a break falls in ("Jan", "2015-01-01") is more use than one
+#' measuring how far through the scale's own chronon it sits ("Jan 0.0%",
+#' "2015-01-01 00:00:00"), so they are labelled discretely, at the granularity
+#' the breaks were stepped by rather than the data's.
+#'
+#' The chronon's attribute suffix (the time zone or coordinates) are dropped.
+#'
+#' @param x Time values, as handed to a scale's `labels` function.
+#' @param chronon The granule to label at, or `NULL` for `x`'s own.
+#' @param cycle The cycle to label within, from `loop_cycle()`, or `NULL` for
+#'   linear labels.
+#' @returns A character vector of labels.
+#' @noRd
+time_labels_at <- function(x, chronon = NULL, cycle = NULL) {
+  if (is_mixtime(x)) {
+    x <- vecvec::unvecvec(x)
+  }
+
+  labels <- rep(NA_character_, vctrs::vec_size(x))
+  # Breaks falling outside the panel are censored to `NA`, and name no granule.
+  finite <- is.finite(vctrs::vec_data(x))
+  if (!any(finite)) {
+    return(labels)
+  }
+
+  args <- list(wrap_mixtime(x[finite]), discrete = TRUE)
+  if (!is.null(chronon)) {
+    args$chronon <- chronon
+  }
+  if (!is.null(cycle)) {
+    args$cycle <- cycle
+  }
+  labels[finite] <- format(inject(mixtime::mixtime(!!!args)), attr = FALSE)
+  labels
 }
 
 #' @keywords internal
@@ -237,6 +285,14 @@ mixtime_scale <- function(
   }
   if (!is_waiver(time_labels)) {
     labels <- function(self, x) {
+      granule <- self$time_breaks
+      if (!is_waiver(granule) && !is.null(granule)) {
+        x <- mixtime::mixtime(
+          wrap_mixtime(x),
+          discrete = TRUE,
+          chronon = granule
+        )
+      }
       format(x, format = time_labels)
     }
   }
@@ -263,6 +319,7 @@ mixtime_scale <- function(
       scale_class,
       time_chronon = time_chronon,
       align_discrete = align_discrete,
+      time_breaks = time_breaks,
     )
   )
 
@@ -277,6 +334,24 @@ ScaleContinuousMixtime <- ggproto(
   "ScaleContinuousMixtime",
   ScaleContinuous,
   secondary.axis = waiver(),
+
+  # The granule the breaks step by, allows control by coord_calendar's cells
+  time_breaks = waiver(),
+
+  get_labels = function(self, breaks = self$get_breaks()) {
+    granule <- self$time_breaks
+    if (is_waiver(granule) || is.null(granule) || !is_waiver(self$labels)) {
+      return(ggproto_parent(ScaleContinuous, self)$get_labels(breaks))
+    }
+    # A child rather than a mutation of `self`: `get_labels()` may be called
+    # more than once, and from a view scale holding the scale itself.
+    labelled <- ggproto(
+      NULL,
+      self,
+      labels = function(x) time_labels_at(x, chronon = granule)
+    )
+    ggproto_parent(ScaleContinuous, labelled)$get_labels(breaks)
+  },
   # range = MixtimeRange$new(),
   # clone = function(self) {
   #   new <- ggproto(NULL, self)
@@ -347,7 +422,12 @@ ScaleContinuousMixtime <- ggproto(
       )
     }
 
-    is_duration <- vapply(x@x, S7::S7_inherits, logical(1L), mixtime::mt_duration)
+    is_duration <- vapply(
+      x@x,
+      S7::S7_inherits,
+      logical(1L),
+      mixtime::mt_duration
+    )
     if (any(is_duration) && !all(is_duration)) {
       cli::cli_abort(
         c(
@@ -383,7 +463,11 @@ ScaleContinuousMixtime <- ggproto(
         v <- v + align_nudge
       }
 
-      v <- mixtime::mixtime(v, chronon = self$time_chronon, discrete = FALSE)
+      v <- mixtime::mixtime(
+        wrap_mixtime(v),
+        chronon = self$time_chronon,
+        discrete = FALSE
+      )
       v@x[[1L]]
     })
 

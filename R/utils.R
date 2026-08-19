@@ -307,3 +307,18 @@ ggtime_migrate_deprecate <- function(cl, pkg, version) {
     user_env = caller_env(2)
   )
 }
+
+#' Wrap a bare time vector for `mixtime::mixtime()`
+#'
+#' Going from time vectors to mixtime is necessary for [mixtime::mixtime()] to
+#' correctly convert it to other chronons.
+#'
+#' @param x A time vector.
+#' @returns `x`, as a `<mixtime>` if it was a bare `<mt_time>`.
+#' @noRd
+wrap_mixtime <- function(x) {
+  if (S7::S7_inherits(x, mixtime::mt_time)) {
+    return(mixtime::new_mixtime(x))
+  }
+  x
+}
