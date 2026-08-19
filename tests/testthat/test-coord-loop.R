@@ -139,7 +139,11 @@ test_that("coord_loop works with coord_radial", {
   vdiffr::expect_doppelganger(
     "radial",
     p +
-      coord_loop(time_loops = mixtime::months(1L), expand = TRUE, coord = coord_radial()),
+      coord_loop(
+        time_loops = mixtime::months(1L),
+        expand = TRUE,
+        coord = coord_radial()
+      ),
     writer = write_svg_r42
   )
 })
@@ -179,9 +183,27 @@ test_that("looped axes are labelled cyclically", {
     ),
     c("Jan", "Mar", "May", "Jul", "Sep", "Nov", "Jan")
   )
+  # A calendar breaks its axis at every one of the row's own cells rather than
+  # wherever pretty breaks fall, so each cell of the row is named. Monthly data
+  # can only be cut into months however fine the `cells` asked for, so the
+  # default daily cells of a yearly row fall on month boundaries -- and are
+  # named by the granule the calendar asked to be cut by, giving each month's
+  # day of the year rather than its name.
   expect_equal(
-    loop_labels(p + coord_calendar(time_rows = mixtime::years(1L))),
-    c("Jan", "Mar", "May", "Jul", "Sep", "Nov", "Jan")
+    loop_labels(p + coord_calendar(rows = mixtime::years(1L), cols = NULL)),
+    paste0("D", c("01", "32", "60", "91", 121, 152, 182, 213, 244, 274, 305, 335, "01"))
+  )
+  # Cells the axis can be cut by are named as themselves.
+  expect_equal(
+    loop_labels(
+      p +
+        coord_calendar(
+          cells = mixtime::months(1L),
+          rows = mixtime::years(1L),
+          cols = NULL
+        )
+    ),
+    c(month.abb, "Jan")
   )
 
   # Without a loop, time is linear and labelled as points in time.
@@ -194,7 +216,15 @@ test_that("looped axes are labelled cyclically", {
         coord_loop(time_loops = mixtime::years(1L)) +
         scale_x_mixtime(time_labels = "{lin(year)}-{cyc(month, year)}")
     ),
-    c("1973-01", "1973-03", "1973-05", "1973-07", "1973-09", "1973-11", "1974-01")
+    c(
+      "1973-01",
+      "1973-03",
+      "1973-05",
+      "1973-07",
+      "1973-09",
+      "1973-11",
+      "1974-01"
+    )
   )
 })
 
@@ -212,17 +242,23 @@ test_that("time_loops can be given as a granule directly", {
   # results.
   expect_equal(
     ggplot_build(p + coord_loop(time_loops = mixtime::years(1L)))$data,
-    ggplot_build(p + coord_loop(time_loops = mixtime::cal_gregorian$year(1L)))$data
+    ggplot_build(
+      p + coord_loop(time_loops = mixtime::cal_gregorian$year(1L))
+    )$data
   )
   # A duration of more than one unit steps by all of it, rather than by one.
   expect_equal(
     ggplot_build(p + coord_loop(time_loops = mixtime::years(2L)))$data,
-    ggplot_build(p + coord_loop(time_loops = mixtime::cal_gregorian$year(2L)))$data
+    ggplot_build(
+      p + coord_loop(time_loops = mixtime::cal_gregorian$year(2L))
+    )$data
   )
   expect_equal(
-    ggplot_build(p + coord_calendar(time_rows = mixtime::years(1L)))$data,
     ggplot_build(
-      p + coord_calendar(time_rows = mixtime::cal_gregorian$year(1L))
+      p + coord_calendar(rows = mixtime::years(1L), cols = NULL)
+    )$data,
+    ggplot_build(
+      p + coord_calendar(rows = mixtime::cal_gregorian$year(1L), cols = NULL)
     )$data
   )
 })
@@ -238,10 +274,17 @@ test_that("time_loops must be a single duration", {
     coord_loop(time_loops = mixtime::years(1:2)),
     "`time_loops` must be a single duration"
   )
-  # `coord_calendar()` names the argument the user passed.
+  # `coord_calendar()`'s granule arguments (`rows` among them) are captured
+  # unevaluated and only resolved once the axis's calendar is known (see
+  # `eval_granule()`), so this now surfaces at build time rather than at
+  # construction, naming the argument the user passed just the same.
+  df <- data.frame(time = as.Date("2020-01-01") + 0:9, value = 0:9)
+  p <- ggplot(df, aes(x = time, y = value)) + geom_line()
   expect_error(
-    coord_calendar(time_rows = c(mixtime::years(1L), mixtime::days(2L))),
-    "`time_rows` must be a single duration"
+    ggplot_build(
+      p + coord_calendar(rows = c(mixtime::years(1L), mixtime::days(2L)))
+    ),
+    "`rows` must be a single duration"
   )
   # No looping is not a duration to check.
   expect_no_error(coord_loop(time_loops = NULL))
@@ -253,8 +296,8 @@ test_that("time_loops must be a single duration", {
     "`time_loops` must be a duration, not a time point"
   )
   expect_error(
-    coord_calendar(time_rows = mixtime::yearmonth(600L)),
-    "`time_rows` must be a duration, not a time point"
+    ggplot_build(p + coord_calendar(rows = mixtime::yearmonth(600L))),
+    "`rows` must be a duration, not a time point"
   )
 })
 
@@ -265,9 +308,13 @@ test_that("time_loops rejects strings", {
     coord_loop(time_loops = "1 year"),
     "`time_loops` must be a duration or a granule"
   )
+  # See "time_loops must be a single duration" above: resolved (and so
+  # validated) at build time.
+  df <- data.frame(time = as.Date("2020-01-01") + 0:9, value = 0:9)
+  p <- ggplot(df, aes(x = time, y = value)) + geom_line()
   expect_error(
-    coord_calendar(time_rows = "1 week"),
-    "`time_rows` must be a duration or a granule"
+    ggplot_build(p + coord_calendar(rows = "1 week")),
+    "`rows` must be a duration or a granule"
   )
 })
 
@@ -326,4 +373,49 @@ test_that("looping does not depend on clipping path support", {
     on.exit(grDevices::dev.off(), add = TRUE)
     print(p)
   })
+})
+
+test_that("self$limits is restored even if the parent setup_panel_params() errors", {
+  # As with `CoordCalendar`, `CoordLoop$setup_panel_params()` temporarily
+  # overwrites `self$limits` with the loop window and must restore it even if
+  # the parent call errors, or the coord is left permanently holding the loop
+  # window as its user limits.
+  df <- data.frame(
+    time = as.Date("2020-01-01") + 0:365,
+    value = seq_len(366)
+  )
+  p <- ggplot(df, aes(x = time, y = value)) +
+    geom_point() +
+    coord_loop(time_loops = mixtime::months(1L))
+  built <- ggplot_build(p)
+  layout <- built$layout
+  scale_x <- layout$panel_scales_x[[1]]
+  scale_y <- layout$panel_scales_y[[1]]
+  coord <- layout$coord
+  params <- layout$coord_params
+
+  # `ggplot_build()` above already exercised `setup_panel_params()` once;
+  # reset to a known baseline before poisoning the scale.
+  coord$limits <- list(x = NULL, y = NULL)
+  before <- coord$limits
+
+  # `setup_panel_params()` calls the parent's `setup_panel_params()` twice:
+  # once for the uncut range, once (with `self$limits` overwritten) for the
+  # loop window. Erroring only on the second call exercises the restore
+  # without preventing the method from getting that far.
+  orig_get_limits <- scale_x$get_limits
+  calls <- 0L
+  scale_x$get_limits <- function() {
+    calls <<- calls + 1L
+    if (calls == 2L) {
+      stop("forced error for testing")
+    }
+    orig_get_limits()
+  }
+
+  expect_error(
+    coord$setup_panel_params(scale_x, scale_y, params),
+    "forced error for testing"
+  )
+  expect_identical(coord$limits, before)
 })

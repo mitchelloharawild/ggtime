@@ -180,120 +180,148 @@ CoordLoop <- function(coord) {
     "CoordLoop",
     coord,
 
-    # The name of the scale representing time within `panel_params`.
-    # Usually but not always equal to `time`. Specializations of `CoordLoop`
-    # must set this appropriately (in [specialize_coord_loop()]).
+    # Name of the scale holding time within `panel_params`; set by
+    # `specialize_coord_loop()`.
     time_scale = NULL,
 
-    # Is the coord being wrapped linear? Used to decide whether munching needs
-    # to do any real work, see `distance()` below.
+    # Is the wrapped coord linear? Decides whether munching does real work
+    # in `distance()`.
     parent_is_linear = coord$is_linear(),
 
-    # Set by `distance()` and consumed by `transform()` to detect connected data.
+    # Set by `distance()`, read by `transform()` to detect connected data.
     munch_connected = FALSE,
 
-    # When TRUE, cutting and layout are both skipped. Panel decoration
-    # (gridlines, axis keys) is already expressed in the coordinates of the loop
-    # window, so it must be passed straight through -- see `as_decoration()`.
+    # When TRUE, skips cutting and layout: panel decoration is already in
+    # the loop window's coordinates and must pass through untouched (see
+    # `as_decoration()`).
     is_decoration = FALSE,
 
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
-      # Calculate the panel parameters as normal (without looping) so that
-      # user-defined limits, scale limits, expand, etc are all taken into
-      # account when working out where to cut.
+      # Un-looped params first, so limits/expand are computed from the true
+      # range before working out where to cut.
       uncut_params <- ggproto_parent(coord, self)$setup_panel_params(
         scale_x,
         scale_y,
         params
       )
+      trans <- uncut_params[[self$time_scale]]$get_transformation()
+      cuts <- self$compute_cuts(uncut_params, trans, scale_x, scale_y)
 
-      time_cuts <- loop_cuts(
-        uncut_params,
-        self$time_scale,
-        self$loops,
-        self$time_loops
-      )
+      # Labels a looped axis as a position within the loop, not a point in
+      # time.
+      scales <- self$cyclical_scales(scale_x, scale_y, cuts)
 
-      # A looped axis measures time within the loop rather than time itself, so
-      # its labels should name positions in the cycle ("Jan") rather than points
-      # in time ("1973 Jan").
-      if (identical(self$time, "x")) {
-        scale_x <- as_cyclical_scale(scale_x, self$time_loops)
-      } else {
-        scale_y <- as_cyclical_scale(scale_y, self$time_loops)
-      }
-
-      # Recalculate the panel parameters zoomed in on the first loop, so that
-      # expansion, breaks and user limits are all applied to the window that is
-      # actually drawn.
+      # Zoomed into the loop window, so expansion, breaks and user limits
+      # apply to what is actually drawn.
       old_limits <- self$limits
-      self$limits[[self$time_scale]] <- c(
-        # Restart at the first time point
-        time_cuts[1],
-        # End at the longest loop in the window
-        time_cuts[1] + max(diff(time_cuts))
-      )
+      on.exit(self$limits <- old_limits, add = TRUE)
+      self$limits[[self$time_scale]] <- self$window(cuts)
       cut_params <- ggproto_parent(coord, self)$setup_panel_params(
-        scale_x,
-        scale_y,
+        scales$x,
+        scales$y,
         params
       )
-      self$limits <- old_limits
 
-      cut_params$time_cuts <- time_cuts
-      # Cutting happens in transformed data space, which is what `transform()`
-      # and `distance()` are handed.
-      cut_params$loop_cuts <- as.numeric(
-        cut_params[[self$time_scale]]$get_transformation()$transform(time_cuts)
-      )
+      self$panel_cuts(cut_params, cuts, trans)
+    },
+
+    # Hook: cutpoints for cutting and folding the time axis, from the
+    # un-looped params and the time scale's transformation. Returns a
+    # vector of loop points here; `loop_granule()`, `window()` and
+    # `panel_cuts()` below all read from it, and it's the only thing
+    # carried from here to those hooks (a subclass needing richer
+    # structure, like `CoordCalendar`, overrides all four together).
+    #
+    # `scale_x`/`scale_y` are unused here, but needed by `CoordCalendar`'s
+    # override to resolve a bare granule expression against the time
+    # scale's own calendar.
+    compute_cuts = function(self, uncut_params, trans, scale_x, scale_y) {
+      loop_cuts(uncut_params, self$time_scale, self$loops, self$time_loops)
+    },
+
+    # Hook: the granule the time axis cycles over, for `cyclical_scales()`
+    # below. Loops over `self$time_loops` directly, ignoring `cuts`.
+    loop_granule = function(self, cuts) self$time_loops,
+
+    # Hook: the granule the time axis is divided into, stepping breaks and
+    # naming labels unless the scale has breaks of its own. `NULL` here,
+    # since a loop has no divisions of its own to break at.
+    break_granule = function(self, cuts) NULL,
+
+    # The time scale, re-labelled to describe a position within the loop
+    # rather than a point in time.
+    cyclical_scales = function(self, scale_x, scale_y, cuts) {
+      cycle <- self$loop_granule(cuts)
+      divide <- self$break_granule(cuts)
+      if (identical(self$time, "x")) {
+        list(x = as_cyclical_scale(scale_x, cycle, divide), y = scale_y)
+      } else {
+        list(x = scale_x, y = as_cyclical_scale(scale_y, cycle, divide))
+      }
+    },
+
+    # Hook: the window to zoom `self$limits[[self$time_scale]]` into (see
+    # `setup_panel_params()`): the first time point to the end of the
+    # longest loop.
+    window = function(self, cuts) {
+      c(cuts[1], cuts[1] + max(diff(cuts)))
+    },
+
+    # Hook: attaches the cut-specific fields to the panel params.
+    panel_cuts = function(self, cut_params, cuts, trans) {
+      cut_params$time_cuts <- cuts
+      # Transformed, since cutting happens in transformed data space.
+      cut_params$loop_cuts <- as.numeric(trans$transform(cuts))
       cut_params
     },
 
-    # Reporting as non-linear is what gives us the "is this geometry connected?"
-    # signal: `coord_munch()` (called only by connected geoms) calls
-    # `distance()` immediately before `transform()`, whereas pointwise geoms
-    # reach `transform()` directly. It also gets us `Inf` resolved against the
-    # backtransformed range for free, and makes rects and segments arrive as
-    # rings and paths so that one cutting code path covers them all.
+    # Reporting non-linear routes connected geoms through `distance()`
+    # before `transform()` (the "is this connected?" signal), resolves
+    # `Inf` against the backtransformed range, and turns rects/segments
+    # into rings/paths so one cutting path covers everything.
     is_linear = function() FALSE,
 
     distance = function(self, x, y, panel_params) {
       self$munch_connected <- TRUE
 
       if (self$parent_is_linear) {
-        # Make munching a no-op: a distance of 0 gives `extra = 1`, and
-        # interpolating a segment into one piece returns it unchanged.
+        # A distance of 0 gives `extra = 1`: munching becomes a no-op.
         return(rep(0, max(length(x) - 1L, 0L)))
       }
 
-      # The parent genuinely needs to munch (e.g. `coord_radial()`). Measure the
-      # unfolded distance: a segment that spans several loops is cut into one
-      # piece per loop, and each of those pieces needs its own vertices. Folding
-      # first would report a segment spanning a whole loop as having travelled
-      # nowhere, and it would be drawn as a straight chord instead of an arc.
+      # Measures the unfolded distance, so a segment spanning several loops
+      # still gets vertices per piece rather than reading as travelling
+      # nowhere.
       ggproto_parent(coord, self)$distance(x, y, panel_params)
     },
 
     transform = function(self, data, panel_params) {
       connected <- isTRUE(self$munch_connected)
-      # Reset defensively on every call, so a `transform()` reached without a
-      # preceding `distance()` is never mistaken for connected data.
+      # Reset so a call without a preceding `distance()` isn't mistaken for
+      # connected data.
       self$munch_connected <- FALSE
 
       if (isTRUE(self$is_decoration)) {
         return(ggproto_parent(coord, self)$transform(data, panel_params))
       }
 
-      cut <- if (connected) cut_connected else cut_pointwise
-      data <- cut(data, self$time, panel_params$loop_cuts)
+      data <- self$cut_data(data, panel_params, connected)
       data <- ggproto_parent(coord, self)$transform(data, panel_params)
       self$arrange_loops(data, panel_params)
     },
 
-    # Panel decoration is derived from the panel params, whose limits are the
-    # loop window, so it already lives in the folded coordinate space. Cutting
-    # it would fold breaks in the window's overhang (a break sitting exactly on
-    # the next loop's start) back to the start of the panel.
+    # Hook: cuts and folds `data`'s time aesthetic by this panel's cuts,
+    # ready for the plain coord's `transform()` to rescale into `[0, 1]`.
+    # `connected` (munched line/path-like data) is cut without introducing
+    # duplicate vertices at existing breaks.
+    cut_data = function(self, data, panel_params, connected) {
+      cut <- if (connected) cut_connected else cut_pointwise
+      cut(data, self$time, panel_params$loop_cuts)
+    },
+
+    # Already lives in folded coordinate space (the panel params' limits
+    # are the loop window), so passed through as decoration rather than
+    # cut.
     train_panel_guides = function(self, panel_params, layers, params = list()) {
       as_decoration(
         self,
@@ -319,10 +347,8 @@ CoordLoop <- function(coord) {
       )
     },
 
-    # Hook for laying the cut loops out within the panel. `coord_loop()`
-    # superimposes them, so there is nothing to do beyond dropping the loop
-    # index that `cut_*()` attached. `coord_calendar()` overrides this to stack
-    # the loops into rows.
+    # Hook for laying cut loops out within the panel. Superimposed here, so
+    # just drops the loop index `cut_*()` attached.
     arrange_loops = function(self, data, panel_params) {
       data$.loop <- NULL
       data
@@ -332,118 +358,123 @@ CoordLoop <- function(coord) {
 
 # cyclical labels ---------------------------------------------------------
 
-#' Label a time scale by position within the loop
+#' Label a time scale by position within the loop, broken at its divisions
 #'
-#' Looping arranges time cyclically, so the time axis no longer describes the
-#' passage of time but a position within the cycle: monthly data looped over
-#' years is showing months of the year, and should be labelled "Jan", "Feb", ...
-#' rather than "1973 Jan", "1973 Feb", .... Which labels are appropriate depends
-#' on both the chronon of the data and the cycle it is looped over, and mixtime
-#' already knows how to format a time point that way. Attaching the loop's cycle
-#' to the break values and formatting them therefore gives suitable labels for
-#' any chronon and cycle, in any calendar.
+#' A looped axis measures a position within the cycle rather than the
+#' passage of time, so it's labelled that way ("Jan" rather than "1973
+#' Jan"), using mixtime's own formatting for the chronon and cycle. A coord
+#' that divides the axis into granules of its own (`coord_calendar()`'s
+#' `cells`) also gets a break at every division, named at that division's
+#' own granularity.
 #'
-#' Only the labels are replaced. Where the breaks fall is unchanged, so
-#' `breaks`, `time_breaks` and the panel's expansion all behave as they do
-#' without looping.
+#' Both are defaults: `breaks`/`time_breaks` and `labels`/`time_labels` are
+#' left unchanged where the scale already sets them.
 #' @param scale The positional `Scale` handling the time aesthetic.
 #' @param time_loops The loop duration given to [coord_loop()], as reduced by
 #'   `duration_as_granule()`.
-#' @returns `scale` labelled cyclically, or unchanged when the cycle is unknown
-#'   or the user has specified labels of their own.
+#' @param divisions The granule the coord divides the axis into, from
+#'   `CoordLoop$break_granule()`, or `NULL` if it has no divisions of its own.
+#' @returns `scale` broken and labelled by the loop, or unchanged where it has
+#'   nothing to add.
 #' @noRd
-as_cyclical_scale <- function(scale, time_loops) {
+as_cyclical_scale <- function(scale, time_loops, divisions = NULL) {
   cycle <- loop_cycle(time_loops)
-  if (is.null(cycle)) {
-    return(scale)
+
+  # A scale stepping its own breaks by a granule takes precedence over the
+  # coord's divisions.
+  granule <- scale$time_breaks
+  if (is_waiver(granule)) {
+    granule <- NULL
   }
-  # `labels` (and `time_labels`, which sets it) says how the user wants time
-  # written, which looping has no business overriding.
-  if (!is_waiver(scale$labels)) {
+  # Only worth defaulting on a cyclical axis; without a cycle the labels
+  # would be full dates, unreadable at every division.
+  divide <- !is.null(divisions) &&
+    !is.null(cycle) &&
+    is.null(granule) &&
+    is_waiver(scale$breaks)
+  if (divide) {
+    granule <- divisions
+  }
+
+  # Nothing to say about either where the breaks fall or how they are named.
+  if (!divide && (is.null(cycle) || !is_waiver(scale$labels))) {
     return(scale)
   }
 
-  # A child of the scale rather than a mutation of it: the view scale keeps hold
-  # of the scale and formats its labels when the panel is drawn, long after
-  # `setup_panel_params()` has returned.
-  ggplot2::ggproto(NULL, scale, labels = function(x) loop_labels(x, cycle))
+  fields <- list()
+  if (divide) {
+    fields$breaks <- breaks_time_granule(divisions)
+  }
+  if (is_waiver(scale$labels)) {
+    fields$labels <- function(x) {
+      time_labels_at(x, chronon = granule, cycle = cycle)
+    }
+  }
+
+  # A child, not a mutation: the view scale formats labels at draw time,
+  # long after `setup_panel_params()` returns.
+  inject(ggplot2::ggproto(NULL, scale, !!!fields))
+}
+
+#' Breaks at every boundary of a granule
+#'
+#' Steps the axis by a granule using the coord's own cutting
+#' (`loop_cuts_by_duration()`), so breaks land exactly where the axis is
+#' divided. Also handles plain `Date`/`POSIXct` axes, unlike
+#' `breaks_time_seq()`.
+#' @param granule The granule to break at, as reduced by
+#'   `duration_as_granule()`.
+#' @returns A function of the scale's limits, returning breaks in the scale's
+#'   own time type.
+#' @noRd
+breaks_time_granule <- function(granule) {
+  force(granule)
+  function(limits) {
+    # Dropped rather than raised: the coord already checked this cuts
+    # against the axis before handing it over.
+    tryCatch(
+      loop_cuts_by_duration(limits, granule),
+      error = function(cnd) NULL
+    )
+  }
 }
 
 #' The cycle that a looped time axis repeats over
 #' @inheritParams as_cyclical_scale
 #' @returns A time granule describing the cycle, or `NULL` if the axis has no
-#'   cycle of a known length. Loops given as time points (`loops`) are the
-#'   latter: their spacing is a number of chronons rather than a granule of the
-#'   calendar, which is not enough to know which granule is being cycled over.
+#'   cycle of a known length (e.g. `loops` given as time points, whose
+#'   spacing is a number of chronons rather than a granule).
 #' @noRd
 loop_cycle <- function(time_loops) {
-  # `duration_as_granule()` has already reduced a duration to the granule it
-  # steps by. Anything else (a waiver, or `loops` given as time points) names
-  # no granule of the calendar.
   if (S7::S7_inherits(time_loops, mixtime::mt_unit)) time_loops else NULL
-}
-
-#' Format break values as positions within the loop's cycle
-#' @param x Break values, as handed to a scale's `labels` function.
-#' @param cycle The cycle granule, from `loop_cycle()`.
-#' @returns A character vector of labels.
-#' @noRd
-loop_labels <- function(x, cycle) {
-  if (is_mixtime(x)) {
-    x <- vecvec::unvecvec(x)
-  }
-
-  labels <- rep(NA_character_, vctrs::vec_size(x))
-  # Breaks falling outside the panel are censored to `NA`, and have no position
-  # within the cycle to name.
-  finite <- is.finite(vctrs::vec_data(x))
-
-  # Breaks are continuous positions on the time scale, but a label naming the
-  # granule they fall in ("Jan") is more use than one measuring how far through
-  # it they are ("Jan 0.0%"), so they are labelled discretely.
-  labels[finite] <- format(
-    mixtime::mixtime(x[finite], cycle = cycle, discrete = TRUE)
-  )
-  labels
 }
 
 # specialization ----------------------------------------------------------
 
 #' Specialize the implementation of coord_loop depending on the base coord
 #'
-#' [coord_loop()] wraps a base coord such as [coord_cartesian()] or
-#' [coord_radial()]. This function is called by `CoordLoop()` to specialize an
-#' instance for its underlying base coord by overriding methods needed to support
-#' that base coord.
-#' @param coord A [`ggproto`] object of class `CoordLoop`, which will inherit
-#' from some other coord (as passed to `CoordLoop(coord = ...)`.
+#' Called by `CoordLoop()` to specialize an instance for its wrapped base
+#' coord (e.g. [coord_cartesian()], [coord_radial()]), overriding whatever
+#' methods that coord needs.
+#' @param coord A [`ggproto`] object of class `CoordLoop`, inheriting from
+#'   the base coord passed to `CoordLoop(coord = ...)`.
 #' @param ... unused.
 #' @details
-#' Implement this method on a coord's class to provide support for that coord in
-#' [coord_loop()]. Should return an object that inherits from the input `coord`.
+#' A specialization must implement:
 #'
-#' Specializations *must* implement:
+#' - `coord$time_scale`: the name of the `panel_params` element holding the
+#'   `Scale` that handles time (e.g. `"x"`, `"y"`).
 #'
-#' - `coord$time_scale`: The name of the time scale (e.g. `"x"`, `"y"`, ...):
-#'   corresponds to the element of `panel_params` holding the `Scale` that
-#'   handles time.
+#' A specialization may need to implement:
 #'
-#' Specializations *may need to* implement:
+#' - `coord$limits`: if the positional scales aren't `x`/`y`, map `xlim`/
+#'   `ylim` onto the corresponding scales.
 #'
-#' - `coord$limits`: If the positional scales for this coord are not `x` and `y`
-#'   (so `coord$time_scale` is not `"x"` or `"y"`), you may need to adjust
-#'   `limits` to map limits from `xlim` and `ylim` onto the corresponding scales.
-#'
-#' Note that the cutting and folding of data is handled generically by
-#' `CoordLoop`, in terms of `coord$time` (the data aesthetic) and
-#' `coord$time_scale` (the panel param). Specializations should not need to
-#' override `transform()` or `draw_panel()`.
-#'
-#' We use a separate specialization function rather than making `CoordLoop()`
-#' generic so that the default method of this generic can be an error
-#' (representing an attempt to use an unsupported coord type).
-#' @returns A [`ggproto`] object that inherits from `coord`. Raises an error
-#' if no parent classes of `coord` are supported by [coord_loop()].
+#' Cutting and folding is handled generically by `CoordLoop`, so
+#' specializations shouldn't need to override `transform()` or
+#' `draw_panel()`.
+#' @returns A [`ggproto`] object that inherits from `coord`. Errors if no
+#'   parent class of `coord` is supported by [coord_loop()].
 #' @noRd
 specialize_coord_loop <- function(coord, ...) {
   UseMethod("specialize_coord_loop")
@@ -460,16 +491,11 @@ specialize_coord_loop.default <- function(coord, ...) {
 
 #' Evaluate an expression that draws panel decoration
 #'
-#' Gridlines and axis keys are transformed through `Coord$transform()` just like
-#' layer data is, but they describe the loop *window* rather than data within it,
-#' and are already expressed in its coordinates. They must therefore be passed
-#' through untouched: cutting them would fold a break sitting on the next loop's
-#' start back to the start of the panel, and a layout that places each loop
-#' separately (such as `coord_calendar()`'s rows) would squeeze them all into the
-#' first row instead of replicating them across every row.
-#'
-#' ggplot2 only routes panel decoration through `render_bg()`, `render_fg()` and
-#' `train_panel_guides()`, so wrapping those three covers it.
+#' Gridlines and axis keys describe the loop window, not data within it, and
+#' are already in its coordinates, so they must pass through `transform()`
+#' untouched rather than being cut and laid out like data. Wraps
+#' `render_bg()`, `render_fg()` and `train_panel_guides()`, the only places
+#' ggplot2 routes panel decoration through.
 #' @param coord A `CoordLoop` ggproto object.
 #' @param expr Expression to evaluate, lazily.
 #' @noRd

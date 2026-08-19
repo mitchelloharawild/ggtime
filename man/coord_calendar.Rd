@@ -5,10 +5,18 @@
 \title{Calendar coordinates}
 \usage{
 coord_calendar(
-  rows = waiver(),
-  time_rows = waiver(),
-  cols = waiver(),
-  time_cols = waiver(),
+  cells = day(1L),
+  rows = week(1L),
+  blocks = NULL,
+  panes = month(1L),
+  cols = quarter(1L),
+  pane_spacing = 0.25,
+  col_spacing = 0.1,
+  label_cells = "{cyc(day, month)}",
+  label_rows = NULL,
+  label_blocks = NULL,
+  label_panes = "{cyc(month, year, label = TRUE, abbreviate = TRUE)}",
+  label_cols = NULL,
   time = "x",
   xlim = NULL,
   ylim = NULL,
@@ -19,18 +27,65 @@ coord_calendar(
 )
 }
 \arguments{
-\item{rows}{Layout the time scale into calendar rows, one of:
+\item{cells}{Size of a calendar cell (see the Granule hierarchy section);
+governs the cell labels and the only gridline drawn along the time axis.
 \itemize{
-\item \code{NULL} or \code{waiver()} for no rows (the default)
-\item A \code{mixtime} vector giving time points at which the \code{time} axis should layout into rows
-\item A function that takes the limits as input and returns row layout points as output
+\item \code{NULL}: no cells, no gridlines, no cell labels
+\item a granule or duration, e.g. \code{mixtime::days(1L)}
+}
+
+Defaults to \code{day(1L)}.}
+
+\item{rows}{Size of a calendar row: \code{coord_loop()}'s \code{time_loops} under a
+calendar-specific name.
+\itemize{
+\item \code{NULL}: a single row spanning the whole column
+\item a granule or duration, e.g. \code{mixtime::days(7L)}
+}
+
+Defaults to \code{week(1L)}, or \code{day(7L)} if the calendar has no \code{week}.}
+
+\item{blocks}{Size of a calendar block: rows are grouped and marked with a
+thicker gridline where each block starts.
+\itemize{
+\item \code{NULL} (default): no blocks
+\item a granule or duration, e.g. \code{mixtime::months(1L)}
 }}
 
-\item{time_rows}{A duration giving the distance between calendar rows,
-such as \code{mixtime::weeks(1L)} or \code{mixtime::months(1L)}. If both \code{rows} and
-\code{time_rows} are specified, \code{time_rows} wins.}
+\item{panes}{Size of a calendar pane: rows are grouped and set apart by a
+gap rather than a rule. Must be coarser than \code{rows}, no coarser than
+\code{cols}.
+\itemize{
+\item \code{NULL}: no panes
+\item a granule or duration, e.g. \code{mixtime::months(1L)}
+}
 
-\item{cols, time_cols}{Not yet supported.}
+Defaults to \code{month(1L)}, silently dropped if it doesn't fit.}
+
+\item{cols}{Size of a calendar column, arranged left to right with no
+wrapping.
+\itemize{
+\item \code{NULL}: a single column spanning the whole time range
+\item a granule or duration, e.g. \code{mixtime::quarters(1L)}
+}
+
+Defaults to \code{quarter(1L)}, or \code{month(3L)} if the calendar has no
+\code{quarter}.}
+
+\item{pane_spacing, col_spacing}{Gap between panes of rows / between
+columns, as a fraction of one row's height / one column's width.}
+
+\item{label_cells, label_rows, label_blocks, label_panes, label_cols}{How to
+label each instance of a granule:
+\itemize{
+\item a \code{mixtime} format string, as \code{time_labels} of \code{\link[=scale_x_mixtime]{scale_x_mixtime()}},
+e.g. \code{"{cyc(day, month)}"} (a bare \code{"{day}"} is not valid)
+\item a function of the granule's times, returning a character vector
+\item \code{NULL} (default except for \code{label_cells}/\code{label_panes}): no labels
+}
+
+Named by the time each instance starts, except a block or pane (which
+spans several rows), named by the time in the middle of the group.}
 
 \item{time}{A string specifying which aesthetic contains the time variable that
 should be looped over. Default is \code{"x"}.}
@@ -49,51 +104,69 @@ A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} 
 \item{coord}{The underlying coordinate system to use. Default is \code{coord_cartesian()}.}
 }
 \description{
-The calendar coordinate system arranges time series data into a calendar-like
-layout, making it easier to see fine-grained temporal patterns over a long
-time span. It has similar semantics as the looped coordinate system
-(\code{\link[=coord_loop]{coord_loop()}}), however instead of overlaying looped data the calendar
-coordinate space arranges each loop into rows and columns like a calendar.
+Arranges time series data into a calendar-like layout of rows and columns.
+Data is cut into loops as in \code{\link[=coord_loop]{coord_loop()}}, with each loop becoming its
+own row and column of a grid rather than being overlaid.
 }
 \details{
-This coordinate system is particularly useful for visualizing long time spans
-with events that occur over short intervals (such as holidays).
+Useful for visualizing long time spans with events over short intervals,
+such as holidays. Cuts the time axis at every calendar boundary at once,
+folds each piece into its row's window, and offsets it into its cell of
+the grid. As with \code{\link[=coord_loop]{coord_loop()}}, geometries crossing a boundary are cut,
+justified per \code{align_discrete} (see \code{\link[=scale_x_mixtime]{scale_x_mixtime()}}).
+}
+\section{Granule arguments}{
 
-It works by:
 
-\enumerate{
-\item Dividing the time axis into segments based on the specified row (and column) periods
-\item Folding the time values of every segment into the first segment's window
-\item Cutting geometries that cross a segment boundary, and placing each
-piece into its own calendar row
+\code{cells}/\code{rows}/\code{blocks}/\code{panes}/\code{cols} each accept:
+\itemize{
+\item \code{NULL}
+\item a duration, e.g. \code{mixtime::days(1L)}
+\item a time granule, e.g. \code{mixtime::cal_gregorian$month(1L)}
+\item a bare expression, e.g. \code{day(1L)} or \code{month(1L)}, naming a granule of
+whichever calendar the time axis resolves to (from the scale's common
+chronon, or the Gregorian calendar for a plain \code{Date}/\code{POSIXct} axis)
+}
 }
 
-As for \code{\link[=coord_loop]{coord_loop()}}, the layout is applied to the data rather than to the
-drawing, so the panel contents are drawn only once regardless of how many
-rows the calendar has.
+\section{Granule hierarchy}{
+
+
+Granules sit in a strict hierarchy: \code{col}, \code{pane}, \code{block}, \code{row}, \code{cell}.
+A granule never straddles a boundary of anything above it; a row cut
+short by a coarser boundary is left blank for the rest of its width, as
+on a printed calendar.
 }
-\section{Practical usage}{
+
+\section{Breaks and labels}{
 
 
-The calendar coordinate system arranges a cartesian coordinate system into a
-dense calendar-like layout. Calendar layouts are particularly useful for
-identifying specific dates or events that occur over short intervals in long
-series. For example, the daily pedestrian counts at Melbourne's Birrarung
-Marr park is nearby to several major sporting venues, and the calendar layout
-makes obvious the spikes in pedestrian activity that occur during annual
-sporting events (such as the Australian Open tennis tournament). Calendar
-layouts are also useful to identify the effect of holidays, especially when
-their dates change each year (such as Easter).
+The time axis is broken at every \code{cells} boundary and labelled as a
+position within the \code{rows} cycle (e.g. "Mon", "Tue", ...), unless
+\code{breaks}/\code{labels}/\code{time_breaks}/\code{time_labels} are set explicitly (see
+\code{\link[=scale_x_mixtime]{scale_x_mixtime()}}). Falls back to the scale's own breaks when \code{cells}
+or \code{rows} is \code{NULL}, \code{cells} can't cut the axis, or a row holds too many
+cells to name individually.
+}
 
-Similarly to \code{\link[=coord_loop]{coord_loop()}}, the calendar coordinate system draws geometries
-that cross the boundaries of calendar rows or columns. The justification of
-these geometries can be controlled with the \code{align_discrete} parameter of
-\code{\link[=scale_x_mixtime]{scale_x_mixtime()}} as described in \code{\link[=coord_loop]{coord_loop()}}.
+\section{Theming}{
 
-The calendar coordinate system works well in conjunction with facetting to
-give more space between months and/or years of the calendar. When facetting,
-using \code{scales = "free_x"} is recommended to make each facet only include
-time periods appropriate for that panel.
+
+Each granule has its own theme elements, \verb{ggtime.calendar.<granule>.line},
+\code{.background} and \code{.text} (\verb{<granule>} = \code{cell}, \code{row}, \code{block}, \code{pane} or
+\code{col}), inheriting from \code{panel.grid}, \code{panel.background} and \code{text}. The
+panel's own grid is not drawn; the \code{cell} granule rules the time axis
+instead.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{+ theme(
+  ggtime.calendar.block.line = element_line(linewidth = 1, linetype = "22"),
+  ggtime.calendar.cell.line = element_blank()
+)
+}\if{html}{\out{</div>}}
+
+A granule's labels are justified within the granule they belong to, each
+in a different default corner so several can be labelled at once without
+colliding.
 }
 
 \examples{
@@ -104,27 +177,26 @@ library(mixtime)
 pedestrian <- tsibble::pedestrian |>
   dplyr::mutate(Time = datetime(Date_Time))
 
-# A weekly calendar arrangement of pedestrian counts in Melbourne
-# Notice the periods of high activity days for the Birrarung Marr sensor
-# during the Australian Open tennis tournament in late January.
+# A weekly calendar arrangement of pedestrian counts, showing the high
+# activity at Birrarung Marr during the Australian Open in late January.
 pedestrian |>
   dplyr::filter(Time < datetime("2015-02-01 00:00:00")) |>
   ggplot(aes(x = Time, y = Count, color = Sensor)) +
   geom_line() +
-  coord_calendar(time_rows = mixtime::weeks(1L)) +
+  coord_calendar(rows = mixtime::weeks(1L), cols = NULL) +
   scale_x_mixtime(
     time_breaks = mixtime::days(1L),
     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
   ) +
   theme(legend.position = "bottom")
 
-# Monthly facets can be used to create a complete calendar for 2015.
+# A full year, with weekly rows and monthly columns: `cols` tiles the
+# months natively, without needing `facet_wrap()`.
 pedestrian |>
-  dplyr::filter(year(Time) == year(2015)) |>
+  dplyr::filter(mixtime::year(Time) == mixtime::year(2015), Sensor != "Birrarung Marr") |>
   ggplot(aes(x = Time, y = Count, color = Sensor)) +
   geom_line() +
-  coord_calendar(time_rows = mixtime::weeks(1L)) +
-  facet_wrap(vars(yearmonth(Time)), ncol = 4, scales = "free_x") +
+  coord_calendar(rows = mixtime::weeks(1L), blocks = mixtime::months(1L)) +
   scale_x_mixtime(
     time_breaks = mixtime::days(1L),
     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"

@@ -74,8 +74,20 @@ check_gaps <- function(x) {
 #' @noRd
 duration_as_granule <- function(x, arg = caller_arg(x), call = caller_env()) {
   # A granule (e.g. `mixtime::cal_gregorian$year(1L)`) is a scalar rather than a
-  # vector, and is already what this returns.
-  if (is_waiver(x) || is.null(x) || S7::S7_inherits(x, mixtime::mt_unit)) {
+  # vector, and is already what this returns -- except for its `@n`, coerced
+  # to a double here to match the duration-conversion path below (whose
+  # `granule@n * as.numeric(x)` is always a double). `@n`'s S7 type
+  # (`class_numeric`) allows either storage mode, and a bare granule
+  # constructor (`cal_gregorian$month(1L)`) builds an integer one; left alone,
+  # two granules of equal value but different storage mode would not be
+  # `identical()` (which is how `calendar_resolve_granules()` detects a
+  # defaulted `coord_calendar()` granule), only because of how each happened
+  # to be constructed.
+  if (is_waiver(x) || is.null(x)) {
+    return(x)
+  }
+  if (S7::S7_inherits(x, mixtime::mt_unit)) {
+    x@n <- as.numeric(x@n)
     return(x)
   }
 
@@ -119,6 +131,117 @@ duration_as_granule <- function(x, arg = caller_arg(x), call = caller_env()) {
   granule <- attr(x, "chronon")
   granule@n <- granule@n * as.numeric(x)
   granule
+}
+
+#' Evaluate a granule expression against a calendar
+#'
+#' `coord_calendar()`'s granule arguments (`cells`, `rows`, `blocks`, `panes`,
+#' `cols`) accept a bare granule expression such as `month(1L)`, which only
+#' means something once resolved against a calendar: `month(1L)` should be
+#' `cal_gregorian$month(1L)` on a Gregorian time axis and
+#' `cal_sym454$month(1L)` on a symmetry454 one. `coord_calendar()` can't
+#' resolve this at construction time -- no axis exists yet -- so the
+#' expression is captured unevaluated (`rlang::enquo()`, see
+#' `coord_calendar()`) and resolved here once the axis's calendar is known
+#' (`calendar_resolve_granules()`, against the calendar `time_scale_calendar()`
+#' reads off the panel's time scale).
+#'
+#' The masking itself -- evaluating the expression with the calendar's own
+#' list of granule constructors (e.g. `list(year = ..., month = ..., day =
+#' ...)`, see `mixtime::new_calendar()`) as an `eval_tidy()` data mask, so a
+#' bare token resolves to that calendar's own unit -- is copied from
+#' `mixtime::linear_time()` (mixtime/R/linear_time.R), which resolves the
+#' same kind of expression (e.g. `linear_time(x, chronon = month(1L))`) the
+#' same way, including the "could not find function" hint below. A
+#' namespace-qualified call (`mixtime::days(1L)`) or an already-resolved
+#' granule passes straight through the mask unaffected.
+#' @param quo A quosure of the user's granule expression, from
+#'   `rlang::enquo()`/`rlang::quo()`.
+#' @param calendar The `mt_calendar` to resolve bare granule names against,
+#'   as `time_scale_calendar()` gives it.
+#' @inheritParams duration_as_granule
+#' @returns A time granule, as `duration_as_granule()` reduces the evaluated
+#'   expression to (or `NULL`/`waiver()` unchanged).
+#' @noRd
+eval_granule <- function(quo, calendar, arg = "x", call = caller_env()) {
+  x <- tryCatch(
+    eval_tidy(quo, data = calendar, env = emptyenv()),
+    error = function(e) {
+      # Special hint for the common case of a granule (typically `week`) not
+      # defined by this calendar, adapted from the same check in
+      # `mixtime::linear_time()`.
+      unit <- sub(
+        '^could not find function "(.*)"$',
+        "\\1",
+        conditionMessage(e)
+      )
+      if (!identical(unit, conditionMessage(e))) {
+        cli::cli_abort(
+          c(
+            conditionMessage(e),
+            i = "This calendar has no {.val {unit}} granule.",
+            i = "Granule tokens are resolved against the calendar of the time
+                 axis's data; supply the granule explicitly (e.g.
+                 {.code mixtime::cal_isoweek${unit}(1L)}), or use a duration
+                 instead."
+          ),
+          call = call
+        )
+      }
+      cli::cli_abort(conditionMessage(e), call = call)
+    }
+  )
+  duration_as_granule(x, arg = arg, call = call)
+}
+
+#' Evaluate a defaulted granule expression, falling back if unresolvable
+#'
+#' `coord_calendar()`'s `rows`/`cols` default to a bare granule token
+#' (`week(1L)`/`quarter(1L)`) that names a *concept* rather than a specific
+#' calendar's granule -- but unlike `cells`/`blocks`/`panes`, which every
+#' calendar in the Granule hierarchy either supports outright or can ignore
+#' (`NULL`), `week`/`quarter` are granules some calendars simply don't have
+#' (`cal_gregorian` has no `week`, `cal_sym454` has no `quarter`). Left alone,
+#' `eval_granule()` would error on those the same way it does for a granule
+#' the user explicitly asked for by a name their axis's calendar doesn't
+#' define -- appropriate for the latter, but not for a default nobody typed.
+#'
+#' This only swaps in `fallback` when both hold: the argument was left at its
+#' default (`is_default`, from `missing()` at construction -- see
+#' `coord_calendar()`) *and* the calendar genuinely has no granule named
+#' `unit`. A `rows`/`cols` the caller wrote out themselves -- even if it
+#' resolves to the same granule the default would have -- always goes through
+#' `quo` unchanged, and still gets `eval_granule()`'s ordinary "no such
+#' granule" error if its calendar can't resolve it. This is the one place
+#' `rows`/`cols` need the `missing()` sentinel that `panes`'s own defaulting
+#' (see `CoordCalendar$granule_specs()`) does without: `panes` decides after
+#' resolving successfully, by comparing values, while here the default
+#' expression itself may not be resolvable at all, so there is nothing to
+#' compare.
+#' @param quo A quosure of the user's granule expression, from
+#'   `rlang::enquo()`/`rlang::quo()`.
+#' @param is_default Was `quo` left at its default (`missing()` at
+#'   construction), rather than supplied by the caller?
+#' @param unit The bare granule name the default names (e.g. `"week"`),
+#'   checked against `names(calendar)`.
+#' @param fallback A quosure to resolve instead when `is_default` is `TRUE`
+#'   and `calendar` has no `unit` granule (e.g. `quo(day(7L))`).
+#' @inheritParams eval_granule
+#' @returns As `eval_granule()`.
+#' @noRd
+eval_granule_default <- function(
+  quo,
+  is_default,
+  unit,
+  fallback,
+  calendar,
+  arg = "x",
+  call = caller_env()
+) {
+  if (is_default && !(unit %in% names(calendar))) {
+    quo <- fallback
+  }
+  eval_granule(quo, calendar, arg = arg, call = call)
 }
 
 interval_to_period <- function(interval) {

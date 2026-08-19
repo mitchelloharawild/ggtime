@@ -10,6 +10,7 @@
   }
 
   S7::methods_register()
+  register_calendar_theme_elements()
   invisible()
 }
 

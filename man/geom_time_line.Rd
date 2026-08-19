@@ -243,9 +243,7 @@ ggplot(df_tz_forward, aes(time, value)) +
  • \tab \code{\link[ggplot2:aes_group_order]{group}} \tab → inferred \cr
  • \tab \code{\link[ggplot2:aes_linetype_size_shape]{linetype}} \tab → via \code{theme()} \cr
  • \tab \code{\link[ggplot2:aes_linetype_size_shape]{linewidth}} \tab → via \code{theme()} \cr
- • \tab \code{xtimeid} \tab   \cr
  • \tab \code{xtimeoffset} \tab   \cr
- • \tab \code{ytimeid} \tab   \cr
  • \tab \code{ytimeoffset} \tab   \cr
 }
 

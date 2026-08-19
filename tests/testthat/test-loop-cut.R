@@ -247,3 +247,231 @@ test_that("rekey_loops() rejects ids that would silently mis-draw", {
     "Too many groups"
   )
 })
+
+test_that("cuts land on the granule's boundaries across a daylight saving change", {
+  # Stepping by a duration drifts an hour at each change, which puts the day
+  # after one at 23:00 the evening before -- drawing and labelling every cut
+  # past it a day out -- and leaves a weekly cut falling mid-week.
+  tz <- "Australia/Melbourne"
+  range <- as.POSIXct(c("2015-03-01", "2015-05-01"), tz = tz)
+
+  days <- loop_cuts_by_duration(range, duration_as_granule(mixtime::days(1L)))
+  expect_equal(unique(format(days, "%H:%M:%S", tz = tz)), "00:00:00")
+  # A day apiece, the 25 hour one at the change included.
+  expect_equal(
+    unique(diff(as.Date(format(days, "%Y-%m-%d", tz = tz)))),
+    as.difftime(1, units = "days")
+  )
+  # Snapping a cut back must not leave the range it spans unclosed.
+  expect_lte(as.numeric(days[1]), as.numeric(range[1]))
+  expect_gte(as.numeric(days[length(days)]), as.numeric(range[2]))
+
+  # `weeks()` is ISO, so every cut opens a Monday either side of the change.
+  weeks <- loop_cuts_by_duration(range, duration_as_granule(mixtime::weeks(1L)))
+  expect_equal(unique(format(weeks, "%u %H:%M:%S", tz = tz)), "1 00:00:00")
+
+  # The same holds of a mixtime axis, which cuts through mixtime's own `seq()`.
+  mixed <- loop_cuts_by_duration(
+    mixtime::datetime(range),
+    duration_as_granule(mixtime::days(1L))
+  )
+  expect_equal(
+    unique(format(mixed, "{cyc(hour, day)}:{cyc(minute, hour)}")),
+    "00:00"
+  )
+})
+
+test_that("cuts are not skipped across a pair of daylight saving changes", {
+  # The drift snapping corrects is carried by every step after the change that
+  # caused it, so a change in the other direction can put two days' worth of
+  # time into one step: an hour early plus a 23 hour day lands on the day after
+  # next, leaving the day between the two without a cut of its own -- a calendar
+  # missing a cell, with the cell before it drawn twice as wide.
+  tz <- "Australia/Melbourne"
+  range <- as.POSIXct(c("2015-01-01", "2015-12-31 23:00:00"), tz = tz)
+  days <- duration_as_granule(mixtime::days(1L))
+
+  cuts <- loop_cuts_by_duration(range, days)
+  expect_equal(unique(format(cuts, "%H:%M:%S", tz = tz)), "00:00:00")
+  expect_equal(
+    as.Date(format(cuts, "%Y-%m-%d", tz = tz)),
+    seq(as.Date("2015-01-01"), as.Date("2016-01-01"), by = "1 day")
+  )
+
+  # The same holds of a mixtime axis, which cuts through mixtime's own `seq()`.
+  mixed <- loop_cuts_by_duration(mixtime::datetime(range), days)
+  expect_equal(length(mixed), length(cuts))
+  expect_equal(as.numeric(mixed), as.numeric(cuts))
+
+  # A granule that groups the days is cut over the same range unharmed.
+  weeks <- loop_cuts_by_duration(range, duration_as_granule(mixtime::weeks(1L)))
+  expect_equal(unique(format(weeks, "%u %H:%M:%S", tz = tz)), "1 00:00:00")
+  expect_equal(
+    unique(diff(as.Date(format(weeks, "%Y-%m-%d", tz = tz)))),
+    as.difftime(7, units = "days")
+  )
+})
+
+test_that("cuts spanning a range are not disturbed by snapping", {
+  range <- as.Date(c("2015-01-15", "2015-06-20"))
+  cuts <- loop_cuts_by_duration(range, duration_as_granule(mixtime::months(3L)))
+  expect_equal(cuts, as.Date(c("2015-01-01", "2015-04-01", "2015-07-01")))
+
+  # A granule that does not divide the calendar evenly is left stepping from
+  # its own floor rather than snapped onto a boundary it does not have.
+  cuts <- loop_cuts_by_duration(range, duration_as_granule(mixtime::days(10L)))
+  expect_equal(unique(diff(as.numeric(cuts))), 10)
+})
+
+# A `loop_cuts_by_duration()` that always snaps, as it did before the drift
+# guard, to check the guard against.
+snapped_cuts <- function(time_range, granule) {
+  step <- granule_seq_by(time_range, granule)
+  from <- mixtime::time_floor(time_range[1], granule)
+  to <- mixtime::time_ceiling(time_range[2], granule)
+  cuts <- seq(from, to, by = step)
+  vctrs::vec_unique(snap_cuts_to_granule(cuts, granule, to, step))
+}
+
+# Whether the guard leaves the cuts to be snapped, for a range and granule.
+cuts_drift <- function(time_range, granule) {
+  step <- granule_seq_by(time_range, granule)
+  from <- mixtime::time_floor(time_range[1], granule)
+  to <- mixtime::time_ceiling(time_range[2], granule)
+  cuts_can_drift(seq(from, to, by = step), to)
+}
+
+test_axes <- function(from, to) {
+  list(
+    date = as.Date(c(from, to)),
+    utc = as.POSIXct(c(from, to), tz = "UTC"),
+    zoned = as.POSIXct(c(from, to), tz = "Australia/Melbourne"),
+    mixtime_date = mixtime::date(as.Date(c(from, to))),
+    mixtime_utc = mixtime::datetime(as.POSIXct(c(from, to), tz = "UTC")),
+    mixtime_zoned = mixtime::datetime(
+      as.POSIXct(c(from, to), tz = "Australia/Melbourne")
+    )
+  )
+}
+
+test_granules <- list(
+  days = duration_as_granule(mixtime::days(1L)),
+  weeks = duration_as_granule(mixtime::weeks(1L)),
+  months = duration_as_granule(mixtime::months(1L)),
+  quarters = duration_as_granule(mixtime::months(3L))
+)
+
+test_that("skipping the snap leaves the cuts it would have made", {
+  # Snapping and filling cost about a third of a cutting call and correct
+  # daylight saving drift and nothing else, so `loop_cuts_by_duration()` steps
+  # around them where the axis cannot drift. Whether it does or not, the cuts
+  # have to come out the same -- over a span holding two changes, one, and
+  # none.
+  spans <- list(
+    c("2015-01-01", "2016-06-30"),
+    c("2015-03-01", "2015-05-01"),
+    c("2015-06-01", "2015-08-15")
+  )
+  for (span in spans) {
+    axes <- test_axes(span[1], span[2])
+    guarded <- reference <- list()
+    for (axis in names(axes)) {
+      for (granule in names(test_granules)) {
+        key <- paste(axis, granule)
+        guarded[[key]] <- as.numeric(
+          loop_cuts_by_duration(axes[[axis]], test_granules[[granule]])
+        )
+        reference[[key]] <- as.numeric(
+          snapped_cuts(axes[[axis]], test_granules[[granule]])
+        )
+      }
+    }
+    expect_equal(guarded, reference)
+  }
+})
+
+test_that("a zoned week cuts on its own boundaries with the snap skipped", {
+  # The guard skips snapping over a range holding no offset change, so the cuts
+  # `seq()` returns are the cuts drawn, with nothing left to correct them. That
+  # made this the case a mixtime bug surfaced through -- `seq()` started a
+  # zoned weekly axis three days late, and snapping had been quietly covering
+  # for it (`mixtime/_dev/seq-bug.md`, fixed upstream 2026-08-19).
+  tz <- "Australia/Melbourne"
+  range <- mixtime::datetime(as.POSIXct(c("2015-06-01", "2015-08-15"), tz = tz))
+  granule <- test_granules$weeks
+
+  expect_false(cuts_drift(range, granule))
+  cuts <- loop_cuts_by_duration(range, granule)
+  # `format()` on a mixtime takes no format string, so the local clock time is
+  # read off the numeric time the cuts carry.
+  local <- as.POSIXct(as.numeric(cuts), origin = "1970-01-01", tz = tz)
+  # Every cut a local Monday midnight, a week apart.
+  expect_equal(unique(format(local, "%H:%M:%S")), "00:00:00")
+  expect_equal(unique(weekdays(local)), "Monday")
+  expect_equal(
+    unique(diff(as.Date(format(local, "%Y-%m-%d")))),
+    as.difftime(7, units = "days")
+  )
+  # And it starts where it was told to.
+  expect_equal(
+    as.numeric(cuts[1L]),
+    as.numeric(mixtime::time_floor(range[1L], granule))
+  )
+})
+
+test_that("the snap is kept wherever a cut can drift off its boundary", {
+  # A zoned axis stepped by a fixed duration is exactly where the correction
+  # earns its keep, so the guard must not fire there. Its offset from UTC moves
+  # under the step at every daylight saving change.
+  axes <- test_axes("2015-01-01", "2016-06-30")
+  expect_true(cuts_drift(axes$zoned, test_granules$days))
+  expect_true(cuts_drift(axes$zoned, test_granules$weeks))
+  expect_true(cuts_drift(axes$mixtime_zoned, test_granules$days))
+  expect_true(cuts_drift(axes$mixtime_zoned, test_granules$weeks))
+
+  # And the correction is still made: a day per cut, each on a local midnight.
+  cuts <- loop_cuts_by_duration(axes$zoned, test_granules$days)
+  tz <- "Australia/Melbourne"
+  expect_equal(unique(format(cuts, "%H:%M:%S", tz = tz)), "00:00:00")
+  expect_equal(
+    unique(diff(as.Date(format(cuts, "%Y-%m-%d", tz = tz)))),
+    as.difftime(1, units = "days")
+  )
+})
+
+test_that("the snap is skipped on an axis with no offset to drift with", {
+  # A `Date` carries no zone at all and UTC never changes offset, so no cut can
+  # leave the boundary it was stepped from.
+  axes <- test_axes("2015-01-01", "2016-06-30")
+  for (axis in c("date", "utc", "mixtime_date", "mixtime_utc")) {
+    for (granule in names(test_granules)) {
+      expect_false(cuts_drift(axes[[axis]], test_granules[[granule]]))
+    }
+  }
+
+  # A zoned axis whose cuts hold no change is in the same position, and is
+  # skipped on the offsets rather than on the absence of a zone.
+  winter <- test_axes("2015-06-01", "2015-08-15")
+  expect_false(cuts_drift(winter$zoned, test_granules$days))
+  # ... but only where they hold none: quarterly cuts of the same range are
+  # rounded out to April and October, which straddle both of Melbourne's.
+  expect_true(cuts_drift(winter$zoned, test_granules$quarters))
+})
+
+test_that("the drift guard defers to snapping wherever it cannot be sure", {
+  granule <- test_granules$days
+  range <- as.Date(c("2015-01-01", "2015-02-01"))
+  step <- granule_seq_by(range, granule)
+  from <- mixtime::time_floor(range[1], granule)
+  to <- mixtime::time_ceiling(range[2], granule)
+  cuts <- seq(from, to, by = step)
+
+  expect_false(cuts_can_drift(cuts, to))
+  # Snapping also closes a range the cuts stop short of, which is a job of its
+  # own rather than drift, and not one the guard may skip.
+  expect_true(cuts_can_drift(cuts[-length(cuts)], to))
+  # Floating point noise a millionth of the spacing is not either of those.
+  nudged <- cuts
+  nudged[length(nudged)] <- nudged[length(nudged)] - 1e-9
+  expect_false(cuts_can_drift(nudged, to))
+})

@@ -1,31 +1,25 @@
 # Cutting and folding geometry for looped time axes
 #
-# These functions implement the engine behind [coord_loop()] and
-# [coord_calendar()]. Rather than drawing the panel once per loop and clipping
-# each copy (which costs O(n_loops x panel content) and needs clipping paths),
-# the *data* is folded into the first loop window and any geometry crossing a
-# loop boundary is cut into one piece per loop. The panel is then drawn once.
+# The engine behind [coord_loop()] and [coord_calendar()]: data is folded
+# into the first loop window, and geometry crossing a loop boundary is cut
+# into one piece per loop, so the panel is drawn once regardless of loop
+# count.
 #
-# Everything here operates on plain data frames in the scale-transformed data
-# space (i.e. the space `Coord$transform()` receives, before rescaling to npc),
-# so the same code serves both cartesian and radial coords. Keeping it free of
-# ggproto also keeps it directly unit testable.
+# Operates on plain data frames in scale-transformed data space (what
+# `Coord$transform()` receives), serving both cartesian and radial coords,
+# and kept free of ggproto so it's directly unit testable.
 
-# The multiplier applied when rekeying an `id` column. `GeomRibbon$draw_group()`
-# offsets the lower edge's ids by `max(ids)` before drawing the outline, which
-# would make lower piece k collide with upper piece k + max(ids) once cutting
-# has turned one id into many. Spacing our ids out keeps the two sets disjoint.
+# Multiplier for rekeying an `id` column, spacing pieces apart so
+# `GeomRibbon$draw_group()`'s lower-edge offset (`max(ids)`) can't collide
+# upper piece k with lower piece k + max(ids). A constant rather than
+# derived from the data, since the upper and lower edges are cut separately
+# and the upper edge drops `NA` positions.
 #
-# It has to be a constant rather than derived from the data: the upper and lower
-# edges are cut in separate calls and must agree on the keying, but the upper
-# edge drops `NA` positions and so cannot be relied on to see the same ids.
+# Two invariants, checked in `rekey_loops()`:
 #
-# Two invariants follow, both checked in `rekey_loops()`:
-#
-#   * The stride must exceed `max(ids)`, or the offset lands on another piece.
-#   * `piece * stride` must stay within integer range, because `polygonGrob()`
-#     coerces `id` to integer and turns anything larger into `NA` (with only a
-#     warning, so the failure would otherwise be silent and near-invisible).
+#   * The stride must exceed `max(ids)`.
+#   * `piece * stride` must stay within integer range (`polygonGrob()`
+#     coerces `id` to integer, turning overflow into a silent `NA`).
 loop_id_stride <- 1e5
 
 #' Which loop does each time value fall in?
@@ -45,11 +39,15 @@ loop_index <- function(t, cuts) {
 #' Fold time values into the first loop window
 #' @inheritParams loop_index
 #' @param loop Loop index of each value, from `loop_index()`.
-#' @returns Numeric time values translated into `[cuts[1], cuts[2])`.
+#' @param origins The time each loop is folded onto, one per loop. Defaults
+#'   to the cuts themselves. [coord_calendar()] uses a coarser origin, the
+#'   start of the calendar row a column begins in, so a position within a
+#'   row keeps its meaning across columns.
+#' @returns Numeric time values translated into the first loop's window.
 #' @noRd
-fold_time <- function(t, loop, cuts) {
-  cuts <- as.numeric(cuts)
-  as.numeric(t) - cuts[loop] + cuts[1L]
+fold_time <- function(t, loop, cuts, origins = cuts) {
+  origins <- as.numeric(origins)
+  as.numeric(t) - origins[loop] + origins[1L]
 }
 
 #' Fold pointwise data into the first loop window
@@ -62,11 +60,11 @@ fold_time <- function(t, loop, cuts) {
 #' @inheritParams loop_index
 #' @returns `data` with time columns folded and a `.loop` column added.
 #' @noRd
-cut_pointwise <- function(data, time, cuts) {
+cut_pointwise <- function(data, time, cuts, origins = cuts) {
   loop <- NULL
   for (col in intersect(loop_position_aes(time), names(data))) {
     idx <- loop_index(data[[col]], cuts)
-    data[[col]] <- fold_time(data[[col]], idx, cuts)
+    data[[col]] <- fold_time(data[[col]], idx, cuts, origins)
     loop <- loop %||% idx
   }
   data$.loop <- loop %||% rep.int(1L, nrow(data))
@@ -76,27 +74,21 @@ cut_pointwise <- function(data, time, cuts) {
 
 #' Cut connected data at loop boundaries and fold it
 #'
-#' Used for data whose rows are vertices of a path or ring. Wherever consecutive
-#' vertices of the same path fall in different loops, a pair of vertices is
-#' interpolated at each boundary crossed: one closing the piece in the old loop,
-#' one opening the piece in the new loop. Pieces are then rekeyed by
-#' `(original key, loop)`.
+#' Where consecutive vertices of a path fall in different loops, a pair of
+#' vertices is interpolated at each boundary crossed, closing the piece in
+#' the old loop and opening one in the new. Pieces are rekeyed by
+#' `(original key, loop)`, so upper and lower piece k of a ribbon share an
+#' id and `polygonGrob()` reassembles each loop into one closed polygon
+#' (`GeomRibbon$draw_group()`); rects, tiles, bars, columns and areas fall
+#' out of the same rule.
 #'
-#' The `(key, loop)` keying is what makes rings work without a polygon clipping
-#' algorithm. `GeomRibbon$draw_group()` munches the upper and lower edges as two
-#' separate open paths and reassembles them with `polygonGrob(id = )`; keying by
-#' `(key, loop)` means upper piece k and lower piece k get the same id, so each
-#' loop reassembles into exactly one closed polygon. Rects, tiles, bars, columns
-#' and areas are structurally ribbons and fall out of the same rule.
-#'
-#' This holds for any ring that is monotone in the time direction, which covers
-#' everything that plausibly appears on a looped time axis. Non-monotone concave
+#' Holds for any ring monotone in the time direction; non-monotone concave
 #' rings are a known limitation.
 #' @inheritParams cut_pointwise
 #' @returns `data` with boundary vertices inserted, time folded, `id`/`group`
 #'   rekeyed per piece, and a `.loop` column added.
 #' @noRd
-cut_connected <- function(data, time, cuts) {
+cut_connected <- function(data, time, cuts, origins = cuts) {
   n <- nrow(data)
   other <- if (identical(time, "x")) "y" else "x"
 
@@ -126,7 +118,7 @@ cut_connected <- function(data, time, cuts) {
   cross <- which(nb > 0L)
   if (length(cross) == 0L) {
     # Nothing spans a boundary: fold in place.
-    data[[time]] <- fold_time(t, lp, cuts)
+    data[[time]] <- fold_time(t, lp, cuts, origins)
     data$.loop <- lp
     return(rekey_loops(data, lp, length(cuts) - 1L))
   }
@@ -155,8 +147,8 @@ cut_connected <- function(data, time, cuts) {
   frac <- ifelse(span == 0, 0, (bt - t[seg]) / span)
   bv <- v[seg] + frac * (v[seg + 1L] - v[seg])
 
-  # A crossing at cut k separates loops k - 1 and k. Travelling forward we close
-  # the piece in k - 1 and open one in k; travelling backward, the reverse.
+  # A crossing at cut k separates loops k - 1 and k: forward closes k - 1
+  # and opens k, backward the reverse.
   close_loop <- ifelse(forward, bidx - 1L, bidx)
   open_loop <- ifelse(forward, bidx, bidx - 1L)
 
@@ -174,10 +166,240 @@ cut_connected <- function(data, time, cuts) {
   out_lp[ins] <- vctrs::vec_interleave(close_loop, open_loop)
 
   data <- vctrs::vec_slice(data, src)
-  data[[time]] <- fold_time(out_t, out_lp, cuts)
+  data[[time]] <- fold_time(out_t, out_lp, cuts, origins)
   data[[other]] <- out_v
   data$.loop <- out_lp
   rekey_loops(data, out_lp, length(cuts) - 1L)
+}
+
+#' Get cutpoints spanning a time range at a fixed duration
+#'
+#' The duration-stepping half of `loop_cuts()`, as a pure function of a
+#' time range so it can also cut a range not taken from a scale's panel
+#' params (e.g. `coord_calendar()`'s `col` boundaries from its `row` cuts'
+#' span).
+#' @param time_range A length-2 vector of the scale's own time type.
+#' @param granule A duration, already reduced to a granule by
+#'   `duration_as_granule()`.
+#' @returns A vector of time cutpoints of `time_range`'s type, as described
+#'   in `loop_cuts()`.
+#' @noRd
+loop_cuts_by_duration <- function(time_range, granule) {
+  step <- granule_seq_by(time_range, granule)
+  from <- mixtime::time_floor(time_range[1], granule)
+  # `time_ceiling()` has already rounded past the end of the data, so this
+  # sequence closes the last loop without extending beyond it.
+  to <- mixtime::time_ceiling(time_range[2], granule)
+  cuts <- seq(from, to, by = step)
+  if (length(cuts) < 2L) {
+    # All of the data sits at a single instant on a loop boundary.
+    cuts <- seq(from, by = step, length.out = 2L)
+  }
+  # Snapping only corrects daylight saving drift, so skipped where the axis
+  # can't drift (`cuts_can_drift()`).
+  if (cuts_can_drift(cuts, to)) {
+    cuts <- snap_cuts_to_granule(cuts, granule, to, step)
+  }
+  # `vec_unique()` preserves mixtime's S7 class, unlike `base::unique()`,
+  # which would drop it and break downstream `time_floor()`/`time_ceiling()`.
+  vctrs::vec_unique(cuts)
+}
+
+#' Can snapping these cutpoints move any of them?
+#'
+#' `snap_cuts_to_granule()`/`fill_skipped_cuts()` cost about a third of a
+#' cutting call, and only ever correct drift from the axis's UTC offset
+#' changing under a fixed-duration step (a `Date` axis, or a fixed-offset
+#' zone, never drifts). Since a cut's clock time can only shift by the
+#' difference in offset from the cut before it, cuts sharing one offset have
+#' not drifted and need no correction.
+#'
+#' Even spacing is *not* a usable test: a zoned axis stepped by a constant
+#' 86400 seconds is evenly spaced in seconds even though every cut past a
+#' daylight saving change sits an hour off its boundary.
+#' @param cuts The stepped cutpoints.
+#' @param to The end the cuts were asked to span. Not skippable when the
+#'   cuts fall short of it, since closing the range is snapping's job too.
+#' @returns `TRUE` when the cuts must go through the snapping path, `FALSE`
+#'   only when it's provably a no-op. Anything not established cheaply and
+#'   reliably answers `TRUE`.
+#' @noRd
+cuts_can_drift <- function(cuts, to) {
+  at <- as.numeric(cuts)
+  n <- length(at)
+  if (n < 2L) {
+    return(TRUE)
+  }
+  tol <- cut_tol(diff(at))
+  # Closing a short range is snapping's job too, unrelated to drift.
+  if (at[n] < as.numeric(to) - tol) {
+    return(TRUE)
+  }
+
+  zone <- try_fetch(mixtime::tz_name(cuts), error = function(cnd) NULL)
+  if (is.null(zone)) {
+    return(TRUE)
+  }
+  # `Date`, and any mixtime whose chronon carries no zone: no offset to move.
+  if (all(is.na(zone))) {
+    return(FALSE)
+  }
+  if (all(zone %in% fixed_offset_zones)) {
+    return(FALSE)
+  }
+
+  offsets <- try_fetch(cut_utc_offsets(cuts), error = function(cnd) NULL)
+  if (is.null(offsets) || anyNA(offsets) || length(offsets) != n) {
+    return(TRUE)
+  }
+  length(unique(offsets)) > 1L
+}
+
+# Zones with the same offset at every instant, so no vector of cuts in one
+# can straddle a change. Named rather than detected, since detecting it
+# means checking every instant of the zone's existence.
+fixed_offset_zones <- c(
+  "UTC",
+  "GMT",
+  "UCT",
+  "Universal",
+  "Zulu",
+  "GMT0",
+  "GMT+0",
+  "GMT-0",
+  "Greenwich"
+)
+
+#' Each cutpoint's offset from UTC, in seconds
+#'
+#' `as.POSIXlt()` reads offsets from the platform's zone database in
+#' microseconds; `mixtime::tz_offset()` answers the same question but takes
+#' hundreds of milliseconds, more than the snapping it would guard.
+#' @param cuts The stepped cutpoints.
+#' @returns Integer seconds east of UTC, one per cut. `NA` where the platform
+#'   does not report the offset, which `cuts_can_drift()` treats as unknown.
+#' @noRd
+cut_utc_offsets <- function(cuts) {
+  if (!inherits(cuts, "POSIXt")) {
+    cuts <- as.POSIXct(cuts)
+  }
+  as.POSIXlt(cuts)$gmtoff
+}
+
+#' A comparison tolerance for time values, relative to their own spacing
+#'
+#' Scaled to the gaps being compared, not the epoch: a relative epsilon on
+#' the epoch is ~1.8 seconds on a modern axis, a granule rather than a
+#' tolerance.
+#' @param spacing The gaps between the cuts, as numerics.
+#' @returns A tolerance small enough to admit only floating point noise: a
+#'   millionth of the smallest gap, floored at a few ULPs of it.
+#' @noRd
+cut_tol <- function(spacing) {
+  spacing <- abs(spacing[is.finite(spacing) & spacing != 0])
+  if (length(spacing) == 0L) {
+    return(0)
+  }
+  max(min(spacing) * 1e-6, .Machine$double.eps * max(spacing) * 8)
+}
+
+#' Snap stepped cutpoints back onto the granule's own boundaries
+#'
+#' Stepping by a duration drifts off a calendar's own boundaries wherever
+#' its units aren't that duration long, e.g. an hour at each daylight
+#' saving change, so each cut is floored back to the boundary it stands
+#' for. Only snapped where that keeps the cuts in order, since a granule
+#' that doesn't floor exactly against this axis would otherwise turn a
+#' drifting cut into an unusable one.
+#'
+#' Snapping alone doesn't give one cut per instance: a drifted step can
+#' land two boundaries on one instance or skip one entirely, so the result
+#' is deduplicated (`loop_cuts_by_duration()`) and skipped boundaries are
+#' put back (`fill_skipped_cuts()`).
+#' @param cuts The stepped cutpoints.
+#' @param granule The granule they were cut at.
+#' @param to The end the cuts were asked to span, which snapping a drifted cut
+#'   back can leave the last of them short of.
+#' @param step The `seq()` step, from `granule_seq_by()`.
+#' @noRd
+snap_cuts_to_granule <- function(cuts, granule, to, step) {
+  snapped <- try_fetch(
+    mixtime::time_floor(cuts, granule),
+    error = function(cnd) NULL
+  )
+  if (is.null(snapped) || is.unsorted(as.numeric(snapped))) {
+    return(cuts)
+  }
+  snapped <- fill_skipped_cuts(snapped, granule)
+
+  # The last cut can end up short after snapping; step on, snapping as we
+  # go, until it's closed. Checked to advance each time, so a granule
+  # flooring onto itself stops rather than looping.
+  last <- function(x) vctrs::vec_slice(x, vctrs::vec_size(x))
+  while (as.numeric(last(snapped)) < as.numeric(to)) {
+    on <- mixtime::time_floor(
+      vctrs::vec_slice(seq(last(snapped), by = step, length.out = 2L), 2L),
+      granule
+    )
+    if (as.numeric(on) <= as.numeric(last(snapped))) {
+      break
+    }
+    snapped <- vctrs::vec_c(snapped, on)
+  }
+  snapped
+}
+
+#' Put back the granule boundaries a drifted step stepped over
+#'
+#' Snapping (`snap_cuts_to_granule()`) puts every cut on a boundary, but not
+#' every boundary on a cut: drift carried across a daylight saving change
+#' can put two steps' worth of time into one, skipping the boundary between
+#' them entirely, which would otherwise draw a missing calendar cell next
+#' to one twice as wide.
+#'
+#' The boundary that should follow each cut is found by stepping one
+#' nominal granule on and snapping back: landing on the next cut means
+#' nothing was skipped, landing back on the same cut means the step stayed
+#' within one instance, and anywhere in between is the boundary to
+#' restore. The nominal step is the median gap between the cuts, so it
+#' holds for granules of uneven length too.
+#' @param cuts The snapped cutpoints.
+#' @param granule The granule they were cut at.
+#' @returns `cuts` with any skipped boundaries inserted, in time order.
+#' @noRd
+fill_skipped_cuts <- function(cuts, granule) {
+  cuts <- vctrs::vec_unique(cuts)
+  # One change hides at most one boundary, so a pass or two suffices; the
+  # cap just guards against a granule that never stops finding "missing"
+  # ones.
+  for (pass in seq_len(10L)) {
+    n <- vctrs::vec_size(cuts)
+    if (n < 3L) {
+      break
+    }
+    at <- as.numeric(cuts)
+    step <- stats::median(diff(at))
+    if (!is.finite(step) || step <= 0) {
+      break
+    }
+    # Numeric step, not `seq()`'s own: steps the whole vector at once and
+    # works the same for `Date`/`POSIXct` axes.
+    on <- try_fetch(
+      mixtime::time_floor(cuts + step, granule),
+      error = function(cnd) NULL
+    )
+    if (is.null(on)) {
+      break
+    }
+    next_at <- as.numeric(on)[-n]
+    skipped <- which(next_at > at[-n] & next_at < at[-1L])
+    if (length(skipped) == 0L) {
+      break
+    }
+    cuts <- vctrs::vec_c(cuts, vctrs::vec_slice(on, skipped))
+    cuts <- vctrs::vec_slice(cuts, order(as.numeric(cuts)))
+  }
+  cuts
 }
 
 #' Get cutpoints along the time axis
@@ -190,15 +412,14 @@ cut_connected <- function(data, time, cuts) {
 #' @param time_loops A duration to loop by (e.g. `mixtime::years(1L)`), or a
 #'   waiver. Takes precedence over `loops`. Already reduced to a granule by
 #'   `duration_as_granule()`.
-#' @returns A vector of time cutpoints of the scale's own type. Loop `k` spans
-#'   `[cuts[k], cuts[k + 1])`, so there is always one more cut than loop.
+#' @returns A vector of time cutpoints of the scale's own type. Loop `k`
+#'   spans `[cuts[k], cuts[k + 1])`, so there is always one more cut than
+#'   loop.
 #'
-#'   The final cut closes the last loop and is never a loop start in its own
-#'   right: a trailing cut beyond the data would add a loop containing nothing,
-#'   which `coord_calendar()` would then lay out as an empty row. A time value
-#'   landing exactly on the final cut is clamped into the last loop by
-#'   `loop_index()`, drawing it at the right edge of the window rather than
-#'   opening an otherwise empty loop for it.
+#'   The final cut only closes the last loop; a trailing cut beyond the
+#'   data would add an empty loop (drawn as an empty row by
+#'   `coord_calendar()`). A value landing exactly on it is clamped into the
+#'   last loop by `loop_index()`.
 #' @noRd
 loop_cuts <- function(
   panel_params,
@@ -210,25 +431,14 @@ loop_cuts <- function(
   time_range <- trans$inverse(panel_params[[scale]]$limits)
 
   if (!is_waiver(time_loops) && !is.null(time_loops)) {
-    step <- granule_seq_by(time_range, time_loops)
-    from <- mixtime::time_floor(time_range[1], time_loops)
-    # `time_ceiling()` has already rounded past the end of the data, so this
-    # sequence closes the last loop without extending beyond it.
-    to <- mixtime::time_ceiling(time_range[2], time_loops)
-    cuts <- seq(from, to, by = step)
-    if (length(cuts) < 2L) {
-      # All of the data sits at a single instant on a loop boundary.
-      cuts <- seq(from, by = step, length.out = 2L)
-    }
-    unique(cuts)
+    loop_cuts_by_duration(time_range, time_loops)
   } else if (!is_waiver(loops) && !is.null(loops)) {
     cuts <- sort(unique(loops))
     n <- length(cuts)
-    # Close the final loop with the width of the widest loop before it, falling
-    # back to the data's overhang past the last loop point when that is larger
-    # (or when there is only one loop point to go on).
+    # Closes the final loop with the widest loop's width, or the data's
+    # overhang past the last loop point if that's larger.
     end <- if (n > 1L) cuts[n] + max(diff(cuts)) else cuts[n]
-    # Compared rather than `max()`ed to avoid coercing the scale's time type.
+    # Compared rather than `max()`ed to keep the scale's own time type.
     if (end < time_range[2]) {
       end <- time_range[2]
     }
@@ -241,12 +451,10 @@ loop_cuts <- function(
 
 #' A `seq()` step usable for the axis's own time type
 #'
-#' `seq.mixtime::mt_time` steps by a granule directly, but plain `Date` and
-#' `POSIXct` axes (both supported by [coord_loop()] alongside mixtime) dispatch
-#' to base R's `seq.Date()`/`seq.POSIXct()`, which only step by a duration
-#' given as a string such as `"2 quarters"`. Building that string from the
-#' granule's own count and unit name keeps those axes working without going
-#' through mixtime's own (unexported) string parser.
+#' `seq.mixtime::mt_time` steps by a granule directly, but plain `Date`/
+#' `POSIXct` axes dispatch to base R's `seq.Date()`/`seq.POSIXct()`, which
+#' only step by a duration string like `"2 quarters"`, built here from the
+#' granule's own count and unit name.
 #' @param x A value of the axis's time type, used only to dispatch on class.
 #' @param granule The step, as reduced by `duration_as_granule()`.
 #' @returns `granule` unchanged for a mixtime axis, or a string `seq()` step
@@ -286,11 +494,9 @@ loop_key_column <- function(data) {
 
 #' Rekey pieces by `(original key, loop)`
 #'
-#' New key values only need to be distinct per piece: `GeomPath` takes
-#' `match(group, unique(group))` and `GeomRibbon` uses `id` directly. Deriving
-#' them arithmetically from the original key and the loop index (rather than a
-#' sequential run counter) is what makes independently-cut edges of the same
-#' ring agree — `GeomRibbon` walks its lower edge in reverse, so anything
+#' Derived arithmetically from the original key and loop index, rather than
+#' a sequential run counter, so independently-cut edges of the same ring
+#' agree: `GeomRibbon` walks its lower edge in reverse, so anything
 #' order-dependent would key the two edges differently.
 #' @noRd
 rekey_loops <- function(data, loop, n_loops) {

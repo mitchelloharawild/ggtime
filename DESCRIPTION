@@ -58,8 +58,9 @@ Imports:
     cli,
     vecvec,
     mixtime (> 0.2.0),
-    S7
-Suggests: 
+    S7,
+    utils
+Suggests:
     testthat (>= 3.0.0),
     tsibbledata,
     feasts,
