@@ -1,0 +1,636 @@
+---
+title: "How `coord_loop()` works"
+subtitle: "Cut and fold, rather than draw and clip"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    fig-width: 7
+    fig-height: 4
+    code-fold: false
+---
+
+```{r setup, include = FALSE}
+# Rendered against the source tree rather than an installed build, so that the
+# internal helpers shown below are the ones in `R/`.
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE,
+  dev = "png",
+  dpi = 150
+)
+```
+
+```{r}
+#| message: false
+library(ggplot2)
+pkgload::load_all(".", quiet = TRUE) # or library(ggtime)
+```
+
+## The idea
+
+A looped time axis shows several stretches of time superimposed on the same
+window: twelve months of every year drawn on top of each other, or seven days
+of every week.
+
+There are two ways to get there.
+
+**Draw and clip** (the previous implementation). Draw the whole panel once per
+loop, translating each copy so that the loop of interest lands in the window,
+and attach a clipping path so only that loop is visible. Correct, but the cost
+is `O(n_loops × panel content)`, and clipping paths need R >= 4.2 and a cairo,
+pdf or quartz device. Annotations spanning the panel (`geom_vline()`,
+`annotate()` with `Inf`) get clipped away with everything else, and curved
+coords need alignment hacks to look right.
+
+**Cut and fold** (the current implementation). Move the *data* instead of the
+drawing. Fold every time value into the first loop's window, cut any geometry
+that crosses a loop boundary into one piece per loop, and draw the panel once.
+Cost is independent of the number of loops, no clipping is involved, and
+annotations are simply never cut.
+
+The whole feature is that second idea plus the bookkeeping needed to make ggplot2
+agree with it.
+
+## The pipeline
+
+```
+setup_panel_params()   work out the cut points; re-window on loop 1
+        │
+        ▼
+distance()             called only for connected geoms → sets a flag
+        │
+        ▼
+transform()            cut ── fold ── rekey ── parent transform ── arrange
+```
+
+### 1. Cut points, and the drawn window
+
+`setup_panel_params()` runs the parent coord's method twice. The first pass has
+nothing to do with looping: it exists so that scale limits, user `xlim`/`ylim`
+and expansion are all resolved before we decide where the cuts go.
+
+```{r}
+#| eval: false
+uncut_params <- ggproto_parent(coord, self)$setup_panel_params(
+  scale_x,
+  scale_y,
+  params
+)
+time_cuts <- loop_cuts(
+  uncut_params,
+  self$time_scale,
+  self$loops,
+  self$time_loops
+)
+```
+
+The second pass re-runs with limits narrowed to the window actually drawn —
+from the first cut, spanning the *longest* loop:
+
+```{r}
+#| eval: false
+self$limits[[self$time_scale]] <- c(
+  time_cuts[1],
+  time_cuts[1] + max(diff(time_cuts))
+)
+```
+
+`max(diff(time_cuts))` matters because loops need not be equal: months are
+28–31 days long, years 365 or 366. Sizing the window to the longest loop means
+no loop overflows it. Breaks, expansion and axis labels are then computed for
+that window, so the axis describes one loop rather than the whole series.
+
+Cuts are stored twice — as time values (`time_cuts`, for anything that needs to
+talk about calendars) and as numbers in transformed data space (`loop_cuts`,
+which is the space `transform()` actually receives).
+
+### 2. Telling connected data from pointwise data
+
+This is the one genuinely awkward part. A point cloud must be folded row by row;
+a line must be folded *and* cut, with new vertices interpolated at each
+boundary. Nothing in the `Coord` API says which kind of data is arriving.
+
+The signal comes from `ggplot2:::coord_munch()`, which calls `coord$distance()`
+immediately before `coord$transform()` — and is only used by geoms whose rows are
+vertices of a connected shape. Pointwise geoms reach `transform()` directly. So
+`distance()` sets a flag that `transform()` reads and clears:
+
+```{r}
+#| eval: false
+distance <- function(self, x, y, panel_params) {
+  self$munch_connected <- TRUE
+  ...
+}
+
+transform <- function(self, data, panel_params) {
+  connected <- isTRUE(self$munch_connected)
+  self$munch_connected <- FALSE
+  cut <- if (connected) cut_connected else cut_pointwise
+  ...
+}
+```
+
+Munching only happens because `is_linear()` returns `FALSE`. That single return
+value buys four things at once:
+
+1. `coord_munch()` is used, giving us the connectivity signal above.
+2. `Inf` and `-Inf` are resolved against `backtransform_range()`, so panel-spanning
+   annotations arrive as real coordinates instead of infinities.
+3. `GeomRect` becomes `GeomPolygon` and `GeomSegment` becomes `GeomPath`, so
+   rects, tiles, bars and columns all arrive as rings and are cut by the same
+   code path as lines.
+4. `GeomRaster` falls back to `geom_rect()` with a message — the one geom that
+   loses out.
+
+When the wrapped coord is linear there is no real munching to do, so
+`distance()` returns zeros; a distance of zero gives `extra = 1`, and
+interpolating a segment into one piece returns it unchanged.
+
+::: {.callout-important}
+## Do not fold before measuring distance
+
+When the wrapped coord *does* need to munch (`coord_radial()`), `distance()`
+delegates to the parent using **unfolded** time values.
+
+Folding first seems natural — it keeps distances small — but it reports a
+segment spanning a whole loop as having travelled nowhere. `munch_data()` then
+computes `extra = 1` and never interpolates, so every arc is drawn as a straight
+chord. The symptom is a radial plot that renders as a near-empty sliver.
+
+The unfolded distance is the right measure: a segment crossing N loops becomes N
+pieces, and each piece needs its own vertices.
+:::
+
+### 3. Cutting
+
+Everything in `R/loop-cut.R` is a plain function on a data frame, with no
+ggproto involved. That keeps it unit testable and lets the same code serve
+cartesian and radial coords, since both hand `transform()` the same
+scale-transformed data space.
+
+`loop_index()` assigns each time value to a loop, clamping so that out-of-range
+values and infinities land in the first or last loop rather than off the end:
+
+```{r}
+cuts <- c(0, 10, 20, 30) # three loops of width 10
+ggtime:::loop_index(c(0, 5, 15, 25, -Inf, Inf, NA), cuts)
+```
+
+`fold_time()` translates a value into the first window, `t - cuts[loop] + cuts[1]`:
+
+```{r}
+ggtime:::fold_time(c(5, 15, 25), c(1, 2, 3), cuts)
+```
+
+`cut_pointwise()` applies that to every positional aesthetic on the time axis
+(`x`, `xmin`, `xmax`, `xend`, ...) independently, adding no rows:
+
+```{r}
+ggtime:::cut_pointwise(
+  data.frame(x = 15, xmin = 12, xmax = 25, y = 1),
+  "x",
+  cuts
+)
+```
+
+`cut_connected()` is the interesting one. Wherever consecutive vertices of the
+same path fall in different loops, it interpolates a *pair* of vertices at each
+boundary crossed — one closing the piece in the old loop at the end of the
+window, one opening the next piece at the start:
+
+```{r}
+ggtime:::cut_connected(
+  data.frame(x = c(5, 15), y = c(1, 3), group = 1L),
+  "x",
+  cuts
+)
+```
+
+A single segment can cross several boundaries at once, and each is inserted:
+
+```{r}
+ggtime:::cut_connected(
+  data.frame(x = c(2, 28), y = c(0, 26), group = 1L),
+  "x",
+  cuts
+)
+```
+
+The insertion is vectorised — one pass computing how many boundaries each
+segment crosses, then a single `vctrs::vec_slice()` to expand the frame — so
+cost is linear in vertices regardless of loop count.
+
+### 4. Rekeying, and why rings survive
+
+Pieces are rekeyed by `(original key, loop)`. This is what makes closed shapes
+work without any polygon clipping algorithm.
+
+`GeomRibbon$draw_group()` munches its upper edge left-to-right and its lower
+edge right-to-left as two *separate* `x`/`y`/`id` frames, then reassembles them
+with `polygonGrob(id = )`. Because the key is computed arithmetically from the
+original key and the loop index — never from order of appearance — upper piece
+*k* and lower piece *k* get the same id, and each loop closes into exactly one
+polygon:
+
+```{r}
+upper <- ggtime:::cut_connected(
+  data.frame(x = c(2, 28), y = c(5, 6), id = 1),
+  "x",
+  cuts
+)
+lower <- ggtime:::cut_connected(
+  data.frame(x = c(28, 2), y = c(1, 0), id = 1),
+  "x",
+  cuts
+)
+identical(sort(unique(upper$id)), sort(unique(lower$id)))
+```
+
+Ids are also spaced apart by a stride, because `GeomRibbon` offsets the lower
+edge's ids by `max(ids)` before drawing the outline. With contiguous ids, lower
+piece *k* would collide with upper piece *k + max(ids)* and draw a spurious
+connector across the panel:
+
+```{r}
+any(upper$id %in% (lower$id + 1))
+```
+
+This holds for any ring monotone along the time axis, which covers ribbons,
+areas, rects, tiles, bars and columns. Non-monotone concave rings are a known
+limitation.
+
+### 5. Panel decoration must bypass all of this
+
+Gridlines and axis keys pass through `Coord$transform()` exactly like layer data
+does, but they describe the loop *window* and are already expressed in its
+coordinates. Cutting them is actively wrong: the drawn window spans the longest
+loop, so a break sitting on the next loop's start gets folded back onto the
+panel's left edge, landing on top of the first label.
+
+Three methods are wrapped to suppress cutting and layout:
+
+```{r}
+#| eval: false
+as_decoration <- function(coord, expr) {
+  old <- coord$is_decoration
+  coord$is_decoration <- TRUE
+  on.exit(coord$is_decoration <- old, add = TRUE)
+  expr
+}
+```
+
+applied to `render_bg()`, `render_fg()` and `train_panel_guides()` — the only
+paths ggplot2 routes decoration through.
+
+### 6. `arrange_loops()`: the seam for `coord_calendar()`
+
+After cutting and the parent's transform, each row carries a `.loop` index.
+What happens next is the only difference between looping and a calendar:
+
+```{r}
+#| eval: false
+# coord_loop(): superimpose, so just drop the index
+arrange_loops <- function(self, data, panel_params) {
+  data$.loop <- NULL
+  data
+}
+
+# coord_calendar(): loop k becomes row k, an affine squeeze on the other axis
+arrange_loops <- function(self, data, panel_params) {
+  row <- data$.loop
+  data$.loop <- NULL
+  n_row <- self$.n_row
+  offset <- (n_row - row) / n_row
+  stacked <- if (self$is_flipped) ggplot_global$x_aes else ggplot_global$y_aes
+  for (col in intersect(stacked, names(data))) {
+    data[[col]] <- data[[col]] / n_row + offset
+  }
+  data
+}
+```
+
+`coord_calendar()` inherits all of the cutting and folding, and adds only the
+row layout plus replication of the decoration grob down the panel.
+
+Support for a new base coord is likewise a declaration rather than an
+implementation. `specialize_coord_loop()` methods only name which panel param
+holds time:
+
+```{r}
+#| eval: false
+specialize_coord_loop.CoordCartesian <- function(coord, ...) {
+  ggproto("CoordLoopCartesian", coord, time_scale = coord$time)
+}
+```
+
+## It working
+
+### Seasonal patterns
+
+```{r}
+#| fig-cap: "Yearly loops of monthly US accidental deaths."
+uad <- tsibble::as_tsibble(USAccDeaths)
+uad$index <- as.Date(uad$index)
+
+p <- ggplot(uad, aes(x = index, y = value)) +
+  geom_line()
+
+p + coord_loop(time_loops = "1 year")
+```
+
+Because time stays continuous rather than being discretised into a factor, the
+line connecting December to January is preserved — the segment leaving December
+is cut at the year boundary and its remainder reappears at the left edge.
+
+Loop points can also be given explicitly rather than as a duration:
+
+```{r}
+#| fig-cap: "Explicit loop points, at three arbitrary dates."
+p + coord_loop(loops = as.Date(c("1973-01-01", "1974-07-01", "1977-01-01")))
+```
+
+### Annotations spanning the panel
+
+Previously these were clipped away with the rest of the panel copy
+([#11](https://github.com/mitchelloharawild/ggtime/issues/11)). They are
+pointwise data, resolved against the backtransformed range and folded, never
+cut:
+
+```{r}
+#| fig-cap: "hline, vline and an Inf-spanning segment, all drawn in full."
+p +
+  geom_hline(yintercept = 9000, colour = "firebrick") +
+  geom_vline(xintercept = as.Date("1973-07-01"), colour = "steelblue") +
+  annotate(
+    "segment",
+    x = -Inf,
+    xend = Inf,
+    y = 7500,
+    yend = 10500,
+    colour = "grey40",
+    linetype = "dashed"
+  ) +
+  coord_loop(time_loops = "1 year")
+```
+
+### Rings crossing boundaries
+
+Ribbons, areas and rects are all rings, and all cut by the same code:
+
+```{r}
+#| fig-cap: "A ribbon cut into one closed polygon per loop."
+ggplot(uad, aes(x = index)) +
+  geom_ribbon(
+    aes(ymin = value - 800, ymax = value + 800),
+    fill = "steelblue",
+    alpha = 0.4,
+    colour = "steelblue4"
+  ) +
+  geom_line(aes(y = value)) +
+  coord_loop(time_loops = "1 year")
+```
+
+```{r}
+#| fig-cap: "Rects spanning a loop boundary are split, not dropped."
+quarters <- data.frame(
+  xmin = as.Date(c("1973-11-15", "1974-11-15", "1975-11-15")),
+  xmax = as.Date(c("1974-02-15", "1975-02-15", "1976-02-15"))
+)
+
+p +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
+    data = quarters,
+    inherit.aes = FALSE,
+    fill = "orange",
+    alpha = 0.3
+  ) +
+  coord_loop(time_loops = "1 year")
+ggplot(uad, aes(x = index, y = value)) +
+  geom_line() +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
+    data = quarters,
+    inherit.aes = FALSE,
+    fill = "orange",
+    alpha = 0.3
+  ) +
+  coord_calendar(time_rows = "1 year")
+```
+
+### Radial
+
+`coord_radial()` now draws genuine arcs across loop boundaries, with no
+transparency or alignment workarounds:
+
+```{r}
+#| fig-width: 5
+#| fig-height: 5
+#| fig-cap: "A polar seasonal plot."
+p + coord_loop(time_loops = "1 year", coord = coord_radial())
+```
+
+(The label at the top of the circle is doubled: the first and last break of the
+window sit at the same angle once the axis wraps, so both are drawn. Cosmetic,
+and specific to radial.)
+
+### Calendars
+
+The same machinery, with the pieces stacked into rows instead of superimposed:
+
+```{r}
+#| fig-width: 7
+#| fig-height: 5
+#| fig-cap: "Weekly rows of half-hourly pedestrian counts."
+tsibble::pedestrian |>
+  dplyr::filter(Date < "2015-02-01") |>
+  ggplot(aes(x = Date_Time, y = Count, colour = Sensor)) +
+  geom_line() +
+  coord_calendar(time_rows = "1 week") +
+  scale_x_datetime(date_breaks = "1 day", date_labels = "%a") +
+  theme(legend.position = "bottom")
+```
+
+### Cost is flat in the number of loops
+
+Drawing once means the number of loops no longer drives the cost. Twenty years
+of daily data, rendered to a PNG:
+
+```{r}
+#| cache: true
+daily <- data.frame(
+  date = seq(as.Date("2000-01-01"), as.Date("2019-12-31"), by = "1 day")
+)
+daily$value <- sin(seq_len(nrow(daily)) / 58) + rnorm(nrow(daily), sd = 0.2)
+
+render <- function(plot) {
+  f <- tempfile(fileext = ".png")
+  png(f, width = 800, height = 500)
+  on.exit(
+    {
+      dev.off()
+      unlink(f)
+    },
+    add = TRUE
+  )
+  print(plot)
+}
+
+timings <- vapply(
+  c("1 year", "1 month", "1 week"),
+  function(period) {
+    gg <- ggplot(daily, aes(date, value)) +
+      geom_line() +
+      coord_loop(time_loops = period)
+    system.time(render(gg))[["elapsed"]]
+  },
+  numeric(1)
+)
+
+round(timings, 2)
+```
+
+Roughly 20, 240 and 1040 loops respectively, in about the same time each. The
+same three plots measured against the previous implementation (separately, since
+it is no longer in the tree) took 1.37s, 0.85s and 1.87s — cost tracked loop
+count, and the weekly case was the slowest by a wide margin.
+
+### No device requirement
+
+Clipping paths needed R >= 4.2 and a cairo, pdf or quartz device. Nothing here
+does, which is easiest to show on a device that has never supported them:
+
+```{r}
+f <- tempfile(fileext = ".png")
+png(f, type = "Xlib", width = 400, height = 300)
+print(p + coord_loop(time_loops = "1 year"))
+dev.off()
+file.size(f) > 0
+```
+
+## Testing
+
+Because the engine is pure functions, most of the behaviour is covered by fast
+unit tests in `tests/testthat/test-loop-cut.R` rather than SVG snapshots —
+boundary interpolation, multi-loop segments, ribbon key agreement, the id
+stride, irregular (monthly) cut spacing, `NA`/`Inf` handling, and empty input.
+Snapshots in `test-coord-loop.R` are left to cover what only shows up in a
+rendered panel.
+
+## Known limitations
+
+All four are reachable from ordinary plots. The examples below are the shapes
+they take in practice.
+
+### Rings that re-enter the same loop
+
+Rekeying by `(key, loop)` gives each loop exactly one piece of a ring — which is
+right as long as the ring crosses each loop window once. A ring that doubles back
+in time hands the same loop two disconnected fragments, and they are closed into
+a single polygon that bridges the gap.
+
+Monotone rings are safe, and that covers every ribbon, area, rect, tile, bar and
+column. What is not safe is a hand-traced `geom_polygon()` whose outline reverses
+direction — an arrow or chevron marking a period, say:
+
+```{r}
+#| fig-cap: "Unlooped, the chevron's notch is drawn as intended."
+chevron <- data.frame(
+  x = as.Date(c(
+    "1973-08-01",
+    "1973-11-01",
+    "1973-08-01",
+    "1974-04-01",
+    "1974-07-01",
+    "1974-04-01"
+  )),
+  y = c(7200, 8200, 9200, 9200, 8200, 7200)
+)
+
+marked <- p +
+  geom_polygon(
+    aes(x, y),
+    data = chevron,
+    inherit.aes = FALSE,
+    fill = "orange",
+    alpha = 0.5,
+    colour = "darkorange3"
+  )
+
+marked
+```
+
+```{r}
+#| fig-cap: "Looped, the notch's fragments are joined into stray wedges."
+marked + coord_loop(time_loops = "1 year")
+```
+
+The two edges of the notch fall in the same loop but are not contiguous, so the
+polygon closes across the panel. Drawing the shape as two monotone polygons
+instead of one avoids it.
+
+### Calendar rows are shared across panels
+
+The row count is a maximum across panels, so every facet gets the same number of
+rows. That is deliberate — a calendar month should be the same height in every
+facet — but a panel covering less time than its neighbours is padded with empty
+rows. A partial final year is the usual way to meet this:
+
+```{r}
+#| fig-width: 7
+#| fig-height: 5
+#| fig-cap: "2023 is only four months long, but is laid out with twelve rows."
+daily_years <- data.frame(
+  date = seq(as.Date("2021-01-01"), as.Date("2023-04-30"), by = "1 day")
+)
+daily_years$value <- sin(seq_len(nrow(daily_years)) / 30)
+daily_years$year <- format(daily_years$date, "%Y")
+
+by_year <- ggplot(daily_years, aes(date, value)) +
+  geom_line() +
+  facet_wrap(~year, scales = "free_x")
+
+by_year + coord_calendar(time_rows = "1 month")
+```
+
+Eight empty rows under 2023. Because the count is derived by accumulating a
+maximum, it is state on the coord rather than a property of a panel; it is reset
+in `setup_params()` at the start of each build. The sharing itself is inherent
+to a calendar layout: a common row height across facets is what makes the
+calendar readable and comparable between panels.
+
+### The piece ceiling
+
+Rekeyed `id` values are spaced by a fixed `loop_id_stride` (`1e5`), because the
+upper and lower edges of a ribbon are cut in separate calls and must agree on
+keys without seeing each other's data. `polygonGrob()` then coerces `id` to
+integer, which caps a single ribbon-like layer at `.Machine$integer.max /
+loop_id_stride` — about 21,500 — pieces.
+
+That is a lot of pieces, but loop counts multiply: 30 years of six-hourly data
+folded into a daily profile is nearly eleven thousand loops, and a ribbon is cut
+twice per loop.
+
+```{r}
+#| error: true
+six_hourly <- data.frame(
+  time = seq(
+    as.POSIXct("1990-01-01", tz = "UTC"),
+    by = "6 hours",
+    length.out = 30 * 365 * 4
+  )
+)
+six_hourly$value <- sin(seq_len(nrow(six_hourly)) / 13)
+
+ggplot(six_hourly, aes(time, ymin = value - 0.2, ymax = value + 0.2)) +
+  geom_ribbon(fill = "steelblue") +
+  coord_loop(time_loops = "1 day")
+```
+
+An error rather than a silent mis-draw: past the ceiling `grid` would coerce the
+ids to `NA` and quietly drop the geometry. The same plot over twenty years, or as
+a `geom_line()` rather than a ribbon, is well inside the limit.

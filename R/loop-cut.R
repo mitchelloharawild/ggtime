@@ -461,7 +461,7 @@ loop_cuts <- function(
 #'   for a `Date`/`POSIXct` axis.
 #' @noRd
 granule_seq_by <- function(x, granule) {
-  if (is_mixtime(x)) {
+  if (is_mixtime(x) || S7::S7_inherits(x, mixtime::mt_time)) {
     return(granule)
   }
   paste(granule@n, mixtime::time_unit_plural(granule))
