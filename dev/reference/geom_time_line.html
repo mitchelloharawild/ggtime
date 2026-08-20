@@ -5,8 +5,9 @@ duplicated values.
 The geometry helps to visualise time with changing time offsets provided by the
 [x/y]timeoffset aesthetics. Changes in time offsets are drawn using dashed lines,
 which are most commonly used for timezone changes and daylight savings time transitions.
-Timezone offsets are automatically used when times from the mixtime package are used
-in conjunction with position_time_civil() positioning (the default).
+Timezone offsets are automatically used when times from the mixtime package are
+plotted in local time, which is the scale's default behaviour (see the time_chronon
+argument of scale_x_mixtime()).
 This geometry also respects implicit missing values in regular time series, and will
 not connect temporal observations separated by gaps.
 The ggplot2::group aesthetic determines which cases are connected together."><meta property="og:image" content="https://pkg.mitchelloharawild.com/ggtime/logo.svg"><meta name="robots" content="noindex"><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
@@ -78,8 +79,9 @@ duplicated values.</p>
 <p>The geometry helps to visualise time with changing time offsets provided by the
 <code>[x/y]timeoffset</code> aesthetics. Changes in time offsets are drawn using dashed lines,
 which are most commonly used for timezone changes and daylight savings time transitions.
-Timezone offsets are automatically used when times from the <code>mixtime</code> package are used
-in conjunction with <code><a href="position_time.html">position_time_civil()</a></code> positioning (the default).</p>
+Timezone offsets are automatically used when times from the <code>mixtime</code> package are
+plotted in local time, which is the scale's default behaviour (see the <code>time_chronon</code>
+argument of <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code>).</p>
 <p>This geometry also respects implicit missing values in regular time series, and will
 not connect temporal observations separated by gaps.</p>
 <p>The <a href="https://ggplot2.tidyverse.org/reference/aes_group_order.html" class="external-link">ggplot2::group</a> aesthetic determines which cases are connected together.</p>
@@ -90,11 +92,13 @@ not connect temporal observations separated by gaps.</p>
 <span>  mapping <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  data <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  stat <span class="op">=</span> <span class="st">"identity"</span>,</span>
-<span>  position <span class="op">=</span> <span class="st">"time_civil"</span>,</span>
+<span>  position <span class="op">=</span> <span class="st">"identity"</span>,</span>
 <span>  na.rm <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  orientation <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  show.legend <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  inherit.aes <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  transitions <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  transition_aesthetics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>linetype <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -103,14 +107,127 @@ not connect temporal observations separated by gaps.</p>
     <h2>Arguments</h2>
 
 
-<dl><dt id="arg-inherit-aes">inherit.aes<a class="anchor" aria-label="anchor" href="#arg-inherit-aes"></a></dt>
-<dd><p>If <code>FALSE</code>, overrides the default aesthetics, rather than
-combining with them. This is most useful for helper functions that define both
-data and aesthetics and shouldn't inherit behaviour from the default plot specification.</p></dd>
+<dl><dt id="arg-mapping">mapping<a class="anchor" aria-label="anchor" href="#arg-mapping"></a></dt>
+<dd><p>Set of aesthetic mappings created by <code><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes()</a></code>. If specified and
+<code>inherit.aes = TRUE</code> (the default), it is combined with the default mapping
+at the top level of the plot. You must supply <code>mapping</code> if there is no plot
+mapping.</p></dd>
+
+
+<dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
+<dd><p>The data to be displayed in this layer. There are three
+options:</p>
+<p>If <code>NULL</code>, the default, the data is inherited from the plot
+data as specified in the call to <code><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot()</a></code>.</p>
+<p>A <code>data.frame</code>, or other object, will override the plot
+data. All objects will be fortified to produce a data frame. See
+<code><a href="https://ggplot2.tidyverse.org/reference/fortify.html" class="external-link">fortify()</a></code> for which variables will be created.</p>
+<p>A <code>function</code> will be called with a single argument,
+the plot data. The return value must be a <code>data.frame</code>, and
+will be used as the layer data. A <code>function</code> can be created
+from a <code>formula</code> (e.g. <code>~ head(.x, 10)</code>).</p></dd>
+
+
+<dt id="arg-stat">stat<a class="anchor" aria-label="anchor" href="#arg-stat"></a></dt>
+<dd><p>The statistical transformation to use on the data for this layer.
+When using a <code>geom_*()</code> function to construct a layer, the <code>stat</code>
+argument can be used to override the default coupling between geoms and
+stats. The <code>stat</code> argument accepts the following:</p><ul><li><p>A <code>Stat</code> ggproto subclass, for example <code>StatCount</code>.</p></li>
+<li><p>A string naming the stat. To give the stat as a string, strip the
+function name of the <code>stat_</code> prefix. For example, to use <code><a href="https://ggplot2.tidyverse.org/reference/geom_bar.html" class="external-link">stat_count()</a></code>,
+give the stat as <code>"count"</code>.</p></li>
+<li><p>For more information and other ways to specify the stat, see the
+<a href="https://ggplot2.tidyverse.org/reference/layer_stats.html" class="external-link">layer stat</a> documentation.</p></li>
+</ul></dd>
+
+
+<dt id="arg-position">position<a class="anchor" aria-label="anchor" href="#arg-position"></a></dt>
+<dd><p>A position adjustment to use on the data for this layer. This
+can be used in various ways, including to prevent overplotting and
+improving the display. The <code>position</code> argument accepts the following:</p><ul><li><p>The result of calling a position function, such as <code><a href="https://ggplot2.tidyverse.org/reference/position_jitter.html" class="external-link">position_jitter()</a></code>.
+This method allows for passing extra arguments to the position.</p></li>
+<li><p>A string naming the position adjustment. To give the position as a
+string, strip the function name of the <code>position_</code> prefix. For example,
+to use <code><a href="https://ggplot2.tidyverse.org/reference/position_jitter.html" class="external-link">position_jitter()</a></code>, give the position as <code>"jitter"</code>.</p></li>
+<li><p>For more information and other ways to specify the position, see the
+<a href="https://ggplot2.tidyverse.org/reference/layer_positions.html" class="external-link">layer position</a> documentation.</p></li>
+</ul></dd>
+
+
+<dt id="arg-na-rm">na.rm<a class="anchor" aria-label="anchor" href="#arg-na-rm"></a></dt>
+<dd><p>If <code>FALSE</code>, the default, missing values are removed with
+a warning. If <code>TRUE</code>, missing values are silently removed.</p></dd>
+
+
+<dt id="arg-orientation">orientation<a class="anchor" aria-label="anchor" href="#arg-orientation"></a></dt>
+<dd><p>Which positional axis (<code>"x"</code> or <code>"y"</code>) carries the time
+variable that observations are connected in order of. The default (<code>NA</code>)
+determines this automatically: whichever of <code>x</code>/<code>y</code> is time-valued (a
+<code>mixtime</code> or <code>POSIXct</code>), preferring <code>x</code> if both (or neither) are.</p></dd>
+
+
+<dt id="arg-show-legend">show.legend<a class="anchor" aria-label="anchor" href="#arg-show-legend"></a></dt>
+<dd><p>logical. Should this layer be included in the legends?
+<code>NA</code>, the default, includes if any aesthetics are mapped.
+<code>FALSE</code> never includes, and <code>TRUE</code> always includes.
+It can also be a named logical vector to finely select the aesthetics to
+display. To include legend keys for all levels, even
+when no data exists, use <code>TRUE</code>.  If <code>NA</code>, all levels are shown in legend,
+but unobserved levels are omitted.</p></dd>
+
+
+<dt id="arg-inherit-aes">inherit.aes<a class="anchor" aria-label="anchor" href="#arg-inherit-aes"></a></dt>
+<dd><p>If <code>FALSE</code>, overrides the default aesthetics,
+rather than combining with them. This is most useful for helper functions
+that define both data and aesthetics and shouldn't inherit behaviour from
+the default plot specification, e.g. <code><a href="https://ggplot2.tidyverse.org/reference/annotation_borders.html" class="external-link">annotation_borders()</a></code>.</p></dd>
+
+
+<dt id="arg-transitions">transitions<a class="anchor" aria-label="anchor" href="#arg-transitions"></a></dt>
+<dd><p>A <code>data.frame</code> of known time offset transitions, shaped
+like <code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/tz_transitions.html" class="external-link">mixtime::tz_transitions()</a></code>'s own output (<code>time</code> a time point, and
+<code>offset_before</code>/<code>offset_after</code> <code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration.html" class="external-link">mixtime::duration()</a></code>s), with an optional
+<code>id</code> column to scope rows to a specific series (matched against the
+<code>xtimeid</code> aesthetic; applied to every series when omitted). Defaults to
+<code><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver()</a></code>, which automatically calls <code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/tz_transitions.html" class="external-link">mixtime::tz_transitions()</a></code> for
+every timezone present in the data. See the "Time transitions" section
+below.</p></dd>
+
+
+<dt id="arg-transition-aesthetics">transition_aesthetics<a class="anchor" aria-label="anchor" href="#arg-transition-aesthetics"></a></dt>
+<dd><p>A named <code>list</code> of aesthetics for the segment
+drawn for time <code>transitions</code>, specifying how it is styled differently to the
+rest of the line. Defaults to <code>list(linetype = 2)</code>, drawing transitions
+with dashed lines. Valid aesthetics are <code>colour</code>/<code>color</code>, <code>linewidth</code>,
+<code>linetype</code> and <code>alpha</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Other arguments passed on to <code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_line()</a></code>.</p></dd>
+<dd><p>Other arguments passed on to <code><a href="https://ggplot2.tidyverse.org/reference/layer.html" class="external-link">layer()</a></code>'s <code>params</code> argument. These
+arguments broadly fall into one of 4 categories below. Notably, further
+arguments to the <code>position</code> argument, or aesthetics that are required
+can <em>not</em> be passed through <code>...</code>. Unknown arguments that are not part
+of the 4 categories below are ignored.</p><ul><li><p>Static aesthetics that are not mapped to a scale, but are at a fixed
+value and apply to the layer as a whole. For example, <code>colour = "red"</code>
+or <code>linewidth = 3</code>. The geom's documentation has an <strong>Aesthetics</strong>
+section that lists the available options. The 'required' aesthetics
+cannot be passed on to the <code>params</code>. Please note that while passing
+unmapped aesthetics as vectors is technically possible, the order and
+required length is not guaranteed to be parallel to the input data.</p></li>
+<li><p>When constructing a layer using
+a <code>stat_*()</code> function, the <code>...</code> argument can be used to pass on
+parameters to the <code>geom</code> part of the layer. An example of this is
+<code>stat_density(geom = "area", outline.type = "both")</code>. The geom's
+documentation lists which parameters it can accept.</p></li>
+<li><p>Inversely, when constructing a layer using a
+<code>geom_*()</code> function, the <code>...</code> argument can be used to pass on parameters
+to the <code>stat</code> part of the layer. An example of this is
+<code>geom_area(stat = "density", adjust = 0.5)</code>. The stat's documentation
+lists which parameters it can accept.</p></li>
+<li><p>The <code>key_glyph</code> argument of <code><a href="https://ggplot2.tidyverse.org/reference/layer.html" class="external-link">layer()</a></code> may also be passed on through
+<code>...</code>. This can be one of the functions described as
+<a href="https://ggplot2.tidyverse.org/reference/draw_key.html" class="external-link">key glyphs</a>, to change the display of the layer in the legend.</p></li>
+</ul></dd>
 
 </dl></div>
     <div id="practical-usage">
@@ -121,16 +238,21 @@ data and aesthetics and shouldn't inherit behaviour from the default plot specif
 <p>The <code>geom_time_line()</code> geometry extends <code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_line()</a></code> with time
 semantics that ensure the line's slope accurately reflects rates of change in
 the measurements over time.</p>
-<p>Most notably, <code>geom_time_line()</code> works closely with <code><a href="position_time.html">position_time_civil()</a></code>
-and <code><a href="position_time.html">position_time_absolute()</a></code> to correctly display time in civil and
-absolute time formats, respectively. Civil time positioning (the default)
-shows time as experienced in a specific timezone (also known as 'local time',
-it is the time on clocks in that timezone). Absolute time positioning shows
-time as a continuous timeline without timezone adjustments.</p>
-<p>When time series are visualised in civil time, timezone offset changes (e.g.
+<p>Most notably, <code>geom_time_line()</code> works closely with the time scale
+(<code><a href="scale_mixtime.html">scale_x_mixtime()</a></code>) to correctly display time in local
+and absolute time formats. Local time (the scale's default whenever all
+time points share a timezone) shows time as experienced in that timezone, it
+is the time on clocks in that timezone. Absolute time shows time as a
+continuous timeline without timezone adjustments. Which of these is shown is
+controlled by the scale's <code>time_chronon</code>: a chronon with <code>tz = NA</code> combines
+time points by their local wall-clock reading (local time), while a chronon
+with a fixed timezone (such as UTC, the default when a common chronon must
+be identified across timezones) aligns them by the instant they occurred
+(absolute time).</p>
+<p>When time series are visualised in local time, timezone offset changes (e.g.
 due to daylight saving time) cause 'jumps' in time which are indicated with
 dashed lines. This preserves the integrity of the line's slope across these
-transitions. Another benefit of visualising time series in civil time is to
+transitions. Another benefit of visualising time series in local time is to
 compare time series across different timezones, as the time axis is better
 aligned with human behaviour in their local timezone (e.g. working hours,
 sleep patterns, etc). Plotting time series in <em>absolute time</em> shows the exact
@@ -150,20 +272,32 @@ to and from the duplicated time points (rather than drawing sawtooth lines).</p>
 <p>Further details about each specific capability are described in the following
 sections.</p>
     </div>
-    <div id="changing-time-offsets">
-    <h2>Changing time offsets</h2>
+    <div id="time-transitions">
+    <h2>Time transitions</h2>
 
 
 
-<p>The <code>xtimeoffset</code> and <code>ytimeoffset</code> aesthetics allow for visualization of time
-offset changes, such as timezone transitions or daylight saving time changes.
-When successive time offsets differ, a dashed line segment is drawn to show
-the offset transition. These aesthetics are automatically set when using
-<code>position</code> = <code><a href="position_time.html">position_time_civil()</a></code> (the default), however the offsets can
-also be set manually to show other types of time offsets. One example of when
-it is useful to set the offsets manually is when showing measurements from a
-sensor with a known time drift (e.g. a clock that runs fast or slow) that is
-re-calibrated at known times.</p>
+<p>When time is displayed locally, daylight savings transitions introduce
+discontinuities in the local timeline when the clock jumps forwards or
+backwards. <code>geom_time_line()</code> draws these jumps as dashed segments, to
+preserve the integrity of the line's slope across the transition. When
+the time scale is set to use local time (see the <code>time_chronon</code> argument
+of <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code>), the default behaviour (<code>transitions = waiver()</code>)
+sources daylight savings transitions automatically with
+<code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/tz_transitions.html" class="external-link">mixtime::tz_transitions()</a></code>.</p>
+<p>The appearance of transition segments is controlled with
+<code>transition_aesthetics</code>, a named list of aesthetic overrides (<code>colour</code>,
+<code>linewidth</code>, <code>linetype</code> and/or <code>alpha</code>). The default is a dashed line.</p>
+<p>Offset changes aren't always timezone related. A sensor may be periodically
+synchronized to adjust for clock drift, or the <code>transitions</code> may reflect an
+individual's personal travel through time zones. The local time should be
+mapped to the <code>[x/y]</code> positional aesthetics, with the offset from absolute
+time mapped to <code>[x/y]timeoffset</code> (a <code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration.html" class="external-link">mixtime::duration()</a></code>). The <code>transitions</code>
+argument then specifies the instants at which the offset changes, and the
+offset before and after each transition. This is specified as a <code>data.frame</code>
+shaped like <code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/tz_transitions.html" class="external-link">mixtime::tz_transitions()</a></code>, with an optional <code>id</code> column to
+scope rows to a specific series (matched against the <code>[x/y]timeid</code>
+aesthetic).</p>
     </div>
     <div id="missing-time-values">
     <h2>Missing time values</h2>
@@ -192,7 +326,7 @@ draw all lines that connect to and from each of the duplicated time values.</p>
     </div>
     <div id="see-also">
     <h2>See also</h2>
-    <div class="dont-index"><p><code><a href="position_time.html">position_time_civil()</a></code>/<code><a href="position_time.html">position_time_absolute()</a></code> for civil and absolute time positioning.</p>
+    <div class="dont-index"><p><a href="scale_mixtime.html">scale_mixtime</a> for defining local and absolute time using <code>time_chronon</code>.</p>
 <p><code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_line()</a></code>/<code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_path()</a></code> for standard line/path geoms in ggplot2.</p></div>
     </div>
     <div id="aesthetics">
@@ -215,19 +349,32 @@ draw all lines that connect to and from each of the duplicated time values.</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_ts</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="geom_time_line-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `default_timeoffset()`:</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> could not find function "default_timeoffset"</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Random walk with a backward timezone change (DST ends)</span></span></span>
 <span class="r-in"><span><span class="va">df_tz_back</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2023-04-02"</span>, tz <span class="op">=</span> <span class="st">"Australia/Melbourne"</span><span class="op">)</span> <span class="op">+</span> <span class="fl">0</span><span class="op">:</span><span class="fl">11</span> <span class="op">*</span> <span class="fl">3600</span>,</span></span>
 <span class="r-in"><span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">12</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Naive/local time (`tz = NA`) shows the DST transition as a dashed jump</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_back</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="geom_time_line-2.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/calendar_gregorian.html" class="external-link">cal_gregorian</a></span><span class="op">$</span><span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `default_timeoffset()`:</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> could not find function "default_timeoffset"</span>
+<span class="r-in"><span><span class="co"># Absolute time aligns to a single fixed timezone, removing the jump</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_back</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span>position <span class="op">=</span> <span class="fu"><a href="position_time.html">position_time_absolute</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="geom_time_line-3.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/calendar_gregorian.html" class="external-link">cal_gregorian</a></span><span class="op">$</span><span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `default_timeoffset()`:</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> could not find function "default_timeoffset"</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Random walk with a forward timezone change (DST starts)</span></span></span>
 <span class="r-in"><span><span class="va">df_tz_forward</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
@@ -235,11 +382,19 @@ draw all lines that connect to and from each of the duplicated time values.</p>
 <span class="r-in"><span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">12</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_forward</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="geom_time_line-4.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/calendar_gregorian.html" class="external-link">cal_gregorian</a></span><span class="op">$</span><span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `default_timeoffset()`:</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> could not find function "default_timeoffset"</span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_forward</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span> <span class="fu">geom_time_line</span><span class="op">(</span>position <span class="op">=</span> <span class="fu"><a href="position_time.html">position_time_absolute</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="geom_time_line-5.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/calendar_gregorian.html" class="external-link">cal_gregorian</a></span><span class="op">$</span><span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `default_timeoffset()`:</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> could not find function "default_timeoffset"</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
@@ -256,7 +411,7 @@ draw all lines that connect to and from each of the duplicated time values.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
       </footer></div>

@@ -81,7 +81,6 @@ patterns can be more easily seen when superimposed on top of each other.</p>
 <span>  expand <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  default <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  clip <span class="op">=</span> <span class="st">"on"</span>,</span>
-<span>  clip_loops <span class="op">=</span> <span class="st">"on"</span>,</span>
 <span>  coord <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/coord_cartesian.html" class="external-link">coord_cartesian</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -99,8 +98,8 @@ patterns can be more easily seen when superimposed on top of each other.</p>
 
 <dt id="arg-time-loops">time_loops<a class="anchor" aria-label="anchor" href="#arg-time-loops"></a></dt>
 <dd><p>A duration giving the distance between temporal
-loops like "2 weeks", or "10 years". If both <code>loops</code> and <code>time_loops</code> are
-specified, <code>time_loops</code> wins.</p></dd>
+loops, such as <code>mixtime::weeks(2L)</code> or <code>mixtime::years(10L)</code>. If both
+<code>loops</code> and <code>time_loops</code> are specified, <code>time_loops</code> wins.</p></dd>
 
 
 <dt id="arg-time">time<a class="anchor" aria-label="anchor" href="#arg-time"></a></dt>
@@ -127,12 +126,6 @@ Default is <code>FALSE</code>.</p></dd>
 A setting of <code>"on"</code> (the default) means yes, and a setting of <code>"off"</code> means no.</p></dd>
 
 
-<dt id="arg-clip-loops">clip_loops<a class="anchor" aria-label="anchor" href="#arg-clip-loops"></a></dt>
-<dd><p>Should the drawing of each loop of the timescale be clipped to
-the breaks defined by <code>time_loops</code>?
-A setting of <code>"on"</code> (the default) means yes, and a setting of <code>"off"</code> means no.</p></dd>
-
-
 <dt id="arg-coord">coord<a class="anchor" aria-label="anchor" href="#arg-coord"></a></dt>
 <dd><p>The underlying coordinate system to use. Default is <code><a href="https://ggplot2.tidyverse.org/reference/coord_cartesian.html" class="external-link">coord_cartesian()</a></code>.</p></dd>
 
@@ -145,11 +138,12 @@ A setting of <code>"on"</code> (the default) means yes, and a setting of <code>"
     <h2>Details</h2>
     <p>This coordinate system is particularly useful for visualizing seasonal or
 cyclic patterns in time series data. It works by:</p>
-<ol><li><p>Dividing the time axis into segments based on the specified loop period</p></li>
-<li><p>Translating each segment to overlay on the first segment</p></li>
-<li><p>Creating a visualization where multiple time periods are superimposed</p></li>
-</ol><p>The coordinate system requires R version 4.2.0 or higher due to its use of
-usage of clipping paths.</p>
+<ol><li><p>Dividing the time axis into loops based on the specified loop period</p></li>
+<li><p>Folding the time values of every loop into the first loop's window</p></li>
+<li><p>Cutting geometries that cross a loop boundary into one piece per loop</p></li>
+</ol><p>Since the looping is applied to the data rather than to the drawing, the
+panel is drawn only once regardless of how many loops are shown. The cost of
+the plot is therefore independent of the number of loops.</p>
     </div>
     <div id="practical-usage">
     <h2>Practical usage</h2>
@@ -168,8 +162,17 @@ between the end of one seasonal period and the start of the next is
 preserved. This is otherwise lost when time is discretised into ordered
 factors (e.g. months of the year, or days of week). This allows lines and
 other geometries to be drawn across seasonal boundaries, such as a line that
-connects December to January when plotting annual seasonality.
-The justification of looping can be controlled using the <code>align_discrete</code> option
+connects December to January when plotting annual seasonality.</p>
+<p>Looping arranges time cyclically, so the time axis describes a position
+within the loop rather than the passage of time. The axis is labelled to
+match: monthly data looped over years is labelled with months of the year
+("Jan", "Feb", ...), and daily data looped over weeks with days of the week
+("Mon", "Tue", ...). Which labels are appropriate depends on both the chronon
+of the data and the loop's cycle, and is determined by the calendar being
+used. Labels given with the <code>labels</code> or <code>time_labels</code> options of
+<code><a href="scale_mixtime.html">scale_x_mixtime()</a></code> are used unchanged, since they say how the user wants
+time written.</p>
+<p>The justification of looping can be controlled using the <code>align_discrete</code> option
 of <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code>, where values from 0 to 1 specify the alignment.
 Left alignment (<code>align_discrete = 0</code>) places inter-seasonal connections on the
 left of the panel, right alignment (<code>align_discrete = 1</code>) uses the right side,
@@ -210,22 +213,35 @@ seasonality across data at daily and hourly frequencies, both day of week
 and hour of week are needed. Since these factors have different levels, they
 cannot be plotted on the same axis. In contrast, it is possible to plot both
 daily and hourly data on the same axis using <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code>, which can
-then be looped over weekly periods with <code>coord_loop(time_loops = "1 week")</code>.</p>
+then be looped over weekly periods with
+<code>coord_loop(time_loops = mixtime::weeks(1L))</code>.</p>
 <p>Another subtle issue of using factors instead of continuous time is that
 spacing between time points is regularized. For example, when plotting the
 annual seasonal pattern with months as a factor, each month is given equal
 width on the x-axis despite the fact that months have different lengths.</p>
+    </div>
+    <div id="known-limitations">
+    <h2>Known limitations</h2>
+
+
+
+<p>Geometries are cut into loops by splitting the paths and rings that make them
+up, which requires those shapes to be monotone along the time axis. This
+works works for lines, paths, ribbons, areas, rects, tiles, bars, columns and
+segments. A non-monotone concave polygon that crosses a loop boundary is not
+cut correctly.</p>
     </div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pkg.mitchelloharawild.com/ggtime/">ggtime</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/" class="external-link">mixtime</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Basic usage with US accidental deaths data</span></span></span>
 <span class="r-in"><span><span class="va">uad</span> <span class="op">&lt;-</span> <span class="fu">tsibble</span><span class="fu">::</span><span class="fu"><a href="https://tsibble.tidyverts.org/reference/as-tsibble.html" class="external-link">as_tsibble</a></span><span class="op">(</span><span class="va">USAccDeaths</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># Requires mixtime, POSIXct, or Date time types</span></span></span>
-<span class="r-in"><span><span class="va">uad</span><span class="op">$</span><span class="va">index</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="va">uad</span><span class="op">$</span><span class="va">index</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">uad</span><span class="op">$</span><span class="va">index</span> <span class="op">&lt;-</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">yearmonth</a></span><span class="op">(</span><span class="va">uad</span><span class="op">$</span><span class="va">index</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">uad</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">index</span>, y <span class="op">=</span> <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span></span></span>
@@ -235,8 +251,8 @@ width on the x-axis despite the fact that months have different lengths.</p>
 <span class="r-plt img"><img src="coord_loop-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With yearly looping to show seasonal patterns</span></span></span>
-<span class="r-in"><span><span class="va">p</span> <span class="op">+</span> <span class="fu">coord_loop</span><span class="op">(</span>time_loop <span class="op">=</span> <span class="st">"1 year"</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in time_chronon(self$time_loops):</span> could not find function "time_chronon"</span>
+<span class="r-in"><span><span class="va">p</span> <span class="op">+</span> <span class="fu">coord_loop</span><span class="op">(</span>time_loops <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration_helpers.html" class="external-link">years</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="coord_loop-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
@@ -252,7 +268,7 @@ width on the x-axis despite the fact that months have different lengths.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
       </footer></div>
