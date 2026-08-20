@@ -13,6 +13,8 @@ geom_time_line(
   orientation = NA,
   show.legend = NA,
   inherit.aes = TRUE,
+  transitions = waiver(),
+  transition_aesthetics = list(linetype = 2),
   ...
 )
 }
@@ -66,10 +68,10 @@ to use \code{position_jitter()}, give the position as \code{"jitter"}.
 \item{na.rm}{If \code{FALSE}, the default, missing values are removed with
 a warning. If \code{TRUE}, missing values are silently removed.}
 
-\item{orientation}{The orientation of the layer. The default (\code{NA})
-automatically determines the orientation from the aesthetic mapping. In the
-rare event that this fails it can be given explicitly by setting \code{orientation}
-to either \code{"x"} or \code{"y"}. See the \emph{Orientation} section for more detail.}
+\item{orientation}{Which positional axis (\code{"x"} or \code{"y"}) carries the time
+variable that observations are connected in order of. The default (\code{NA})
+determines this automatically: whichever of \code{x}/\code{y} is time-valued (a
+\code{mixtime} or \code{POSIXct}), preferring \code{x} if both (or neither) are.}
 
 \item{show.legend}{logical. Should this layer be included in the legends?
 \code{NA}, the default, includes if any aesthetics are mapped.
@@ -79,11 +81,53 @@ display. To include legend keys for all levels, even
 when no data exists, use \code{TRUE}.  If \code{NA}, all levels are shown in legend,
 but unobserved levels are omitted.}
 
-\item{inherit.aes}{If \code{FALSE}, overrides the default aesthetics, rather than
-combining with them. This is most useful for helper functions that define both
-data and aesthetics and shouldn't inherit behaviour from the default plot specification.}
+\item{inherit.aes}{If \code{FALSE}, overrides the default aesthetics,
+rather than combining with them. This is most useful for helper functions
+that define both data and aesthetics and shouldn't inherit behaviour from
+the default plot specification, e.g. \code{\link[ggplot2:annotation_borders]{annotation_borders()}}.}
 
-\item{...}{Other arguments passed on to \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}.}
+\item{transitions}{A \code{data.frame} of known time offset transitions, shaped
+like \code{\link[mixtime:tz_transitions]{mixtime::tz_transitions()}}'s own output (\code{time} a time point, and
+\code{offset_before}/\code{offset_after} \code{\link[mixtime:duration]{mixtime::duration()}}s), with an optional
+\code{id} column to scope rows to a specific series (matched against the
+\code{xtimeid} aesthetic; applied to every series when omitted). Defaults to
+\code{waiver()}, which automatically calls \code{\link[mixtime:tz_transitions]{mixtime::tz_transitions()}} for
+every timezone present in the data. See the "Time transitions" section
+below.}
+
+\item{transition_aesthetics}{A named \code{list} of aesthetics for the segment
+drawn for time \code{transitions}, specifying how it is styled differently to the
+rest of the line. Defaults to \code{list(linetype = 2)}, drawing transitions
+with dashed lines. Valid aesthetics are \code{colour}/\code{color}, \code{linewidth},
+\code{linetype} and \code{alpha}.}
+
+\item{...}{Other arguments passed on to \code{\link[ggplot2:layer]{layer()}}'s \code{params} argument. These
+arguments broadly fall into one of 4 categories below. Notably, further
+arguments to the \code{position} argument, or aesthetics that are required
+can \emph{not} be passed through \code{...}. Unknown arguments that are not part
+of the 4 categories below are ignored.
+\itemize{
+\item Static aesthetics that are not mapped to a scale, but are at a fixed
+value and apply to the layer as a whole. For example, \code{colour = "red"}
+or \code{linewidth = 3}. The geom's documentation has an \strong{Aesthetics}
+section that lists the available options. The 'required' aesthetics
+cannot be passed on to the \code{params}. Please note that while passing
+unmapped aesthetics as vectors is technically possible, the order and
+required length is not guaranteed to be parallel to the input data.
+\item When constructing a layer using
+a \verb{stat_*()} function, the \code{...} argument can be used to pass on
+parameters to the \code{geom} part of the layer. An example of this is
+\code{stat_density(geom = "area", outline.type = "both")}. The geom's
+documentation lists which parameters it can accept.
+\item Inversely, when constructing a layer using a
+\verb{geom_*()} function, the \code{...} argument can be used to pass on parameters
+to the \code{stat} part of the layer. An example of this is
+\code{geom_area(stat = "density", adjust = 0.5)}. The stat's documentation
+lists which parameters it can accept.
+\item The \code{key_glyph} argument of \code{\link[ggplot2:layer]{layer()}} may also be passed on through
+\code{...}. This can be one of the functions described as
+\link[ggplot2:draw_key]{key glyphs}, to change the display of the layer in the legend.
+}}
 }
 \description{
 \code{geom_time_line()} connects observations in order of the time variable, similar to
@@ -147,20 +191,32 @@ Further details about each specific capability are described in the following
 sections.
 }
 
-\section{Changing time offsets}{
+\section{Time transitions}{
 
 
-The \code{xtimeoffset} and \code{ytimeoffset} aesthetics allow for visualization of time
-offset changes, such as timezone transitions or daylight saving time changes.
-When successive time offsets differ, a dashed line segment is drawn to show
-the offset transition. These aesthetics are automatically set when time
-points are plotted in local time, which is the scale's default behaviour
-(see the \code{time_chronon} argument of \code{\link[=scale_x_mixtime]{scale_x_mixtime()}}), however the
-offsets can also be set manually to show other types of time offsets. One
-example of when it is useful to set the offsets manually is when showing
-measurements from a
-sensor with a known time drift (e.g. a clock that runs fast or slow) that is
-re-calibrated at known times.
+When time is displayed locally, daylight savings transitions introduce
+discontinuities in the local timeline when the clock jumps forwards or
+backwards. \code{geom_time_line()} draws these jumps as dashed segments, to
+preserve the integrity of the line's slope across the transition. When
+the time scale is set to use local time (see the \code{time_chronon} argument
+of \code{\link[=scale_x_mixtime]{scale_x_mixtime()}}), the default behaviour (\code{transitions = waiver()})
+sources daylight savings transitions automatically with
+\code{\link[mixtime:tz_transitions]{mixtime::tz_transitions()}}.
+
+The appearance of transition segments is controlled with
+\code{transition_aesthetics}, a named list of aesthetic overrides (\code{colour},
+\code{linewidth}, \code{linetype} and/or \code{alpha}). The default is a dashed line.
+
+Offset changes aren't always timezone related. A sensor may be periodically
+synchronized to adjust for clock drift, or the \code{transitions} may reflect an
+individual's personal travel through time zones. The local time should be
+mapped to the \verb{[x/y]} positional aesthetics, with the offset from absolute
+time mapped to \verb{[x/y]timeoffset} (a \code{\link[mixtime:duration]{mixtime::duration()}}). The \code{transitions}
+argument then specifies the instants at which the offset changes, and the
+offset before and after each transition. This is specified as a \code{data.frame}
+shaped like \code{\link[mixtime:tz_transitions]{mixtime::tz_transitions()}}, with an optional \code{id} column to
+scope rows to a specific series (matched against the \verb{[x/y]timeid}
+aesthetic).
 }
 
 \section{Missing time values}{

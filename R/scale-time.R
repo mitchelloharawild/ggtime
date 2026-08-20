@@ -329,6 +329,57 @@ mixtime_scale <- function(
   sc
 }
 
+#' Aesthetics carrying a length of time rather than a point in time
+#'
+#' `geom_time_line()`'s `[x/y]timeoffset` aesthetics measure how far the time
+#' being drawn sits from the instant it occurred. They are durations, not
+#' positions, but they are subtracted from positions, so they have to be
+#' expressed in the same chronon as the positions set by this scale.
+#'
+#' They are deliberately *not* listed in the scale's `aesthetics` to avoid
+#' training the axis range with mixed modes of time.
+#'
+#' @param aesthetics The scale's own `aesthetics`, to take the axis from.
+#' @returns The offset aesthetic belonging to the same axis as `aesthetics`.
+#' @noRd
+time_offset_aes <- function(aesthetics) {
+  if ("x" %in% aesthetics) "xtimeoffset" else "ytimeoffset"
+}
+
+#' Convert a time offset onto the scale's common chronon
+#'
+#' Not routed through `Scale$transform()`: an offset is a length of time, so it
+#' takes neither the `align_discrete()` nudge nor the scale's `transform`.
+#'
+#' @param x The offset aesthetic's column, which must be a duration.
+#' @param chronon The scale's common chronon, to convert onto.
+#' @param aes The offset aesthetic's name, for error messages.
+#' @param call The scale's call, for error messages.
+#' @returns `x` as a bare number of `chronon` units.
+#' @noRd
+transform_time_offset <- function(x, chronon, aes, call = NULL) {
+  if (!is_mixtime(x) || !all(mixtime::time_is_duration(x))) {
+    cli::cli_abort(
+      c(
+        "The {.field {aes}} aesthetic must be a duration, not \\
+         {.obj_type_friendly {x}}.",
+        i = "A time offset is a length of time, which the scale converts onto
+             the chronon it draws time on. A bare number has no unit to convert
+             from.",
+        i = "Use a {.pkg mixtime} duration, such as {.code mixtime::seconds(45)}."
+      ),
+      call = call
+    )
+  }
+  # A granule at a time, as `$transform()` converts the positions: time given
+  # at several granularities has its offsets stated at several granularities
+  # too, and each granule is converted from its own.
+  x@x <- lapply(x@x, function(v) {
+    mixtime::duration(v, chronon = chronon, discrete = FALSE)@x[[1L]]
+  })
+  as.numeric(x)
+}
+
 #' @keywords internal
 ScaleContinuousMixtime <- ggproto(
   "ScaleContinuousMixtime",
@@ -362,6 +413,7 @@ ScaleContinuousMixtime <- ggproto(
     # Mostly ggplot2::Scale$transform_df, it additionally:
     # * computes the appropriate common time scale for mixed granularities
     # * passes in the aesthetic name for aes_nudge alignments
+    # * converts time offsets onto the common time scale
     if (is.null(df) || nrow(df) == 0 || ncol(df) == 0 || is_waiver(df)) {
       return()
     }
@@ -377,12 +429,24 @@ ScaleContinuousMixtime <- ggproto(
     }
 
     # TODO - Consider applying the aes_nudge here, and calling ggplot2::Scale$transform_df.
-    df <- .mapply(
+    out <- .mapply(
       self$transform,
       list(df[aesthetics], aesthetics),
       MoreArgs = NULL
     )
-    names(df) <- aesthetics
+    names(out) <- aesthetics
+
+    # Convert time offset aesthetics to the common time_chronon
+    offsets <- intersect(time_offset_aes(self$aesthetics), names(df))
+    for (aes in offsets) {
+      out[[aes]] <- transform_time_offset(
+        df[[aes]],
+        self$time_chronon,
+        aes,
+        self$call
+      )
+    }
+    df <- out
 
     # Add gap filling for implicit missing values
     # DESIGN: should this be in position? Position may be too late to have access to enough data.
