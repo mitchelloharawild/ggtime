@@ -472,7 +472,7 @@ inject_time_aes <- function(mapping, peek, aesthetic) {
 # time duration offsets through `ScaleMixtime` to be converted onto the scale's
 # chosen common chronon.
 #' @exportS3Method ggplot2::ggplot_add ggtime_time_line_layer
-ggplot_add.ggtime_time_line_layer <- function(object, plot, object_name) {
+ggplot_add.ggtime_time_line_layer <- function(object, plot, ...) {
   mapping <- object$mapping %||% aes()
   inherited <- if (isTRUE(object$inherit.aes)) plot$mapping else aes()
   peek <- c(mapping, inherited[setdiff(names(inherited), names(mapping))])
