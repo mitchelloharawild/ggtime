@@ -78,7 +78,7 @@ pedestrians <- data.frame(
 # Warp points extend a month either side of the data, because panels are drawn
 # with their range expanded beyond it. They are monthly while the data is
 # daily, which is fine: warp points are converted to the data's granularity.
-month_starts <- mixtime::yearmonth("2020-12-01") + 0:5
+month_starts <- mixtime::yearmonth("2020 Dec") + 0:5
 
 # Without warping, the weekly cycle is evenly spaced but the month gridlines
 # are not: 28 day February is drawn narrower than its 31 day neighbours.

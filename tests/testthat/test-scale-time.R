@@ -146,7 +146,7 @@ test_that("default labels drop the within-chronon position when breaks are whole
 test_that("fractional within-chronon positions are still shown", {
   # A warp can place breaks partway through a chronon; that fractional
   # position should still be reported rather than always dropped.
-  month_starts <- mixtime::yearmonth("2020-12-01") + 0:5
+  month_starts <- mixtime::yearmonth("2020 Dec") + 0:5
   df <- data.frame(x = mixtime::date("2021-01-01") + 0:89, y = 1:90)
   p <- ggplot(df, aes(x, y)) +
     geom_line() +
