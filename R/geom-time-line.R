@@ -439,22 +439,29 @@ inject_time_aes <- function(mapping, peek, aesthetic) {
   id_aes <- paste0(aesthetic, "timeid")
   typed_aes <- paste0(aesthetic, "timetyped")
 
+  aes_env <- env(
+    quo_get_env(expr),
+    default_timeoffset = default_timeoffset,
+    default_timeid = default_timeid,
+    is_time_typed = is_time_typed
+  )
+
   if (is.null(peek[[offset_aes]])) {
     mapping[[offset_aes]] <- new_quosure(
       expr(default_timeoffset(!!quo_get_expr(expr))),
-      env = quo_get_env(expr)
+      env = aes_env
     )
   }
   if (is.null(peek[[id_aes]])) {
     mapping[[id_aes]] <- new_quosure(
       expr(default_timeid(!!quo_get_expr(expr))),
-      env = quo_get_env(expr)
+      env = aes_env
     )
   }
   if (is.null(peek[[typed_aes]])) {
     mapping[[typed_aes]] <- new_quosure(
       expr(is_time_typed(!!quo_get_expr(expr))),
-      env = quo_get_env(expr)
+      env = aes_env
     )
   }
   mapping
