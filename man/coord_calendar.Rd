@@ -174,14 +174,12 @@ library(ggplot2)
 library(mixtime)
 
 # Hourly pedestrian counts in Melbourne, as mixtime time points.
-pedestrian <- tsibble::pedestrian |>
-  dplyr::mutate(Time = datetime(Date_Time))
+pedestrian <- dplyr::mutate(tsibble::pedestrian, Time = datetime(Date_Time))
 
 # A weekly calendar arrangement of pedestrian counts, showing the high
 # activity at Birrarung Marr during the Australian Open in late January.
-pedestrian |>
-  dplyr::filter(Time < datetime("2015-02-01 00:00:00")) |>
-  ggplot(aes(x = Time, y = Count, color = Sensor)) +
+pedestrian_jan <- dplyr::filter(pedestrian, Time < datetime("2015-02-01 00:00:00"))
+ggplot(pedestrian_jan, aes(x = Time, y = Count, color = Sensor)) +
   geom_line() +
   coord_calendar(rows = mixtime::weeks(1L), cols = NULL) +
   scale_x_mixtime(
@@ -191,9 +189,11 @@ pedestrian |>
   theme(legend.position = "bottom")
 
 # A full year, with monthly rows
-pedestrian |>
-  dplyr::filter(mixtime::year(Time) == mixtime::year(2015), Sensor != "Birrarung Marr") |>
-  ggplot(aes(x = Time, y = Count, color = Sensor)) +
+pedestrian_2015 <- dplyr::filter(
+  pedestrian,
+  mixtime::year(Time) == mixtime::year(2015), Sensor != "Birrarung Marr"
+)
+ggplot(pedestrian_2015, aes(x = Time, y = Count, color = Sensor)) +
   geom_line() +
   coord_calendar(rows = month(1L), cols = NULL) +
   scale_x_mixtime(

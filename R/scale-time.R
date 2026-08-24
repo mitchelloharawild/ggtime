@@ -110,15 +110,15 @@
 #'   time = mixtime::yearmonth("1973 Jan") + 0:71,
 #'   value = USAccDeaths
 #' )
-#' uad_year <- uad_month |>
-#'   group_by(time = mixtime::year(time)) |>
+#' uad_year <- uad_month %>%
+#'   group_by(time = mixtime::year(time)) %>%
 #'   summarise(value = mean(value), .groups = "drop")
 #'
 #' bind_rows(
 #'   month = uad_month,
 #'   year = uad_year,
 #'   .id = "grain"
-#' ) |>
+#' ) %>%
 #'   ggplot(aes(time, value, color = grain)) +
 #'   geom_line() +
 #'   scale_x_mixtime()
