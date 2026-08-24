@@ -1,4 +1,4 @@
-# ggtime (development version)
+# ggtime 1.0.0
 
 This release introduces the grammar of temporal graphics: a set of time-aware
 geoms, scales, and coordinate systems that extend ggplot2 to work with mixtime
