@@ -62,7 +62,22 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="ggtime-development-version">ggtime (development version)<a class="anchor" aria-label="anchor" href="#ggtime-development-version"></a></h2>
-</div>
+<p>This release introduces the grammar of temporal graphics: a set of time-aware geoms, scales, and coordinate systems that extend ggplot2 to work with mixtime time vectors. These grammar elements sit alongside the plot helper functions from previous releases, and are what the helpers are now built from.</p>
+<ul><li>
+<code><a href="../reference/geom_time_line.html">geom_time_line()</a></code>: a time-aware extension of <code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line()</a></code> that keeps a line’s slope an accurate reflection of the rate of change, even across timezone changes, gaps, and duplicated time points.</li>
+<li>
+<code><a href="../reference/scale_mixtime.html">scale_x_mixtime()</a></code>/<code><a href="../reference/scale_mixtime.html">scale_y_mixtime()</a></code>: the position scale behind every mixtime time axis, applied automatically whenever a <code>mixtime</code> vector is mapped to a plot. It maps time points of different granularities onto one shared axis, and takes calendrical durations for breaks (<code>time_breaks</code>) and calendar-aware format strings for labels (<code>time_labels</code>).</li>
+<li>
+<code><a href="../reference/scale_mixtime_continuous.html">scale_colour_mixtime()</a></code>/<code><a href="../reference/scale_mixtime_continuous.html">scale_fill_mixtime()</a></code>/<code><a href="../reference/scale_mixtime_continuous.html">scale_alpha_mixtime()</a></code>/ <code><a href="../reference/scale_mixtime_continuous.html">scale_size_mixtime()</a></code>/<code><a href="../reference/scale_mixtime_continuous.html">scale_linewidth_mixtime()</a></code>: mixtime-aware equivalents for other aesthetics.</li>
+<li>
+<code><a href="../reference/coord_loop.html">coord_loop()</a></code>: loops the time axis around a calendrical period, so a continuous time axis can be compared cyclically instead of being discretised into a seasonal factor.</li>
+<li>
+<code><a href="../reference/coord_calendar.html">coord_calendar()</a></code>: arranges time into a calendar-like grid of rows and columns, useful for visualising events over short intervals within a long time span, such as holidays.</li>
+<li>
+<code><a href="../reference/aes_nudge.html">aes_nudge()</a></code>: specifying alignment of discrete time poisitions on continuous time plot axis with sensible defaults.</li>
+<li>
+<code><a href="../reference/transform_warp.html">transform_warp()</a></code>: a scales transform for warping time.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.2.0" id="ggtime-020">ggtime 0.2.0<small>2026-02-09</small><a class="anchor" aria-label="anchor" href="#ggtime-020"></a></h2>
 <p>This release completes the migration of graphics functions from {feasts} and {fabletools}, including a deprecation process for a gradual migration to {ggtime}. If you previously used time-series graphics from {feasts} or {fable}, you should now include <code><a href="https://pkg.mitchelloharawild.com/ggtime/">library(ggtime)</a></code> in your script to avoid deprecation notices. Existing code will continue to work with a deprecation warning.</p>
