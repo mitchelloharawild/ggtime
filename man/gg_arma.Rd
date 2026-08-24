@@ -21,7 +21,7 @@ Only models which compute ARMA roots can be visualised with this function.
 That is to say, the \code{glance()} of the model contains \code{ar_roots} and \code{ma_roots}.
 }
 \examples{
-if (requireNamespace("fable", quietly = TRUE)) {
+\dontshow{if (requireNamespace("fable", quietly = TRUE) && requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(fable)
 library(tsibble)
 library(dplyr)
@@ -33,5 +33,5 @@ tsibbledata::aus_retail \%>\%
   ) \%>\%
   model(ARIMA(Turnover ~ pdq(0,1,1) + PDQ(0,1,1))) \%>\%
   gg_arma()
-}
+\dontshow{\}) # examplesIf}
 }

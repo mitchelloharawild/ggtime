@@ -34,6 +34,7 @@ Plots a time series along with its ACF along with an customisable third
 graphic of either a PACF, histogram, lagged scatterplot or spectral density.
 }
 \examples{
+\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(tsibble)
 library(dplyr)
 tsibbledata::aus_retail \%>\%
@@ -42,7 +43,7 @@ tsibbledata::aus_retail \%>\%
     Industry == "Cafes, restaurants and catering services"
   ) \%>\%
   gg_tsdisplay(Turnover)
-
+\dontshow{\}) # examplesIf}
 }
 \references{
 Hyndman and Athanasopoulos (2019) \emph{Forecasting: principles

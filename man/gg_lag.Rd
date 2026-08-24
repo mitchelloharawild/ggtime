@@ -47,6 +47,7 @@ A lag plot shows the time series against lags of itself. It is often coloured
 the seasonal period to identify how each season correlates with others.
 }
 \examples{
+\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(tsibble)
 library(dplyr)
 tsibbledata::aus_retail \%>\%
@@ -55,5 +56,5 @@ tsibbledata::aus_retail \%>\%
     Industry == "Cafes, restaurants and catering services"
   ) \%>\%
   gg_lag(Turnover)
-
+\dontshow{\}) # examplesIf}
 }

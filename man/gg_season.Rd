@@ -67,6 +67,7 @@ plot type allows the underlying seasonal pattern to be seen more clearly,
 and is especially useful in identifying years in which the pattern changes.
 }
 \examples{
+\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(tsibble)
 library(dplyr)
 tsibbledata::aus_retail \%>\%
@@ -75,7 +76,7 @@ tsibbledata::aus_retail \%>\%
     Industry == "Cafes, restaurants and catering services"
   ) \%>\%
   gg_season(Turnover)
-
+\dontshow{\}) # examplesIf}
 }
 \references{
 Hyndman and Athanasopoulos (2019) Forecasting: principles and practice,

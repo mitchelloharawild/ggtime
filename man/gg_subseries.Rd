@@ -42,6 +42,7 @@ particularly useful in identifying changes in the seasonal pattern over time.
 similar to a seasonal plot (\code{\link[=gg_season]{gg_season()}}), and
 }
 \examples{
+\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(tsibble)
 library(dplyr)
 tsibbledata::aus_retail \%>\%
@@ -50,7 +51,7 @@ tsibbledata::aus_retail \%>\%
     Industry == "Cafes, restaurants and catering services"
   ) \%>\%
   gg_subseries(Turnover)
-
+\dontshow{\}) # examplesIf}
 }
 \references{
 Hyndman and Athanasopoulos (2019) Forecasting: principles and practice,
