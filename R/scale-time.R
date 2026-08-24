@@ -107,7 +107,7 @@
 #' library(ggplot2)
 #' library(dplyr)
 #' uad_month <- tibble(
-#'   time = mixtime::yearmonth(36L + 0:71),
+#'   time = mixtime::yearmonth("1973 Jan") + 0:71,
 #'   value = USAccDeaths
 #' )
 #' uad_year <- uad_month |>
