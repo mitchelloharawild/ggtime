@@ -190,13 +190,12 @@ pedestrian |>
   ) +
   theme(legend.position = "bottom")
 
-# A full year, with weekly rows and monthly columns: `cols` tiles the
-# months natively, without needing `facet_wrap()`.
+# A full year, with monthly rows
 pedestrian |>
   dplyr::filter(mixtime::year(Time) == mixtime::year(2015), Sensor != "Birrarung Marr") |>
   ggplot(aes(x = Time, y = Count, color = Sensor)) +
   geom_line() +
-  coord_calendar(rows = mixtime::weeks(1L), blocks = mixtime::months(1L)) +
+  coord_calendar(rows = month(1L), cols = NULL) +
   scale_x_mixtime(
     time_breaks = mixtime::days(1L),
     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
