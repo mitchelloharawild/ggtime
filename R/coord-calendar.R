@@ -111,22 +111,12 @@ utils::globalVariables(c("day", "week", "quarter"))
 #' # Hourly pedestrian counts in Melbourne, as mixtime time points.
 #' pedestrian <- dplyr::mutate(tsibble::pedestrian, Time = datetime(Date_Time))
 #'
-#' # A weekly calendar arrangement of pedestrian counts, showing the high
+#' # A monthly calendar arrangement of pedestrian counts, showing the high
 #' # activity at Birrarung Marr during the Australian Open in late January.
-#' pedestrian_jan <- dplyr::filter(pedestrian, Time < datetime("2015-02-01 00:00:00"))
-#' ggplot(pedestrian_jan, aes(x = Time, y = Count, color = Sensor)) +
-#'   geom_line() +
-#'   coord_calendar(rows = mixtime::weeks(1L), cols = NULL) +
-#'   scale_x_mixtime(
-#'     time_breaks = mixtime::days(1L),
-#'     time_labels = "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
-#'   ) +
-#'   theme(legend.position = "bottom")
-#'
-#' # A full year, with monthly rows
 #' pedestrian_2015 <- dplyr::filter(
 #'   pedestrian,
-#'   mixtime::year(Time) == mixtime::year(2015), Sensor != "Birrarung Marr"
+#'   mixtime::year(Time) == mixtime::year(2015),
+#'   Sensor == "Birrarung Marr"
 #' )
 #' ggplot(pedestrian_2015, aes(x = Time, y = Count, color = Sensor)) +
 #'   geom_line() +
