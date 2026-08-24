@@ -1,5 +1,31 @@
 # ggtime (development version)
 
+This release introduces the grammar of temporal graphics: a set of time-aware
+geoms, scales, and coordinate systems that extend ggplot2 to work with mixtime
+time vectors. These grammar elements sit alongside the plot helper functions 
+from previous releases, and are what the helpers are now built from.
+
+* `geom_time_line()`: a time-aware extension of `geom_line()` that keeps a
+  line's slope an accurate reflection of the rate of change, even across
+  timezone changes, gaps, and duplicated time points.
+* `scale_x_mixtime()`/`scale_y_mixtime()`: the position scale behind every
+  mixtime time axis, applied automatically whenever a `mixtime` vector is
+  mapped to a plot. It maps time points of different granularities onto one
+  shared axis, and takes calendrical durations for breaks (`time_breaks`)
+  and calendar-aware format strings for labels (`time_labels`).
+* `scale_colour_mixtime()`/`scale_fill_mixtime()`/`scale_alpha_mixtime()`/
+  `scale_size_mixtime()`/`scale_linewidth_mixtime()`: mixtime-aware
+  equivalents for other aesthetics.
+* `coord_loop()`: loops the time axis around a calendrical period, so a
+  continuous time axis can be compared cyclically instead of being
+  discretised into a seasonal factor.
+* `coord_calendar()`: arranges time into a calendar-like grid of rows and
+  columns, useful for visualising events over short intervals within a long
+  time span, such as holidays.
+* `aes_nudge()`: specifying alignment of discrete time poisitions on continuous
+  time plot axis with sensible defaults.
+* `transform_warp()`: a scales transform for warping time.
+
 # ggtime 0.2.0
 
 This release completes the migration of graphics functions from {feasts} and
