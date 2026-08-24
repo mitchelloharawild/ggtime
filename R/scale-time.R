@@ -168,6 +168,190 @@ scale_x_mixtime <- function(
   set_sec_axis(sec.axis, sc)
 }
 
+#' @export
+#' @rdname scale_mixtime
+scale_y_mixtime <- function(
+  name = waiver(),
+  breaks = waiver(),
+  time_breaks = waiver(),
+  minor_breaks = waiver(),
+  time_minor_breaks = waiver(),
+  labels = waiver(),
+  time_labels = waiver(),
+  time_chronon = waiver(),
+  align_discrete = aes_nudge(),
+  transform = "identity",
+  limits = NULL,
+  expand = waiver(),
+  oob = scales::censor,
+  guide = waiver(),
+  position = "left",
+  sec.axis = waiver()
+) {
+  sc <- mixtime_scale(
+    aesthetics = ggplot_global$y_aes,
+    name = name,
+    palette = identity,
+    breaks = breaks,
+    time_breaks = time_breaks,
+    minor_breaks = minor_breaks,
+    time_minor_breaks = time_minor_breaks,
+    labels = labels,
+    time_labels = time_labels,
+    time_chronon = time_chronon,
+    align_discrete = align_discrete,
+    transform = transform,
+    guide = guide,
+    limits = limits,
+    expand = expand,
+    oob = oob,
+    position = position
+  )
+  set_sec_axis(sec.axis, sc)
+}
+
+#' Non-positional scales for mixtime data
+#'
+#' Beyond `x` and `y`, mixtime vectors can also be mapped to `colour`,
+#' `fill`, `alpha`, `size`, and `linewidth` (e.g. to shade points or lines by
+#' when they occurred). These are the default scales used for mixtime vectors
+#' mapped to those aesthetics, and are automatically applied. To override the
+#' scale's behaviour manually, use `scale_*_mixtime`.
+#'
+#' Unlike [scale_x_mixtime()] and [scale_y_mixtime()], these scales don't draw
+#' a common time axis shared by multiple layers, so there is only a single
+#' aesthetic column to map. The common chronon (and, for `colour`/`fill`, the
+#' colour gradient) is still resolved the same way as the position scales,
+#' with mixed granularities coerced onto the finest chronon they can all be
+#' represented in and `time_breaks`/`time_labels` accepted for time-aware
+#' breaks and labelling.
+#'
+#' @inheritParams scale_mixtime
+#' @inheritParams ggplot2::scale_colour_gradient
+#' @param aesthetics The names of the aesthetics that this scale should be
+#' applied to, allowing this to be used with a different aesthetic (e.g. a
+#' custom aesthetic tied to `colour` or `fill` by
+#' [ggplot2::aes()]/[ggplot2::register_theme_elements()]).
+#' @param range Output range for `size`, `alpha`, and `linewidth`, given as a
+#' numeric vector of length 2. If `NULL`, the aesthetic's default range is
+#' used.
+#'
+#' @examples
+#' library(ggplot2)
+#' df <- data.frame(
+#'   time = mixtime::yearmonth(600:611),
+#'   value = as.numeric(USAccDeaths)
+#' )
+#'
+#' ggplot(df, aes(value, 1, colour = time)) +
+#'   geom_point(size = 5) +
+#'   scale_colour_mixtime()
+#'
+#' @name scale_mixtime_continuous
+NULL
+
+#' @export
+#' @rdname scale_mixtime_continuous
+scale_colour_mixtime <- function(
+  name = waiver(),
+  ...,
+  low = "#132B43",
+  high = "#56B1F7",
+  space = "Lab",
+  na.value = "grey50",
+  guide = "colourbar",
+  aesthetics = "colour"
+) {
+  mixtime_scale(
+    aesthetics = aesthetics,
+    name = name,
+    palette = scales::pal_seq_gradient(low, high, space),
+    na.value = na.value,
+    guide = guide,
+    ...
+  )
+}
+
+#' @export
+#' @rdname scale_mixtime_continuous
+scale_color_mixtime <- scale_colour_mixtime
+
+#' @export
+#' @rdname scale_mixtime_continuous
+scale_fill_mixtime <- function(
+  name = waiver(),
+  ...,
+  low = "#132B43",
+  high = "#56B1F7",
+  space = "Lab",
+  na.value = "grey50",
+  guide = "colourbar",
+  aesthetics = "fill"
+) {
+  mixtime_scale(
+    aesthetics = aesthetics,
+    name = name,
+    palette = scales::pal_seq_gradient(low, high, space),
+    na.value = na.value,
+    guide = guide,
+    ...
+  )
+}
+
+#' @export
+#' @rdname scale_mixtime_continuous
+scale_alpha_mixtime <- function(
+  name = waiver(),
+  ...,
+  range = NULL,
+  aesthetics = "alpha"
+) {
+  palette <- if (!is.null(range)) scales::pal_rescale(range) else NULL
+  mixtime_scale(
+    aesthetics = aesthetics,
+    name = name,
+    palette = palette,
+    fallback.palette = scales::pal_rescale(c(0.1, 1)),
+    ...
+  )
+}
+
+#' @export
+#' @rdname scale_mixtime_continuous
+scale_size_mixtime <- function(
+  name = waiver(),
+  ...,
+  range = NULL,
+  aesthetics = "size"
+) {
+  palette <- if (!is.null(range)) scales::pal_area(range) else NULL
+  mixtime_scale(
+    aesthetics = aesthetics,
+    name = name,
+    palette = palette,
+    fallback.palette = scales::pal_area(),
+    ...
+  )
+}
+
+#' @export
+#' @rdname scale_mixtime_continuous
+scale_linewidth_mixtime <- function(
+  name = waiver(),
+  ...,
+  range = NULL,
+  aesthetics = "linewidth"
+) {
+  palette <- if (!is.null(range)) scales::pal_rescale(range) else NULL
+  mixtime_scale(
+    aesthetics = aesthetics,
+    name = name,
+    palette = palette,
+    fallback.palette = scales::pal_rescale(c(1, 6)),
+    ...
+  )
+}
+
 
 #' Step through a time range in whole `size` units
 #'

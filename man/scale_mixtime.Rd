@@ -3,6 +3,7 @@
 \name{scale_mixtime}
 \alias{scale_mixtime}
 \alias{scale_x_mixtime}
+\alias{scale_y_mixtime}
 \title{Position scales for mixtime data}
 \usage{
 scale_x_mixtime(
@@ -21,6 +22,25 @@ scale_x_mixtime(
   oob = scales::censor,
   guide = waiver(),
   position = "bottom",
+  sec.axis = waiver()
+)
+
+scale_y_mixtime(
+  name = waiver(),
+  breaks = waiver(),
+  time_breaks = waiver(),
+  minor_breaks = waiver(),
+  time_minor_breaks = waiver(),
+  labels = waiver(),
+  time_labels = waiver(),
+  time_chronon = waiver(),
+  align_discrete = aes_nudge(),
+  transform = "identity",
+  limits = NULL,
+  expand = waiver(),
+  oob = scales::censor,
+  guide = waiver(),
+  position = "left",
   sec.axis = waiver()
 )
 }
