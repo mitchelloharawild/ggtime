@@ -240,7 +240,7 @@ scale_y_mixtime <- function(
 #' library(ggplot2)
 #' df <- data.frame(
 #'   time = mixtime::yearmonth(600:611),
-#'   value = as.numeric(USAccDeaths)
+#'   value = as.numeric(USAccDeaths[1:12])
 #' )
 #'
 #' ggplot(df, aes(value, 1, colour = time)) +
