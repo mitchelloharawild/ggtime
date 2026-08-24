@@ -42,6 +42,8 @@ Description: Extends the capabilities of 'ggplot2' by providing grammatical
     including time plots, season plots, and seasonal sub-series plots.
 License: GPL (>= 3)
 URL: https://pkg.mitchelloharawild.com/ggtime/, https://github.com/mitchelloharawild/ggtime
+Depends:
+    R (>= 4.1.0)
 Imports: 
     ggplot2,
     grid,
@@ -74,7 +76,6 @@ Suggests:
     fontquiver,
     sysfonts,
     showtext
-Remotes: github::mitchelloharawild/mixtime
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
