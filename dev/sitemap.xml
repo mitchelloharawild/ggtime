@@ -1,6 +1,5 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/LICENSE.html</loc></url>
-<url><loc>https://pkg.mitchelloharawild.com/ggtime/TODO.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/authors.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/index.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/news/index.html</loc></url>
@@ -24,7 +23,7 @@
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/reexports.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/scale_cf_lag.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/scale_mixtime.html</loc></url>
+<url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/scale_mixtime_continuous.html</loc></url>
 <url><loc>https://pkg.mitchelloharawild.com/ggtime/reference/transform_warp.html</loc></url>
-<url><loc>https://pkg.mitchelloharawild.com/ggtime/todo.html</loc></url>
 </urlset>
 
