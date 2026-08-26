@@ -1720,6 +1720,123 @@ test_that("coord_calendar rejects spacing that is not a fraction", {
   expect_equal(coord_calendar(col_spacing = rel(0.25))$col_spacing, 0.25)
 })
 
+test_that("cell_ratio fixes the panel's aspect so a cell has that shape", {
+  df <- calendar_data()
+  p <- ggplot(df, aes(x = time, y = value)) + geom_line()
+
+  square <- ggplot_build(p + coord_calendar(cell_ratio = 1, cols = NULL))
+  coord <- square$plot$coordinates
+  params <- square$layout$panel_params[[1]]
+  layout <- coord$grid_layout(params)
+
+  # Daily cells of a weekly row: a cell is a seventh of the panel's width and
+  # a row its whole height, so the panel must be as many times as tall as
+  # there are rows, over the seven cells across it.
+  cell_width <- layout$col$width[1L] / 7
+  cell_height <- layout$row$height[1L]
+  aspect <- coord$aspect(params)
+  expect_equal(aspect, cell_width / cell_height)
+  # The cell the panel is shaped around is square: its height, as a fraction
+  # of the panel's height, times the panel's own aspect ratio.
+  expect_equal(cell_height * aspect, cell_width)
+
+  # The ratio is the cell's height over its width, so it scales the panel.
+  tall <- ggplot_build(p + coord_calendar(cell_ratio = 2, cols = NULL))
+  expect_equal(
+    tall$plot$coordinates$aspect(tall$layout$panel_params[[1]]),
+    2 * aspect
+  )
+})
+
+test_that("cell_ratio leaves the panel free unless it is set", {
+  df <- calendar_data()
+  built <- ggplot_build(
+    ggplot(df, aes(x = time, y = value)) + geom_line() + coord_calendar()
+  )
+  expect_null(
+    built$plot$coordinates$aspect(built$layout$panel_params[[1]])
+  )
+})
+
+test_that("a flipped calendar's cell_ratio still measures height over width", {
+  df <- calendar_data()
+  upright <- ggplot_build(
+    ggplot(df, aes(x = time, y = value)) +
+      geom_line() +
+      coord_calendar(cell_ratio = 1, cols = NULL)
+  )
+  flipped <- ggplot_build(
+    ggplot(df, aes(y = time, x = value)) +
+      geom_line() +
+      coord_calendar(time = "y", cell_ratio = 1, cols = NULL)
+  )
+
+  # Time runs down the panel rather than across it, so the cell that was
+  # `1 / 7` of the panel wide is now that fraction of it tall.
+  expect_equal(
+    flipped$plot$coordinates$aspect(flipped$layout$panel_params[[1]]),
+    1 / upright$plot$coordinates$aspect(upright$layout$panel_params[[1]])
+  )
+})
+
+test_that("cell_ratio shapes a whole row when there are no cells", {
+  df <- calendar_data()
+  p <- ggplot(df, aes(x = time, y = value)) + geom_line()
+  built <- ggplot_build(p + coord_calendar(cells = NULL, cell_ratio = 1))
+  coord <- built$plot$coordinates
+  params <- built$layout$panel_params[[1]]
+  layout <- coord$grid_layout(params)
+
+  expect_null(params$cell_breaks)
+  expect_equal(
+    coord$aspect(params),
+    layout$col$width[1L] / layout$row$height[1L]
+  )
+})
+
+test_that("a base coord's own ratio is scaled into the calendar's grid", {
+  df <- calendar_data()
+  p <- ggplot(df, aes(x = time, y = value)) + geom_line()
+  built <- ggplot_build(
+    p + coord_calendar(cols = NULL, coord = ggplot2::coord_fixed(2))
+  )
+  coord <- built$plot$coordinates
+  params <- built$layout$panel_params[[1]]
+  layout <- coord$grid_layout(params)
+
+  # `coord_fixed()` shapes one row's window, which is a tile of the grid
+  # rather than the whole panel.
+  tile <- diff(params$y.range) / diff(params$x.range) * 2
+  expect_equal(
+    coord$aspect(params),
+    tile * layout$col$width[1L] / layout$row$height[1L]
+  )
+
+  # Both would fix the panel's one aspect ratio.
+  expect_error(
+    coord_calendar(cell_ratio = 1, coord = ggplot2::coord_fixed()),
+    "cannot both be set"
+  )
+})
+
+test_that("coord_calendar rejects a cell_ratio that is not a positive number", {
+  expect_error(coord_calendar(cell_ratio = 0), "positive number")
+  expect_error(coord_calendar(cell_ratio = -1), "positive number")
+  expect_error(coord_calendar(cell_ratio = "square"), "positive number")
+  expect_error(coord_calendar(cell_ratio = c(1, 2)), "single")
+  expect_equal(coord_calendar(cell_ratio = rel(2))$cell_ratio, 2)
+  expect_null(coord_calendar()$cell_ratio)
+})
+
+test_that("a cell's width is the typical one, not the average", {
+  expect_equal(calendar_cell_frac(NULL), 1)
+  expect_equal(calendar_cell_frac(numeric()), 1)
+  expect_equal(calendar_cell_frac(c(1, 2, 3) / 4), 1 / 4)
+  # A row the cells do not divide evenly closes with a sliver of a cell (the
+  # week of a daylight saving change), which must not shrink every other cell.
+  expect_equal(calendar_cell_frac(c(0.2, 0.4, 0.6, 0.8, 0.99)), 0.2)
+})
+
 test_that("panes must sit between rows and cols in coarseness", {
   df <- calendar_data()
   p <- ggplot(df, aes(x = time, y = value)) + geom_line()

@@ -1,9 +1,19 @@
+# ggtime (development version)
+
+## Improvements
+
+* `coord_calendar()` gains `cell_ratio`, which fixes the aspect ratio of a
+  calendar cell as `coord_fixed()` fixes that of the data units of the axes.
+  `cell_ratio = 1` gives the square cells of a printed calendar.
+
 # ggtime 1.0.0
 
 This release introduces the grammar of temporal graphics: a set of time-aware
 geoms, scales, and coordinate systems that extend ggplot2 to work with mixtime
 time vectors. These grammar elements sit alongside the plot helper functions 
 from previous releases, and are what the helpers are now built from.
+
+## New features
 
 * `geom_time_line()`: a time-aware extension of `geom_line()` that keeps a
   line's slope an accurate reflection of the rate of change, even across

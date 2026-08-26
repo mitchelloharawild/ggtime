@@ -42,6 +42,16 @@ utils::globalVariables(c("day", "week", "quarter"))
 #'   `quarter`.
 #' @param pane_spacing,col_spacing Gap between panes of rows / between
 #'   columns, as a fraction of one row's height / one column's width.
+#' @param cell_ratio Aspect ratio of a calendar cell, as its height divided
+#'   by its width, in the manner of [ggplot2::coord_fixed()] but applied to a
+#'   cell rather than to the data units of the axes.
+#'   * `NULL` (default): the panel takes whatever shape it is given
+#'   * a number, e.g. `1` for the square cells of a printed calendar
+#'
+#'   Fixing a cell fixes the panel's own aspect ratio, so this cannot be
+#'   combined with a `coord` that sets its own `ratio`, and
+#'   `theme(aspect.ratio = )` overrides it. Applies to a whole row's tile
+#'   when there are no cells to divide it.
 #' @param label_cells,label_rows,label_blocks,label_panes,label_cols How to
 #'   label each instance of a granule:
 #'   * a `mixtime` format string, as `time_labels` of [scale_x_mixtime()],
@@ -140,6 +150,7 @@ coord_calendar <- function(
   cols = quarter(1L),
   pane_spacing = 0.25,
   col_spacing = 0.1,
+  cell_ratio = NULL,
   label_cells = "{cyc(day, month)}",
   label_rows = NULL,
   label_blocks = NULL,
@@ -171,6 +182,7 @@ coord_calendar <- function(
 
   pane_spacing <- check_spacing(pane_spacing)
   col_spacing <- check_spacing(col_spacing)
+  cell_ratio <- check_ratio(cell_ratio)
   label_formats <- list(
     cell = check_labels(label_cells),
     row = check_labels(label_rows),
@@ -198,6 +210,17 @@ coord_calendar <- function(
     cli::cli_abort("{.fn coord_calendar} does not support {.cls {cls}}.")
   }
 
+  # A `coord` with its own `ratio` (`coord_fixed()`) fixes the panel's shape
+  # from the data units of one row's window, `cell_ratio` from a cell; the
+  # panel has only the one shape to give (see `CoordCalendar$aspect()`).
+  if (!is.null(cell_ratio) && !is.null(loop_coord$ratio)) {
+    cli::cli_abort(c(
+      "{.arg cell_ratio} and {.arg coord}'s own {.arg ratio} cannot both be
+       set.",
+      i = "Each fixes the panel's aspect ratio."
+    ))
+  }
+
   ggplot2::ggproto(
     NULL,
     CoordCalendar(loop_coord),
@@ -210,6 +233,7 @@ coord_calendar <- function(
     cols_missing = cols_missing,
     pane_spacing = pane_spacing,
     col_spacing = col_spacing,
+    cell_ratio = cell_ratio,
     label_formats = label_formats,
     # Captured now: needed by `check_pane_granule()` deep inside
     # `ggplot_build()`, once this call's own frame is gone.
@@ -258,6 +282,32 @@ check_spacing <- function(x, arg = caller_arg(x), call = caller_env()) {
   x
 }
 
+#' Check a cell aspect ratio
+#' @param x The user's `cell_ratio` argument.
+#' @returns `x` as a plain number, or `NULL` for a free panel.
+#' @noRd
+check_ratio <- function(x, arg = caller_arg(x), call = caller_env()) {
+  # Named before `x` is touched, since `caller_arg()` reads its promise.
+  force(arg)
+  if (is.null(x)) {
+    return(NULL)
+  }
+  x <- unclass(x)
+  if (
+    !is.numeric(x) || length(x) != 1L || is.na(x) || x <= 0 || !is.finite(x)
+  ) {
+    cli::cli_abort(
+      c(
+        "{.arg {arg}} must be a single positive number, or {.code NULL}.",
+        i = "It gives a cell's height as a multiple of its width, such as
+             {.code 1} for square cells."
+      ),
+      call = call
+    )
+  }
+  x
+}
+
 #' The most cells a row may hold and still be broken at every one of them
 #'
 #' The days of a month: the coarsest cycle a calendar plausibly divides into
@@ -288,6 +338,9 @@ CoordCalendar <- function(coord) {
     # Gaps set by `coord_calendar()`.
     pane_spacing = 0,
     col_spacing = 0,
+
+    # Cell aspect ratio set by `coord_calendar()`; `NULL` for a free panel.
+    cell_ratio = NULL,
 
     # Label format per granule; `NULL` means no label.
     label_formats = list(),
@@ -463,6 +516,37 @@ CoordCalendar <- function(coord) {
         grid$layout_stamp <- stamp
       }
       grid$layout
+    },
+
+    # A cell is a fraction of the panel in each direction, so the ratio
+    # asked of a cell scales into one for the panel as a whole, which is
+    # what ggplot2 fixes (`theme(aspect.ratio = )` still overrides it).
+    #
+    # A base coord with its own `ratio` (`coord_fixed()`) asks for the same
+    # thing in data units, and for a tile rather than a cell: the parent's
+    # aspect is what one row's window should be shaped like, since the panel
+    # params it reads are that window's own ranges. Both cases are the same
+    # scaling, over a different fraction of the panel.
+    aspect = function(self, ranges) {
+      ratio <- self$cell_ratio %||% ggproto_parent(coord, self)$aspect(ranges)
+      if (is.null(ratio)) {
+        return(NULL)
+      }
+      layout <- self$grid_layout(ranges)
+      # One column, as a fraction of the time axis, and one row, as a
+      # fraction of the axis across it.
+      along <- layout$col$width[1L]
+      across <- layout$row$height[1L]
+      if (!is.null(self$cell_ratio)) {
+        along <- along * calendar_cell_frac(ranges$cell_breaks)
+      }
+      # The panel is `ratio` times as tall (in units of the cell's height)
+      # as it is wide (in units of the cell's width).
+      if (self$is_flipped) {
+        ratio * across / along
+      } else {
+        ratio * along / across
+      }
     },
 
     # `x`/`y` are `[0, 1]` positions within the row's window by this point.
@@ -2245,6 +2329,28 @@ calendar_cell_breaks <- function(row_window, cell, trans) {
   # Only boundaries *within* a row are cell boundaries; the window's own
   # edges belong to the coarser granule that cut it.
   breaks[breaks > NPC_TOL & breaks < 1 - NPC_TOL]
+}
+
+#' One cell's width, as a fraction of the tile it divides
+#'
+#' Cells that don't divide a tile evenly (`months` within a `year`, say) have
+#' no one width to fix, and the panel has only one aspect ratio to give, so
+#' the middle cell stands in for them all.
+#'
+#' The median rather than the mean: a tile a cell doesn't divide evenly closes
+#' with a sliver of a cell (the week of a daylight saving change is an hour
+#' longer than its seven days), and averaging that in would narrow every cell
+#' to make room for it.
+#' @param breaks Cell break fractions, from `calendar_cell_breaks()`.
+#' @returns A number in `(0, 1]`; `1` when the tile holds a single cell, or
+#'   none to divide it.
+#' @noRd
+calendar_cell_frac <- function(breaks) {
+  if (is.null(breaks) || length(breaks) == 0L) {
+    return(1)
+  }
+  widths <- diff(c(0, breaks, 1))
+  sort(widths)[ceiling(length(widths) / 2)]
 }
 
 #' Pare the panel's own grid back to what a calendar can read

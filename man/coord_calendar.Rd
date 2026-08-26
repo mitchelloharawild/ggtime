@@ -12,6 +12,7 @@ coord_calendar(
   cols = quarter(1L),
   pane_spacing = 0.25,
   col_spacing = 0.1,
+  cell_ratio = NULL,
   label_cells = "{cyc(day, month)}",
   label_rows = NULL,
   label_blocks = NULL,
@@ -74,6 +75,19 @@ Defaults to \code{quarter(1L)}, or \code{month(3L)} if the calendar has no
 
 \item{pane_spacing, col_spacing}{Gap between panes of rows / between
 columns, as a fraction of one row's height / one column's width.}
+
+\item{cell_ratio}{Aspect ratio of a calendar cell, as its height divided
+by its width, in the manner of \code{\link[ggplot2:coord_fixed]{ggplot2::coord_fixed()}} but applied to a
+cell rather than to the data units of the axes.
+\itemize{
+\item \code{NULL} (default): the panel takes whatever shape it is given
+\item a number, e.g. \code{1} for the square cells of a printed calendar
+}
+
+Fixing a cell fixes the panel's own aspect ratio, so this cannot be
+combined with a \code{coord} that sets its own \code{ratio}, and
+\code{theme(aspect.ratio = )} overrides it. Applies to a whole row's tile
+when there are no cells to divide it.}
 
 \item{label_cells, label_rows, label_blocks, label_panes, label_cols}{How to
 label each instance of a granule:
