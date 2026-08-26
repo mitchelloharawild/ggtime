@@ -1,5 +1,11 @@
 # ggtime (development version)
 
+## New features
+
+* `geom_candlestick()`/`stat_ohlc()`: summarises the values within each
+  time granule by their first (`open`), largest (`high`), smallest (`low`), and
+  last (`close`) value, drawn as a candlestick chart.
+
 ## Improvements
 
 * `coord_calendar()` gains `cell_ratio`, which fixes the aspect ratio of a
