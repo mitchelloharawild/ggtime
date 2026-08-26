@@ -78,6 +78,7 @@ own row and column of a grid rather than being overlaid.</p>
 <span>  cols <span class="op">=</span> <span class="fu">quarter</span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span>,</span>
 <span>  pane_spacing <span class="op">=</span> <span class="fl">0.25</span>,</span>
 <span>  col_spacing <span class="op">=</span> <span class="fl">0.1</span>,</span>
+<span>  cell_ratio <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  label_cells <span class="op">=</span> <span class="st">"{cyc(day, month)}"</span>,</span>
 <span>  label_rows <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  label_blocks <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -137,6 +138,17 @@ wrapping.</p><ul><li><p><code>NULL</code>: a single column spanning the whole ti
 <dt id="arg-pane-spacing-col-spacing">pane_spacing, col_spacing<a class="anchor" aria-label="anchor" href="#arg-pane-spacing-col-spacing"></a></dt>
 <dd><p>Gap between panes of rows / between
 columns, as a fraction of one row's height / one column's width.</p></dd>
+
+
+<dt id="arg-cell-ratio">cell_ratio<a class="anchor" aria-label="anchor" href="#arg-cell-ratio"></a></dt>
+<dd><p>Aspect ratio of a calendar cell, as its height divided
+by its width, in the manner of <code><a href="https://ggplot2.tidyverse.org/reference/coord_fixed.html" class="external-link">ggplot2::coord_fixed()</a></code> but applied to a
+cell rather than to the data units of the axes.</p><ul><li><p><code>NULL</code> (default): the panel takes whatever shape it is given</p></li>
+<li><p>a number, e.g. <code>1</code> for the square cells of a printed calendar</p></li>
+</ul><p>Fixing a cell fixes the panel's own aspect ratio, so this cannot be
+combined with a <code>coord</code> that sets its own <code>ratio</code>, and
+<code>theme(aspect.ratio = )</code> overrides it. Applies to a whole row's tile
+when there are no cells to divide it.</p></dd>
 
 
 <dt id="arg-label-cells-label-rows-label-blocks-label-panes-label-cols">label_cells, label_rows, label_blocks, label_panes, label_cols<a class="anchor" aria-label="anchor" href="#arg-label-cells-label-rows-label-blocks-label-panes-label-cols"></a></dt>

@@ -95,7 +95,7 @@ automatically identified, but can be manually specified using the
 <span>  transform <span class="op">=</span> <span class="st">"identity"</span>,</span>
 <span>  limits <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  expand <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  oob <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/scales/man/oob.html" class="external-link">censor</a></span>,</span>
+<span>  oob <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="va"><a href="https://scales.r-lib.org/reference/oob.html" class="external-link">censor</a></span>,</span>
 <span>  guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  position <span class="op">=</span> <span class="st">"bottom"</span>,</span>
 <span>  sec.axis <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -114,7 +114,7 @@ automatically identified, but can be manually specified using the
 <span>  transform <span class="op">=</span> <span class="st">"identity"</span>,</span>
 <span>  limits <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  expand <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  oob <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/scales/man/oob.html" class="external-link">censor</a></span>,</span>
+<span>  oob <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="va"><a href="https://scales.r-lib.org/reference/oob.html" class="external-link">censor</a></span>,</span>
 <span>  guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  position <span class="op">=</span> <span class="st">"left"</span>,</span>
 <span>  sec.axis <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/waiver.html" class="external-link">waiver</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -236,10 +236,10 @@ expand the scale by 5% on each side for continuous variables, and by
 <dd><p>One of:</p><ul><li><p>Function that handles limits outside of the scale limits
 (out of bounds). Also accepts rlang <a href="https://rlang.r-lib.org/reference/as_function.html" class="external-link">lambda</a>
 function notation.</p></li>
-<li><p>The default (<code><a href="https://rdrr.io/pkg/scales/man/oob.html" class="external-link">scales::censor()</a></code>) replaces out of
+<li><p>The default (<code><a href="https://scales.r-lib.org/reference/oob.html" class="external-link">scales::censor()</a></code>) replaces out of
 bounds values with <code>NA</code>.</p></li>
-<li><p><code><a href="https://rdrr.io/pkg/scales/man/oob.html" class="external-link">scales::squish()</a></code> for squishing out of bounds values into range.</p></li>
-<li><p><code><a href="https://rdrr.io/pkg/scales/man/oob.html" class="external-link">scales::squish_infinite()</a></code> for squishing infinite values into range.</p></li>
+<li><p><code><a href="https://scales.r-lib.org/reference/oob.html" class="external-link">scales::squish()</a></code> for squishing out of bounds values into range.</p></li>
+<li><p><code><a href="https://scales.r-lib.org/reference/oob.html" class="external-link">scales::squish_infinite()</a></code> for squishing infinite values into range.</p></li>
 </ul></dd>
 
 
