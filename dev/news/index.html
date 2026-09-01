@@ -20,7 +20,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">ggtime</a>
-        <span class="version label label-danger" data-toggle="tooltip" data-placement="bottom" title="In-development version">0.2.0.9000</span>
+        <span class="version label label-danger" data-toggle="tooltip" data-placement="bottom" title="In-development version">1.0.0.9000</span>
       </span>
     </div>
 
@@ -62,7 +62,22 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="ggtime-development-version">ggtime (development version)<a class="anchor" aria-label="anchor" href="#ggtime-development-version"></a></h2>
+<div class="section level3">
+<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/geom_candlestick.html">geom_candlestick()</a></code>/<code><a href="../reference/geom_candlestick.html">stat_ohlc()</a></code>: summarises the values within each time granule by their first (<code>open</code>), largest (<code>high</code>), smallest (<code>low</code>), and last (<code>close</code>) value, drawn as a candlestick chart.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="improvements-development-version">Improvements<a class="anchor" aria-label="anchor" href="#improvements-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/coord_calendar.html">coord_calendar()</a></code> gains <code>cell_ratio</code>, which fixes the aspect ratio of a calendar cell as <code><a href="https://ggplot2.tidyverse.org/reference/coord_fixed.html" class="external-link">coord_fixed()</a></code> fixes that of the data units of the axes. <code>cell_ratio = 1</code> gives the square cells of a printed calendar.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="1.0.0" id="ggtime-100">ggtime 1.0.0<a class="anchor" aria-label="anchor" href="#ggtime-100"></a></h2>
 <p>This release introduces the grammar of temporal graphics: a set of time-aware geoms, scales, and coordinate systems that extend ggplot2 to work with mixtime time vectors. These grammar elements sit alongside the plot helper functions from previous releases, and are what the helpers are now built from.</p>
+<div class="section level3">
+<h3 id="new-features-1-0-0">New features<a class="anchor" aria-label="anchor" href="#new-features-1-0-0"></a></h3>
 <ul><li>
 <code><a href="../reference/geom_time_line.html">geom_time_line()</a></code>: a time-aware extension of <code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line()</a></code> that keeps a line’s slope an accurate reflection of the rate of change, even across timezone changes, gaps, and duplicated time points.</li>
 <li>
@@ -78,6 +93,7 @@
 <li>
 <code><a href="../reference/transform_warp.html">transform_warp()</a></code>: a scales transform for warping time.</li>
 </ul></div>
+</div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.2.0" id="ggtime-020">ggtime 0.2.0<small>2026-02-09</small><a class="anchor" aria-label="anchor" href="#ggtime-020"></a></h2>
 <p>This release completes the migration of graphics functions from {feasts} and {fabletools}, including a deprecation process for a gradual migration to {ggtime}. If you previously used time-series graphics from {feasts} or {fable}, you should now include <code><a href="https://pkg.mitchelloharawild.com/ggtime/">library(ggtime)</a></code> in your script to avoid deprecation notices. Existing code will continue to work with a deprecation warning.</p>

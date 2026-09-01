@@ -22,7 +22,7 @@ own row and column of a grid rather than being overlaid."><meta property="og:ima
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">ggtime</a>
-        <span class="version label label-danger" data-toggle="tooltip" data-placement="bottom" title="In-development version">0.2.0.9000</span>
+        <span class="version label label-danger" data-toggle="tooltip" data-placement="bottom" title="In-development version">1.0.0.9000</span>
       </span>
     </div>
 
@@ -78,6 +78,7 @@ own row and column of a grid rather than being overlaid.</p>
 <span>  cols <span class="op">=</span> <span class="fu">quarter</span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span>,</span>
 <span>  pane_spacing <span class="op">=</span> <span class="fl">0.25</span>,</span>
 <span>  col_spacing <span class="op">=</span> <span class="fl">0.1</span>,</span>
+<span>  cell_ratio <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  label_cells <span class="op">=</span> <span class="st">"{cyc(day, month)}"</span>,</span>
 <span>  label_rows <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  label_blocks <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -137,6 +138,17 @@ wrapping.</p><ul><li><p><code>NULL</code>: a single column spanning the whole ti
 <dt id="arg-pane-spacing-col-spacing">pane_spacing, col_spacing<a class="anchor" aria-label="anchor" href="#arg-pane-spacing-col-spacing"></a></dt>
 <dd><p>Gap between panes of rows / between
 columns, as a fraction of one row's height / one column's width.</p></dd>
+
+
+<dt id="arg-cell-ratio">cell_ratio<a class="anchor" aria-label="anchor" href="#arg-cell-ratio"></a></dt>
+<dd><p>Aspect ratio of a calendar cell, as its height divided
+by its width, in the manner of <code><a href="https://ggplot2.tidyverse.org/reference/coord_fixed.html" class="external-link">ggplot2::coord_fixed()</a></code> but applied to a
+cell rather than to the data units of the axes.</p><ul><li><p><code>NULL</code> (default): the panel takes whatever shape it is given</p></li>
+<li><p>a number, e.g. <code>1</code> for the square cells of a printed calendar</p></li>
+</ul><p>Fixing a cell fixes the panel's own aspect ratio, so this cannot be
+combined with a <code>coord</code> that sets its own <code>ratio</code>, and
+<code>theme(aspect.ratio = )</code> overrides it. Applies to a whole row's tile
+when there are no cells to divide it.</p></dd>
 
 
 <dt id="arg-label-cells-label-rows-label-blocks-label-panes-label-cols">label_cells, label_rows, label_blocks, label_panes, label_cols<a class="anchor" aria-label="anchor" href="#arg-label-cells-label-rows-label-blocks-label-panes-label-cols"></a></dt>
@@ -251,23 +263,12 @@ colliding.</p>
 <span class="r-in"><span><span class="co"># Hourly pedestrian counts in Melbourne, as mixtime time points.</span></span></span>
 <span class="r-in"><span><span class="va">pedestrian</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span><span class="fu">tsibble</span><span class="fu">::</span><span class="va"><a href="https://tsibble.tidyverts.org/reference/pedestrian.html" class="external-link">pedestrian</a></span>, Time <span class="op">=</span> <span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">datetime</a></span><span class="op">(</span><span class="va">Date_Time</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># A weekly calendar arrangement of pedestrian counts, showing the high</span></span></span>
+<span class="r-in"><span><span class="co"># A monthly calendar arrangement of pedestrian counts, showing the high</span></span></span>
 <span class="r-in"><span><span class="co"># activity at Birrarung Marr during the Australian Open in late January.</span></span></span>
-<span class="r-in"><span><span class="va">pedestrian_jan</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">pedestrian</span>, <span class="va">Time</span> <span class="op">&lt;</span> <span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">datetime</a></span><span class="op">(</span><span class="st">"2015-02-01 00:00:00"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">pedestrian_jan</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Count</span>, color <span class="op">=</span> <span class="va">Sensor</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu">coord_calendar</span><span class="op">(</span>rows <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration_helpers.html" class="external-link">weeks</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span>, cols <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    time_breaks <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration_helpers.html" class="external-link">days</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    time_labels <span class="op">=</span> <span class="st">"{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"bottom"</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="coord_calendar-1.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># A full year, with monthly rows</span></span></span>
 <span class="r-in"><span><span class="va">pedestrian_2015</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">pedestrian</span>,</span></span>
-<span class="r-in"><span>  <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">year</a></span><span class="op">(</span><span class="va">Time</span><span class="op">)</span> <span class="op">==</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">year</a></span><span class="op">(</span><span class="fl">2015</span><span class="op">)</span>, <span class="va">Sensor</span> <span class="op">!=</span> <span class="st">"Birrarung Marr"</span></span></span>
+<span class="r-in"><span>  <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">year</a></span><span class="op">(</span><span class="va">Time</span><span class="op">)</span> <span class="op">==</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">year</a></span><span class="op">(</span><span class="fl">2015</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="va">Sensor</span> <span class="op">==</span> <span class="st">"Birrarung Marr"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">pedestrian_2015</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Count</span>, color <span class="op">=</span> <span class="va">Sensor</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
@@ -280,7 +281,7 @@ colliding.</p>
 <span class="r-in"><span>    legend.position <span class="op">=</span> <span class="st">"bottom"</span>,</span></span>
 <span class="r-in"><span>    axis.text.y <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_blank</a></span><span class="op">(</span><span class="op">)</span>, axis.ticks.y <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_blank</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-plt img"><img src="coord_calendar-2.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="coord_calendar-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
