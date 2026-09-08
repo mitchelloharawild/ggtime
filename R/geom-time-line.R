@@ -121,6 +121,12 @@
 #' values. Unlike [ggplot2::geom_line()], `geom_time_line()` will also not connect
 #' points separated by implicit missing values, creating gaps in the line (just
 #' like when an explicit missing value is present in [ggplot2::geom_line()]).
+#' Each point's own granularity determines what counts as "the next"
+#' observation, so this also works when a group mixes granularities (e.g.
+#' daily values that switch to monthly). This is only reliable at a
+#' day-or-coarser granularity -- finer values (such as a raw `POSIXct`) don't
+#' carry a data's sampling interval, only its precision, so gaps aren't
+#' detected there.
 #'
 #' @section Duplicated time values:
 #'
@@ -172,16 +178,22 @@
 #'   geom_time_line() +
 #'   scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = "UTC"))
 #'
-# #' # Implicit missing values (WIP)
-# #' df_missing <- df_ts[-c(4, 7, 8), ]
-# #' ggplot(df_missing, aes(time, value)) +
-# #'   geom_time_line()
-# #'
-# #' # Duplicate time values (WIP)
-# #' df_duplicated <- rbind(df_ts, df_ts[c(5, 9), ])
-# #' df_duplicated[12:13, "value"] <- df_duplicated[12:13, "value"] + 5
-# #' ggplot(df_duplicated, aes(time, value)) +
-# #'   geom_time_line()
+#' # Implicit missing values leave a gap in the line (day-or-coarser
+#' # granularities only -- see the "Missing time values" section below)
+#' df_monthly <- data.frame(
+#'   month = mixtime::yearmonth(as.Date("2023-01-01")) + 0:9,
+#'   value = cumsum(rnorm(10, 2))
+#' )
+#' ggplot(df_monthly[-c(4, 7), ], aes(month, value)) +
+#'   geom_time_line()
+#'
+#' # Duplicate time values fan out rather than drawing a sawtooth line
+#' df_duplicated <- rbind(df_monthly, df_monthly[c(5, 8), ])
+#' dup_rows <- c(5, 8, 11, 12) # both entries of each duplicated month
+#' df_duplicated[dup_rows, "value"] <- df_duplicated[dup_rows, "value"] +
+#'   rnorm(4, sd = 5)
+#' ggplot(df_duplicated, aes(month, value)) +
+#'   geom_time_line()
 #'
 #' @export
 geom_time_line <- function(
@@ -437,6 +449,7 @@ inject_time_aes <- function(mapping, peek, aesthetic) {
   offset_aes <- paste0(aesthetic, "timeoffset")
   id_aes <- paste0(aesthetic, "timeid")
   typed_aes <- paste0(aesthetic, "timetyped")
+  raw_aes <- paste0(aesthetic, "timeraw")
 
   aes_env <- env(
     quo_get_env(expr),
@@ -462,6 +475,12 @@ inject_time_aes <- function(mapping, peek, aesthetic) {
       expr(is_time_typed(!!quo_get_expr(expr))),
       env = aes_env
     )
+  }
+  # The untransformed value itself, kept for `resolve_time_sequence()` -- the
+  # scale flattens mixed granularities onto one common chronon, which is too
+  # late to tell a genuine gap/duplicate from two granularities colliding.
+  if (is.null(peek[[raw_aes]])) {
+    mapping[[raw_aes]] <- expr
   }
   mapping
 }
@@ -491,7 +510,9 @@ GeomTimeLine <- ggproto(
     "xtimeoffset",
     "ytimeoffset",
     "xtimeid",
-    "ytimeid"
+    "ytimeid",
+    "xtimeraw",
+    "ytimeraw"
   ),
   extra_params = c(GeomPath$extra_params, "orientation"),
   setup_params = function(data, params) {
@@ -523,10 +544,22 @@ GeomTimeLine <- ggproto(
     transitions = waiver(),
     transition_aesthetics = list(linetype = 2)
   ) {
-    # TODO
-    # * Add gaps for implicit missing values
-    # * Uniqueness: add message for duplicate, warning for sawtoothing, error for systematic duplicates
-    # * Multiple lines for duplicated time values
+    if (!anyDuplicated(data$group)) {
+      cli::cli_inform(c(
+        "{.fn {class(self[1])}}: Each group consists of only one observation.",
+        i = "Do you need to adjust the {.field group} aesthetic?"
+      ))
+    }
+
+    # Break each group into its connecting edges, skipping genuine gaps and
+    # fanning out duplicated time values instead of a sawtoothing path -- see
+    # `resolve_time_sequence()`. Each edge becomes its own two-row `group`,
+    # which the (unchanged) segment-building below already treats as
+    # independent paths.
+    data <- resolve_time_sequence(data)
+    if (nrow(data) == 0) {
+      return(ggplot2::zeroGrob())
+    }
 
     # Insert transition/jumps at known time offset transitions for dashed
     # lines, styled with `transition_aesthetics` as they are inserted.
@@ -549,13 +582,6 @@ GeomTimeLine <- ggproto(
         )
       })
     )
-
-    if (!anyDuplicated(data$group)) {
-      cli::cli_inform(c(
-        "{.fn {class(self[1])}}: Each group consists of only one observation.",
-        i = "Do you need to adjust the {.field group} aesthetic?"
-      ))
-    }
 
     munched <- ggplot2::coord_munch(coord, data, panel_params)
 
@@ -594,6 +620,179 @@ GeomTimeLine <- ggproto(
     )
   },
 )
+
+#' Break a panel's data into the edges it should be drawn as
+#'
+#' Decomposes each group into edges between consecutive *clusters* of rows
+#' that cover the same time span (see `time_clusters()`), rather than
+#' connecting consecutive rows directly: a cluster boundary separated by a
+#' genuine gap is left unconnected, and a cluster of duplicated time values
+#' is fanned out to every incoming/outgoing edge instead of a single
+#' (sawtoothing) path through it.
+#'
+#' Comparing each row's own time span, rather than the scale positions
+#' `draw_panel()` otherwise works with, is what keeps this correct under
+#' mixed granularities: two points at different granularities can land on the
+#' same scale position (e.g. a quarter's start aligned with a day within it)
+#' without covering the same span, so they're never mistaken for duplicates,
+#' and their adjacency is judged from the spans themselves rather than a
+#' fixed step size that wouldn't fit either granularity.
+#'
+#' @param data One panel's data, with `[x/y]timeraw` and `[x/y]timetyped`
+#'   columns (see `inject_time_aes()`), sorted in time order (see
+#'   `GeomTimeLine$setup_data()`).
+#' @returns `data` reduced to just the rows used by each edge, with `group`
+#'   replaced by a unique id per edge (always 2 rows, at this point).
+#' @noRd
+resolve_time_sequence <- function(data) {
+  flipped <- isTRUE(data$flipped_aes[1])
+  raw <- if (flipped) data$ytimeraw else data$xtimeraw
+  timetyped <- if (flipped) data$ytimetyped else data$xtimetyped
+  # Without a time-typed connecting axis, there's no span to reason about
+  # gaps/duplicates with -- fall back to connecting every row in sequence.
+  if (!isTRUE(timetyped[1])) {
+    raw <- NULL
+  }
+
+  row_groups <- split(seq_len(nrow(data)), data$group)
+  warn_time_duplicates(row_groups, raw)
+
+  edges <- unlist(
+    lapply(row_groups, time_sequence_edges, raw = raw),
+    recursive = FALSE
+  )
+  if (length(edges) == 0) {
+    return(data[0, , drop = FALSE])
+  }
+
+  out <- data[unlist(edges), , drop = FALSE]
+  out$group <- rep(seq_along(edges), each = 2)
+  out
+}
+
+# The `[start, end)` instant span (plain epoch seconds) a single row's raw
+# time value covers. Comparing spans, rather than the raw value directly, is
+# what keeps gap/duplicate detection correct for two things at once:
+# * mixed granularities: a coarse point (e.g. a quarter) and a fine point
+#   (e.g. a day within it) can share a *start* without sharing an *end*, so
+#   they're never mistaken for a duplicate just because they align.
+# * local time: two different instants can share one local wall-clock
+#   reading either side of a DST transition -- `resolve_time_transitions()`
+#   already draws that as its own dashed jump, so it must not also look like
+#   a duplicate or a gap here.
+#
+# A time-zoned value's own numeric already *is* the absolute instant it
+# occurred at (like `POSIXct`'s underlying epoch seconds), so reading it in
+# any fixed zone (`"UTC"`) recovers that instant directly -- correcting it by
+# `default_timeoffset()` first, as this used to, double-counts the offset,
+# which spuriously collides adjacent points across a forward DST jump (the
+# offset changes between them, so the correction no longer cancels out) even
+# though their instants are genuinely distinct. A naive value has no instant
+# to recover this way, so it's read as itself (`tz = NA`); its
+# `default_timeoffset()` is zero anyway, since there's nothing to offset from.
+time_span_at <- function(raw, i) {
+  # `POSIXct` is handled separately, reading its own numeric directly rather
+  # than routing it through `mixtime::mixtime()`: that reconstructs the
+  # instant from its (possibly ambiguous) civil wall-clock reading, which
+  # picks the wrong one of the two instants sharing a repeated local time at
+  # a backward DST transition. `POSIXct`'s own epoch-second numeric has no
+  # such ambiguity to begin with.
+  if (inherits(raw, "POSIXct")) {
+    start <- unclass(raw[i])
+    return(c(start, start))
+  }
+  x <- as_mt_concrete(raw[i])
+  tz <- if (is.na(mixtime::tz_name(x))) NA else "UTC"
+  start <- seconds_since_epoch(x, tz = tz)
+  if (!is.integer(vctrs::vec_data(x))) {
+    return(c(start, start))
+  }
+  # Discrete: spans to the start of the next granule.
+  c(start, seconds_since_epoch(x + 1L, tz = tz))
+}
+
+# One group's row indices, split into runs of exactly-equal spans in order --
+# each run is a "duplicate cluster" (size 1 if unique). Compared row-by-row
+# (not vectorised) since a mixed-granularity slice can't be collapsed to one
+# concrete type all at once.
+time_clusters <- function(rows, raw) {
+  if (length(rows) < 2 || is.null(raw)) {
+    return(as.list(rows))
+  }
+  spans <- lapply(rows, function(i) time_span_at(raw, i))
+  n <- length(rows)
+  eq <- vapply(seq_len(n - 1), function(i) {
+    isTRUE(all(spans[[i]] == spans[[i + 1]]))
+  }, logical(1))
+  unname(split(rows, cumsum(c(TRUE, !eq))))
+}
+
+# A day-or-coarser chronon (date, week, month, quarter, year, ...) is a
+# deliberate calendar granularity, so its own width reliably means "the next
+# expected observation". A finer chronon (raw `POSIXct`'s default is a bare
+# second) is just timestamp precision, not the data's sampling interval, so
+# treating every step as "gapped" would be wrong -- e.g. hourly readings
+# would never touch, since each only spans one second of its hour.
+day_seconds <- 86400
+
+# Edges to draw within one group: every combination of rows between two
+# adjacent clusters, unless a genuine (and reliably-detectable) gap
+# separates them -- the first cluster's span ends before the second's
+# begins.
+time_sequence_edges <- function(rows, raw) {
+  cluster <- time_clusters(rows, raw)
+  if (length(cluster) < 2) {
+    return(list())
+  }
+  edges <- list()
+  for (i in seq_len(length(cluster) - 1)) {
+    a <- cluster[[i]]
+    b <- cluster[[i + 1]]
+    if (!is.null(raw)) {
+      span_a <- time_span_at(raw, a[1])
+      span_b <- time_span_at(raw, b[1])
+      reliable <- (span_a[2] - span_a[1]) >= day_seconds
+      if (reliable && span_a[2] < span_b[1]) {
+        next # a genuine gap
+      }
+    }
+    combos <- expand.grid(a = a, b = b)
+    edges <- c(edges, Map(c, combos$a, combos$b))
+  }
+  edges
+}
+
+# Warn about duplicated time values found across all of a panel's groups, or
+# error if they look systematic (a forgotten grouping variable) rather than
+# incidental -- see the "Duplicated time values" section of `geom_time_line()`.
+warn_time_duplicates <- function(row_groups, raw) {
+  if (is.null(raw)) {
+    return(invisible())
+  }
+  clusters <- unlist(
+    lapply(row_groups, time_clusters, raw = raw),
+    recursive = FALSE
+  )
+  sizes <- lengths(clusters)
+  if (!any(sizes > 1)) {
+    return(invisible())
+  }
+
+  # Systematic: most time points share the same duplicate count, suggesting
+  # a forgotten grouping variable rather than incidental duplicate timestamps.
+  dup_sizes <- sizes[sizes > 1]
+  if (max(table(dup_sizes)) / length(sizes) > 0.5) {
+    cli::cli_abort(c(
+      "{.fn geom_time_line}: Time values are systematically duplicated.",
+      i = "Do you need to use a grouping aesthetic ({.field group} or \\
+           {.field colour}) to draw a separate line for each time series?"
+    ))
+  }
+  cli::cli_warn(c(
+    "{.fn geom_time_line}: Duplicated time values were found within a group.",
+    i = "Drawing all lines that connect to and from the duplicated values."
+  ))
+}
 
 #' Insert rows at known time offset transitions
 #'
@@ -672,9 +871,13 @@ resolve_time_transitions <- function(
       rbind,
       lapply(ids, function(id) {
         rng <- range(data$time_instant[data[[id_col]] == id], na.rm = TRUE)
+        # Padded by a second: `resolve_time_sequence()` now hands this a
+        # minimal (often 2-row) edge, so a transition can sit exactly at one
+        # of its endpoints (e.g. the row right after a jump reads the
+        # transition instant itself), and `tz_transitions()` excludes exact
+        # endpoints.
         tr <- mixtime::tz_transitions(
-          as.POSIXct(rng[1], origin = "1970-01-01", tz = id),
-          # One second later, as `tz_transitions()` excludes its `end`
+          as.POSIXct(rng[1] - 1, origin = "1970-01-01", tz = id),
           as.POSIXct(rng[2] + 1, origin = "1970-01-01", tz = id)
         )
         tr$id <- rep(id, nrow(tr))
@@ -706,10 +909,12 @@ resolve_time_transitions <- function(
       drop = FALSE
     ]
   }
-  rng <- range(data$time_instant, na.rm = TRUE)
   # An observation at the instant of a transition is already at the new offset,
   # so a transition at the last observation is needed to reach it, but one at
-  # the first observation isn't.
+  # the first observation isn't. This matters for minimal edges, where the row
+  # right after a jump reads the transition instant itself, and excluding the
+  # start avoids matching the same transition again for the following edge.
+  rng <- range(data$time_instant, na.rm = TRUE)
   transitions <- transitions[
     transitions$time_num > rng[1] & transitions$time_num <= rng[2],
     ,

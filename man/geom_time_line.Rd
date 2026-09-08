@@ -226,6 +226,12 @@ for regular time series it is also possible to identify implicit missing time
 values. Unlike \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}, \code{geom_time_line()} will also not connect
 points separated by implicit missing values, creating gaps in the line (just
 like when an explicit missing value is present in \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}).
+Each point's own granularity determines what counts as "the next"
+observation, so this also works when a group mixes granularities (e.g.
+daily values that switch to monthly). This is only reliable at a
+day-or-coarser granularity -- finer values (such as a raw \code{POSIXct}) don't
+carry a data's sampling interval, only its precision, so gaps aren't
+detected there.
 }
 
 \section{Duplicated time values}{
@@ -280,6 +286,22 @@ ggplot(df_tz_forward, aes(time, value)) +
   geom_time_line() +
   scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = "UTC"))
 
+# Implicit missing values leave a gap in the line (day-or-coarser
+# granularities only -- see the "Missing time values" section below)
+df_monthly <- data.frame(
+  month = mixtime::yearmonth(as.Date("2023-01-01")) + 0:9,
+  value = cumsum(rnorm(10, 2))
+)
+ggplot(df_monthly[-c(4, 7), ], aes(month, value)) +
+  geom_time_line()
+
+# Duplicate time values fan out rather than drawing a sawtooth line
+df_duplicated <- rbind(df_monthly, df_monthly[c(5, 8), ])
+dup_rows <- c(5, 8, 11, 12) # both entries of each duplicated month
+df_duplicated[dup_rows, "value"] <- df_duplicated[dup_rows, "value"] +
+  rnorm(4, sd = 5)
+ggplot(df_duplicated, aes(month, value)) +
+  geom_time_line()
 
 }
 \seealso{
@@ -300,8 +322,10 @@ ggplot(df_tz_forward, aes(time, value)) +
  • \tab \code{\link[ggplot2:aes_linetype_size_shape]{linewidth}} \tab → via \code{theme()} \cr
  • \tab \code{xtimeid} \tab   \cr
  • \tab \code{xtimeoffset} \tab   \cr
+ • \tab \code{xtimeraw} \tab   \cr
  • \tab \code{ytimeid} \tab   \cr
  • \tab \code{ytimeoffset} \tab   \cr
+ • \tab \code{ytimeraw} \tab   \cr
 }
 
 Learn more about setting these aesthetics in \code{vignette("ggplot2-specs")}.
