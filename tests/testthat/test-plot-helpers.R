@@ -486,3 +486,47 @@ test_that("autoplot.tbl_cf() accepts a mixtime duration lag index", {
   expect_equal(p$labels$x, "lag [1M]")
   expect_no_error(ggplot2::ggplot_build(p))
 })
+
+test_that("ACF-based plots support mixtime indices", {
+  skip_if_no_mixtime_tsibble()
+  skip_if_not_installed("feasts")
+  skip_if_not_installed("fable")
+  set.seed(1)
+  indices <- list(
+    monthly = list(
+      index = mixtime::yearmonth(
+        seq(as.Date("2015-01-01"), by = "month", length.out = 60)
+      ),
+      label = "lag [1M]"
+    ),
+    daily = list(
+      index = mixtime::date(
+        seq(as.Date("2020-01-06"), by = "day", length.out = 120)
+      ),
+      label = "lag [1D]"
+    ),
+    hourly = list(
+      index = mixtime::datetime(
+        as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:119
+      ),
+      label = "lag [3600s]"
+    )
+  )
+  for (x in indices) {
+    data <- mixtime_tsbl(x$index)
+    data$y <- rnorm(nrow(data))
+    acf <- tryCatch(
+      feasts::ACF(data, y),
+      error = function(e) skip("feasts doesn't support mixtime intervals")
+    )
+    p <- ggplot2::autoplot(acf)
+    expect_equal(p$labels$x, x$label)
+    expect_no_error(ggplot2::ggplot_build(p))
+
+    expect_no_error(ggplot2::ggplot_build(gg_lag(data, y)))
+    expect_no_error(gg_tsdisplay(data, y))
+
+    mbl <- fabletools::model(data, fable::NAIVE(y))
+    expect_no_error(gg_tsresiduals(mbl))
+  }
+})
