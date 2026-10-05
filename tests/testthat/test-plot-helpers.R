@@ -530,3 +530,11 @@ test_that("ACF-based plots support mixtime indices", {
     expect_no_error(gg_tsresiduals(mbl))
   }
 })
+
+test_that("gg_season() errors clearly on zero-row data", {
+  empty <- dplyr::filter(tsbl_co2, index > max(index))
+  expect_error(
+    gg_season(empty, value),
+    "at least one observation"
+  )
+})

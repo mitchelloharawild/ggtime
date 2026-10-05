@@ -34,6 +34,10 @@ time_identifier <- function(idx, period, base = NULL, within = NULL, interval) {
     return(rep(NA, length(idx)))
   }
 
+  if (length(idx) == 0) {
+    abort("The data must contain at least one observation to identify seasonal periods.")
+  }
+
   # Early return for years in weeks, as years are structured differently in context of weeks
   if (
     identical(period, lubridate::years(1)) &&

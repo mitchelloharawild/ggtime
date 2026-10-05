@@ -8,6 +8,8 @@
 
 ## Improvements
 
+* `gg_season()` and related plots now give a clear error for zero-row data instead of failing with "object 'found_format' not found".
+
 * `coord_calendar()` gains `cell_ratio`, which fixes the aspect ratio of a
   calendar cell as `coord_fixed()` fixes that of the data units of the axes.
   `cell_ratio = 1` gives the square cells of a printed calendar.
