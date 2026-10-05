@@ -361,3 +361,12 @@ test_that("gg_season() and gg_subseries() support mixtime indices", {
   expect_equal(as.numeric(table(d$group)), rep(7, 4))
   expect_no_error(ggplot2::ggplot_build(gg_subseries(daily, y, "week")))
 })
+
+test_that("autoplot.tbl_ts() labels the axis with the compact interval", {
+  skip_if_no_mixtime_tsibble()
+  monthly <- mixtime_tsbl(
+    mixtime::yearmonth(seq(as.Date("2018-01-01"), by = "month", length.out = 24))
+  )
+  expect_equal(format_interval(tsibble::interval(monthly)), "1M")
+  expect_equal(ggplot2::autoplot(monthly, y)$labels$x, "t [1M]")
+})

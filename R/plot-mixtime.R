@@ -152,3 +152,13 @@ legacy_default_period <- function(data) {
   }
   names(get_frequencies(NULL, data, .auto = "largest"))
 }
+
+# Format an interval (a mixtime granule or list of granules, or a legacy
+# tsibble interval) in tsibble's compact style, e.g. "1M" or "1h 30m".
+format_interval <- function(x) {
+  if (is_granule(x) || (is.list(x) && !inherits(x, "interval"))) {
+    tsibble::format_interval(x)
+  } else {
+    format(x)
+  }
+}

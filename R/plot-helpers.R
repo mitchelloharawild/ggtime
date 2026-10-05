@@ -1114,15 +1114,10 @@ autoplot.tbl_cf <- function(object, level = 95, ...) {
     )
   }
 
-  itvl_fmt <- utils::getS3method(
-    "format",
-    "interval",
-    envir = getNamespace("tsibble")
-  )
   p <- ggplot(object, plot_aes) +
     geom_segment(aes(xend = !!sym("lag"), yend = 0)) +
     geom_hline(yintercept = 0) +
-    xlab(paste0("lag [", itvl_fmt(interval), "]"))
+    xlab(paste0("lag [", format_interval(interval), "]"))
 
   if (!is.null(level)) {
     conf_int <- object %@%
