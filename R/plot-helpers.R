@@ -1127,7 +1127,8 @@ autoplot.tbl_cf <- function(object, level = 95, ...) {
   keys <- key(object)
   n_key <- n_keys(object)
 
-  # Plot lags as mixtime durations (e.g. "12 months") rather than a count
+  # Plot lags as mixtime durations (e.g. "12 months") rather than a count.
+  # Lags may be a `cf_lag`, plain numbers, or already mixtime durations.
   object <- as_tibble(object)
   object[["lag"]] <- lag_to_duration(object[["lag"]], interval)
 

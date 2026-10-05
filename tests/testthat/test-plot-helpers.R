@@ -458,3 +458,31 @@ test_that("autoplot.tbl_cf() plots lags as mixtime durations", {
   expect_equal(p$labels$x, "lag [1M]")
   expect_no_error(ggplot2::ggplot_build(p))
 })
+
+test_that("lag_to_duration() passes mixtime durations through", {
+  d <- mixtime::duration(0:3, mixtime::cal_gregorian$month(1L))
+  expect_identical(lag_to_duration(d), d)
+  expect_equal(
+    lag_to_duration(0:3, mixtime::cal_gregorian$month(1L)),
+    mixtime::duration(0:3, mixtime::cal_gregorian$month(1L))
+  )
+})
+
+test_that("autoplot.tbl_cf() accepts a mixtime duration lag index", {
+  skip_if_no_mixtime_tsibble()
+  cf <- tibble::tibble(
+    lag = mixtime::duration(0:12, mixtime::cal_gregorian$month(1L)),
+    acf = cos(0:12)
+  )
+  cf <- tryCatch(
+    tsibble::new_tsibble(
+      tsibble::as_tsibble(cf, index = "lag"),
+      num_obs = tibble::tibble(.len = 100),
+      class = "tbl_cf"
+    ),
+    error = function(e) skip("tsibble can't index by duration")
+  )
+  p <- ggplot2::autoplot(cf)
+  expect_equal(p$labels$x, "lag [1M]")
+  expect_no_error(ggplot2::ggplot_build(p))
+})

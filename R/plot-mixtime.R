@@ -214,9 +214,13 @@ format_interval <- function(x) {
 
 # Convert the lags of an ACF/PACF/CCF (a `cf_lag` holding a count of lags and
 # the interval they're a multiple of) to a mixtime duration, e.g. 12 lags of a
-# monthly interval become "12 months". Lags without a regular interval (an
+# monthly interval become "12 months", and durations are returned as is. Lags without a regular interval (an
 # irregular series is lagged by observation) are returned as plain numbers.
 lag_to_duration <- function(lag, interval = attr(lag, "interval")) {
+  # Already a mixtime duration (future ACF() output), so nothing to convert
+  if (mixtime::is_mixtime(lag) && all(mixtime::time_is_duration(lag))) {
+    return(lag)
+  }
   lags <- as.numeric(vctrs::vec_data(lag))
   if (is.list(interval) && !inherits(interval, "interval")) {
     # A composite interval has no single unit to count lags in
