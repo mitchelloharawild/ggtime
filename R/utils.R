@@ -377,6 +377,13 @@ floor_tsibble_date.yearweek <- function(x, unit, ...) {
 }
 
 time_origin <- function(x) {
+  # mixtime vectors are integer-backed, so would otherwise match `is.numeric()`
+  if (mixtime::is_mixtime(x)) {
+    abort(
+      "A common time origin is not defined for mixtime vectors, use `season_position()` instead."
+    )
+  }
+
   # Set origin at 1973-01-01 for weekday starting on Monday
   origin <- structure(94694400, class = c("POSIXct", "POSIXt"), tzone = "UTC")
 

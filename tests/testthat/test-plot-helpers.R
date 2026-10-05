@@ -310,3 +310,11 @@ test_that("interval_to_period() converts mixtime granules", {
     lubridate::hours(1) + lubridate::minutes(30)
   )
 })
+
+test_that("time_origin() does not silently treat mixtime as numeric", {
+  expect_error(
+    time_origin(mixtime::yearmonth("2020 Jan")),
+    "mixtime"
+  )
+  expect_equal(time_origin(1:3), 0)
+})
