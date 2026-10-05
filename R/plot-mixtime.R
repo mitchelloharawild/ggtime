@@ -82,24 +82,43 @@ observations_per_period <- function(interval, period) {
   )
 }
 
-# The default seasonal period for a granule interval: the largest common
-# calendar period containing more than one observation (cf.
-# `fabletools::get_frequencies(.auto = "largest")`).
-default_period_granule <- function(interval) {
-  for (granule in period_granules()[c(
-    "year",
-    "month",
-    "week",
-    "day",
-    "hour",
-    "minute"
-  )]) {
+# Approximate number of observations per period for calendar units of
+# varying length (e.g. days in a year), used only to choose default periods.
+nominal_observations_per_period <- function(interval, period) {
+  seconds <- c(
+    second = 1,
+    minute = 60,
+    hour = 3600,
+    day = 86400,
+    week = 604800,
+    month = 2629746,
+    quarter = 7889238,
+    year = 31556952
+  )
+  nominal <- function(x) seconds[[granule_unit(x)]] * x@n
+  nominal(period) / nominal(interval)
+}
+
+# The default seasonal period for a granule interval: the largest (or
+# smallest) common calendar period containing more than one observation (cf.
+# `fabletools::get_frequencies(.auto = )`).
+default_period_granule <- function(interval, auto = c("largest", "smallest")) {
+  auto <- match.arg(auto)
+  units <- c("year", "month", "week", "day", "hour", "minute")
+  if (auto == "smallest") {
+    # Months vary in length, so aren't a natural smallest period
+    units <- rev(setdiff(units, "month"))
+  }
+  for (granule in period_granules()[units]) {
     n <- observations_per_period(interval, granule)
+    if (is.na(n)) {
+      n <- nominal_observations_per_period(interval, granule)
+    }
     if (isTRUE(n > 1)) {
       return(granule)
     }
   }
-  abort("Could not find a seasonal period to use for this time series.")
+  NULL
 }
 
 # The label of a season, named for the period granule it spans ("2020",
@@ -121,6 +140,17 @@ season_position_labels <- function(period) {
   function(x) time_labels_at(x, cycle = period)
 }
 
+# A factor of each time's position within its season ("Jan", "Feb", ...),
+# in seasonal order.
+season_position_factor <- function(x, period) {
+  position <- season_position(x, period)
+  levels <- sort(unique(position))
+  factor(
+    time_labels_at(position, cycle = period),
+    levels = unique(time_labels_at(levels, cycle = period))
+  )
+}
+
 # A season identifier factor, ordered chronologically.
 season_id <- function(x, period, start = mixtime::time_floor(x, period)) {
   levels <- sort(unique(start))
@@ -130,11 +160,24 @@ season_id <- function(x, period, start = mixtime::time_floor(x, period)) {
   )
 }
 
-# Resolve a `period` argument for a mixtime index, defaulting `NULL` to the
-# default seasonal period (or `NULL` when `default = FALSE`).
-season_period <- function(period, interval, arg = "period") {
+# Resolve a `period` argument for a granule interval into a granule. `NULL`
+# defaults to the `auto` seasonal period (and stays `NULL` for other arguments
+# such as `facet_period`).
+season_period <- function(
+  period,
+  interval,
+  arg = "period",
+  auto = "largest"
+) {
   if (is.null(period)) {
-    return(if (arg == "period") default_period_granule(interval) else NULL)
+    if (arg != "period") {
+      return(NULL)
+    }
+    period <- default_period_granule(interval, auto)
+    if (is.null(period)) {
+      abort("Could not find a seasonal period to use for this time series.")
+    }
+    return(period)
   }
   period <- as_period_granule(period, interval, arg)
   n <- observations_per_period(interval, period)
@@ -148,9 +191,15 @@ season_period <- function(period, interval, arg = "period") {
 legacy_default_period <- function(data) {
   interval <- interval(data)
   if (is_granule(interval)) {
-    return(interval_to_period(default_period_granule(interval)))
+    return(interval_to_period(season_period(NULL, interval)))
   }
   names(get_frequencies(NULL, data, .auto = "largest"))
+}
+
+# Whether a granule interval has any common seasonal period (cf.
+# `any(fabletools::get_frequencies(.auto = "all") > 1)`)
+interval_is_seasonal <- function(interval) {
+  !is.null(default_period_granule(interval))
 }
 
 # Format an interval (a mixtime granule or list of granules, or a legacy

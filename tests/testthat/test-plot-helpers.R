@@ -370,3 +370,44 @@ test_that("autoplot.tbl_ts() labels the axis with the compact interval", {
   expect_equal(format_interval(tsibble::interval(monthly)), "1M")
   expect_equal(ggplot2::autoplot(monthly, y)$labels$x, "t [1M]")
 })
+
+test_that("gg_lag() supports mixtime indices", {
+  skip_if_no_mixtime_tsibble()
+  monthly <- mixtime_tsbl(
+    mixtime::yearmonth(seq(as.Date("2018-01-01"), by = "month", length.out = 36))
+  )
+  p <- gg_lag(monthly, y)
+  expect_equal(levels(p$data$season), month.abb)
+  expect_no_error(ggplot2::ggplot_build(p))
+  expect_no_error(ggplot2::ggplot_build(gg_lag(monthly, y, "year")))
+
+  daily <- mixtime_tsbl(
+    mixtime::date(seq(as.Date("2020-01-06"), by = "day", length.out = 28))
+  )
+  expect_equal(
+    levels(gg_lag(daily, y)$data$season),
+    c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+  )
+
+  hourly <- mixtime_tsbl(
+    mixtime::datetime(
+      as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:71
+    )
+  )
+  expect_length(levels(gg_lag(hourly, y)$data$season), 24)
+})
+
+test_that("granule intervals have default seasonal periods", {
+  skip_if_no_mixtime_tsibble()
+  cal <- mixtime::cal_gregorian
+  expect_equal(default_period_granule(cal$month(1L)), cal$year(1L))
+  expect_equal(default_period_granule(cal$day(1L)), cal$year(1L))
+  expect_equal(
+    default_period_granule(cal$day(1L), "smallest"),
+    mixtime::cal_isoweek$week(1L)
+  )
+  expect_equal(default_period_granule(cal$hour(1L), "smallest"), cal$day(1L))
+  expect_null(default_period_granule(cal$year(1L)))
+  expect_true(interval_is_seasonal(cal$month(1L)))
+  expect_false(interval_is_seasonal(cal$year(1L)))
+})

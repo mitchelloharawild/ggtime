@@ -543,13 +543,9 @@ gg_subseries <- function(data, y = NULL, period = NULL, ...) {
 
   if (mt_index) {
     period <- season_period(period, ts_interval)
-    id <- season_position(data[[as_name(idx)]], period)
     data <- as_tibble(data) %>%
       mutate(
-        id = factor(
-          time_labels_at(id, cycle = period),
-          levels = unique(time_labels_at(sort(unique(id)), cycle = period))
-        ),
+        id = season_position_factor(!!idx, period),
         .yint = !!y
       ) %>%
       group_by(!!sym("id"), !!!keys) %>%
@@ -687,21 +683,37 @@ gg_lag <- function(
     )
   }
 
-  period <- get_frequencies(period, data, .auto = "smallest")
+  idx <- index(data)
+  ts_interval <- interval(data)
+  mt_index <- mixtime::is_mixtime(data[[as_name(idx)]])
 
-  period_units <- period * default_time_units(interval(data))
+  if (is_granule(ts_interval)) {
+    period <- season_period(period, ts_interval, auto = "smallest")
+    frequency <- observations_per_period(ts_interval, period)
+  } else {
+    frequency <- get_frequencies(period, data, .auto = "smallest")
+  }
+
+  if (!mt_index) {
+    if (is.na(frequency)) {
+      abort("The seasonal period must be a fixed number of observations.")
+    }
+    period_units <- frequency * default_time_units(ts_interval)
+  }
 
   lag_exprs <- map(lags, function(lag) expr(lag(!!y, !!lag))) %>%
     set_names(paste0(".lag_", lags))
 
-  idx <- index(data)
-
   data <- data %>%
     as_tibble %>%
     mutate(
-      season = within_time_identifier(
-        !!idx - period_units * (tz_units_since(!!idx) %/% period_units)
-      ),
+      season = if (mt_index) {
+        season_position_factor(!!idx, period)
+      } else {
+        within_time_identifier(
+          !!idx - period_units * (tz_units_since(!!idx) %/% period_units)
+        )
+      },
       !!!lag_exprs
     )
 
@@ -722,7 +734,7 @@ gg_lag <- function(
     filter(!is.na(!!sym(".value")) & !is.na(!!y))
 
   mapping <- aes(x = !!sym(".value"), y = !!y)
-  if (period > 1) {
+  if (!isTRUE(frequency <= 1)) {
     mapping$colour <- sym("season")
   }
 
@@ -799,8 +811,12 @@ gg_tsdisplay <- function(
 
   plot_type <- match.arg(plot_type)
   if (plot_type == "auto") {
-    period <- get_frequencies(NULL, data, .auto = "all")
-    if (all(period <= 1)) {
+    seasonal <- if (is_granule(interval(data))) {
+      interval_is_seasonal(interval(data))
+    } else {
+      any(get_frequencies(NULL, data, .auto = "all") > 1)
+    }
+    if (!seasonal) {
       plot_type <- if (any(is.na(eval_tidy(y, data = data)))) {
         "partial"
       } else {
