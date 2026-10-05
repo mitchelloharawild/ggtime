@@ -318,3 +318,46 @@ test_that("time_origin() does not silently treat mixtime as numeric", {
   )
   expect_equal(time_origin(1:3), 0)
 })
+
+mixtime_tsbl <- function(index) {
+  tsibble::tsibble(t = index, y = seq_along(index), index = t)
+}
+
+skip_if_no_mixtime_tsibble <- function() {
+  skip_if_not(
+    is_granule(tsibble::interval(
+      mixtime_tsbl(mixtime::yearmonth(as.Date("2020-01-01") + c(0, 31)))
+    )),
+    "tsibble doesn't support mixtime indices"
+  )
+}
+
+test_that("gg_season() and gg_subseries() support mixtime indices", {
+  skip_if_no_mixtime_tsibble()
+  monthly <- mixtime_tsbl(
+    mixtime::yearmonth(seq(as.Date("2018-01-01"), by = "month", length.out = 36))
+  )
+
+  p <- gg_season(monthly, y)
+  d <- ggplot2::layer_data(p)
+  expect_equal(d$y, monthly$y)
+  expect_equal(as.numeric(table(d$group)), rep(12, 3))
+  expect_no_error(ggplot2::ggplot_build(gg_season(monthly, y, polar = TRUE)))
+  expect_no_error(ggplot2::ggplot_build(gg_season(monthly, y, "2 years")))
+  expect_no_error(ggplot2::ggplot_build(gg_season(monthly, y, 12)))
+  expect_no_error(ggplot2::ggplot_build(
+    gg_season(monthly, y, mixtime::years(1L))
+  ))
+  expect_error(gg_season(monthly, y, 1), "at least one observation")
+
+  p <- gg_subseries(monthly, y)
+  expect_equal(levels(p$data$id), month.abb)
+  expect_no_error(ggplot2::ggplot_build(p))
+
+  daily <- mixtime_tsbl(
+    mixtime::date(seq(as.Date("2020-01-06"), by = "day", length.out = 28))
+  )
+  d <- ggplot2::layer_data(gg_season(daily, y, "week"))
+  expect_equal(as.numeric(table(d$group)), rep(7, 4))
+  expect_no_error(ggplot2::ggplot_build(gg_subseries(daily, y, "week")))
+})

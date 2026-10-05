@@ -274,46 +274,69 @@ gg_season <- function(
   idx <- index_var(data)
   n_key <- n_keys(data)
   keys <- key(data)
-  ts_interval <- interval_to_period(interval(data))
+  mt_index <- mixtime::is_mixtime(data[[idx]])
+  ts_interval <- interval(data)
 
-  if (is.null(period)) {
-    period <- names(get_frequencies(period, data, .auto = "largest"))
-  }
-  if (is.numeric(period)) {
-    period <- period * ts_interval
-  }
-  period <- lubridate::as.period(period)
-  if (period <= ts_interval) {
-    abort("The data must contain at least one observation per seasonal period.")
-  }
-
-  if (!is.null(facet_period)) {
-    if (is.numeric(facet_period)) {
-      facet_period <- facet_period * ts_interval
+  if (mt_index) {
+    period <- season_period(period, ts_interval)
+    facet_period <- season_period(facet_period, ts_interval, "facet_period")
+  } else {
+    ts_interval <- interval_to_period(ts_interval)
+    if (is.null(period)) {
+      period <- legacy_default_period(data)
     }
-    facet_period <- lubridate::as.period(facet_period)
+    if (is.numeric(period)) {
+      period <- period * ts_interval
+    }
+    period <- lubridate::as.period(period)
+    if (period <= ts_interval) {
+      abort("The data must contain at least one observation per seasonal period.")
+    }
 
-    if (facet_period <= ts_interval) {
-      abort(
-        "The data must contain at least one observation per seasonal period."
-      )
+    if (!is.null(facet_period)) {
+      if (is.numeric(facet_period)) {
+        facet_period <- facet_period * ts_interval
+      }
+      facet_period <- lubridate::as.period(facet_period)
+
+      if (facet_period <= ts_interval) {
+        abort(
+          "The data must contain at least one observation per seasonal period."
+        )
+      }
     }
   }
 
   data <- as_tibble(data)
-  data[c("facet_id", "id")] <- time_identifier(
-    data[[idx]],
-    period,
-    within = facet_period,
-    interval = ts_interval
-  )
-  data[idx] <- time_offset_origin(data[[idx]], period)
+  if (mt_index) {
+    start <- mixtime::time_floor(data[[idx]], period)
+    data[["id"]] <- season_id(data[[idx]], period, start)
+    data[["facet_id"]] <- if (is.null(facet_period)) {
+      FALSE
+    } else {
+      season_id(data[[idx]], facet_period)
+    }
+    data[idx] <- season_position(data[[idx]], period, start)
+  } else {
+    data[c("facet_id", "id")] <- time_identifier(
+      data[[idx]],
+      period,
+      within = facet_period,
+      interval = ts_interval
+    )
+    data[idx] <- time_offset_origin(data[[idx]], period)
+  }
 
   if (polar) {
+    interval_end <- if (mt_index) {
+      function(x) x + mixtime::duration(1, ts_interval)
+    } else {
+      function(x) as.Date(x) + ts_interval - .Machine$double.eps
+    }
     extra_x <- data %>%
       group_by(!!sym("facet_id"), !!sym("id")) %>%
       summarise(
-        !!idx := max(as.Date(!!sym(idx))) + ts_interval - .Machine$double.eps,
+        !!idx := interval_end(max(!!sym(idx))),
         !!as_name(y) := (!!y)[[which.min(!!sym(idx))]]
       ) %>%
       group_by(!!sym("facet_id")) %>%
@@ -372,7 +395,10 @@ gg_season <- function(
       )
   }
 
-  if (inherits(data[[idx]], "Date")) {
+  if (mt_index) {
+    p <- p +
+      scale_x_mixtime(labels = season_position_labels(period))
+  } else if (inherits(data[[idx]], "Date")) {
     p <- p +
       ggplot2::scale_x_date(
         breaks = function(limit) {
@@ -512,29 +538,52 @@ gg_subseries <- function(data, y = NULL, period = NULL, ...) {
   keys <- key(data)
   check_gaps(data)
   idx <- index(data)
-  ts_interval <- interval_to_period(interval(data))
+  mt_index <- mixtime::is_mixtime(data[[as_name(idx)]])
+  ts_interval <- interval(data)
 
-  if (is.null(period)) {
-    period <- names(get_frequencies(period, data, .auto = "largest"))
-  }
-  if (is.numeric(period)) {
-    period <- period * ts_interval
-  }
-  period <- lubridate::as.period(period)
-  if (period <= 1) {
-    abort("The data must contain at least one observation per seasonal period.")
+  if (mt_index) {
+    period <- season_period(period, ts_interval)
+    id <- season_position(data[[as_name(idx)]], period)
+    data <- as_tibble(data) %>%
+      mutate(
+        id = factor(
+          time_labels_at(id, cycle = period),
+          levels = unique(time_labels_at(sort(unique(id)), cycle = period))
+        ),
+        .yint = !!y
+      ) %>%
+      group_by(!!sym("id"), !!!keys) %>%
+      mutate(.yint = mean(!!sym(".yint"), na.rm = TRUE))
+  } else {
+    ts_interval <- interval_to_period(ts_interval)
+
+    if (is.null(period)) {
+      period <- legacy_default_period(data)
+    }
+    if (is.numeric(period)) {
+      period <- period * ts_interval
+    }
+    period <- lubridate::as.period(period)
+    if (period <= 1) {
+      abort(
+        "The data must contain at least one observation per seasonal period."
+      )
+    }
+
+    data <- as_tibble(data) %>%
+      mutate(
+        id = time_offset_origin(!!idx, !!period),
+        !!idx := !!idx,
+        .yint = !!y
+      ) %>%
+      group_by(!!sym("id"), !!!keys) %>%
+      mutate(.yint = mean(!!sym(".yint"), na.rm = TRUE))
   }
 
-  data <- as_tibble(data) %>%
-    mutate(
-      id = time_offset_origin(!!idx, !!period),
-      !!idx := !!idx,
-      .yint = !!y
-    ) %>%
-    group_by(!!sym("id"), !!!keys) %>%
-    mutate(.yint = mean(!!sym(".yint"), na.rm = TRUE))
-
-  fct_labeller <- if (
+  fct_labeller <- if (mt_index) {
+    # Already a factor in seasonal order
+    identity
+  } else if (
     inherits(
       data[["id"]],
       c("yearquarter", "yearmonth", "yearweek", "POSIXt", "Date")
@@ -556,7 +605,13 @@ gg_subseries <- function(data, y = NULL, period = NULL, ...) {
     ) +
     ggplot2::geom_hline(aes(yintercept = !!sym(".yint")), colour = "blue")
 
-  if (inherits(data[[as_name(idx)]], "Date")) {
+  if (mt_index) {
+    p <- p +
+      scale_x_mixtime(
+        time_breaks = period,
+        labels = function(x) time_labels_at(x, chronon = period)
+      )
+  } else if (inherits(data[[as_name(idx)]], "Date")) {
     p <- p + ggplot2::scale_x_date(labels = within_time_identifier)
   } else if (inherits(data[[as_name(idx)]], "POSIXct")) {
     p <- p + ggplot2::scale_x_datetime(labels = within_time_identifier)
