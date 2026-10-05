@@ -285,3 +285,28 @@ test_that("gg_arma() plots", {
     list(x = "Re(1/root)", y = "Im(1/root)")
   )
 })
+
+test_that("interval_to_period() converts mixtime granules", {
+  cal <- mixtime::cal_gregorian
+  expect_equal(
+    interval_to_period(cal$month(1L)),
+    lubridate::period(1, units = "month")
+  )
+  expect_equal(
+    interval_to_period(cal$quarter(1L)),
+    lubridate::period(3, units = "month")
+  )
+  expect_equal(
+    interval_to_period(mixtime::cal_isoweek$week(2L)),
+    lubridate::period(2, units = "week")
+  )
+  expect_equal(
+    interval_to_period(cal$hour(1L)),
+    lubridate::period(1, units = "hour")
+  )
+  # Composite intervals are a list of granules
+  expect_equal(
+    interval_to_period(list(cal$hour(1L), cal$minute(30L))),
+    lubridate::hours(1) + lubridate::minutes(30)
+  )
+})
