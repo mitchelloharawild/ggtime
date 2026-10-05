@@ -1123,6 +1123,13 @@ autoplot.tbl_cf <- function(object, level = 95, ...) {
     y = !!sym(cf_type)
   )
   interval <- interval(object)
+  num_obs <- object %@% "num_obs"
+  keys <- key(object)
+  n_key <- n_keys(object)
+
+  # Plot lags as mixtime durations (e.g. "12 months") rather than a count
+  object <- as_tibble(object)
+  object[["lag"]] <- lag_to_duration(object[["lag"]], interval)
 
   if (length(level) > 1) {
     abort(
@@ -1136,8 +1143,7 @@ autoplot.tbl_cf <- function(object, level = 95, ...) {
     xlab(paste0("lag [", format_interval(interval), "]"))
 
   if (!is.null(level)) {
-    conf_int <- object %@%
-      "num_obs" %>%
+    conf_int <- num_obs %>%
       mutate(
         upper = qnorm((1 + (level / 100)) / 2) / sqrt(!!sym(".len")),
         lower = !!parse_expr("-upper")
@@ -1152,8 +1158,8 @@ autoplot.tbl_cf <- function(object, level = 95, ...) {
       )
   }
 
-  if (n_keys(object) > 1) {
-    p <- p + facet_grid(rows = vars(!!!key(object)))
+  if (n_key > 1) {
+    p <- p + facet_grid(rows = vars(!!!keys))
   }
 
   p

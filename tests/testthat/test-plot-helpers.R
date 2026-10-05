@@ -411,3 +411,50 @@ test_that("granule intervals have default seasonal periods", {
   expect_true(interval_is_seasonal(cal$month(1L)))
   expect_false(interval_is_seasonal(cal$year(1L)))
 })
+
+test_that("lag_to_duration() converts lags to mixtime durations", {
+  cal <- mixtime::cal_gregorian
+  lag <- function(x, interval) {
+    vctrs::new_vctr(x, interval = interval, class = "cf_lag")
+  }
+
+  expect_equal(
+    lag_to_duration(lag(0:3, cal$month(1L))),
+    mixtime::duration(c(0, 1, 2, 3), cal$month(1L))
+  )
+  # Lags are counts of the interval, whatever its size
+  expect_equal(
+    format(lag_to_duration(lag(2, cal$hour(3L)))),
+    format(mixtime::duration(2, cal$hour(3L)))
+  )
+  expect_equal(
+    lag_to_duration(lag(1:2, list(cal$day(1L)))),
+    mixtime::duration(c(1, 2), cal$day(1L))
+  )
+  # Without a single regular unit, lags stay as counts
+  expect_equal(lag_to_duration(lag(1:2, NULL)), c(1, 2))
+  expect_equal(lag_to_duration(lag(1:2, list(cal$hour(1L), cal$minute(1L)))), c(1, 2))
+})
+
+test_that("autoplot.tbl_cf() plots lags as mixtime durations", {
+  skip_if_no_mixtime_tsibble()
+  skip_if_not_installed("feasts")
+  loadNamespace("feasts")
+  cf <- tibble::tibble(
+    lag = vctrs::new_vctr(
+      0:12,
+      interval = mixtime::cal_gregorian$month(1L),
+      class = "cf_lag"
+    ),
+    acf = cos(0:12)
+  )
+  cf <- tsibble::new_tsibble(
+    tsibble::as_tsibble(cf, index = "lag"),
+    num_obs = tibble::tibble(.len = 100),
+    class = "tbl_cf"
+  )
+  p <- ggplot2::autoplot(cf)
+  expect_true(mixtime::is_mixtime(p$data$lag))
+  expect_equal(p$labels$x, "lag [1M]")
+  expect_no_error(ggplot2::ggplot_build(p))
+})
