@@ -285,7 +285,7 @@ gg_season <- function(
     if (is.null(period)) {
       period <- legacy_default_period(data)
     }
-    if (is.numeric(period)) {
+    if (is.numeric(period) && !lubridate::is.period(period)) {
       period <- period * ts_interval
     }
     period <- lubridate::as.period(period)
@@ -560,7 +560,7 @@ gg_subseries <- function(data, y = NULL, period = NULL, ...) {
     if (is.null(period)) {
       period <- legacy_default_period(data)
     }
-    if (is.numeric(period)) {
+    if (is.numeric(period) && !lubridate::is.period(period)) {
       period <- period * ts_interval
     }
     period <- lubridate::as.period(period)
