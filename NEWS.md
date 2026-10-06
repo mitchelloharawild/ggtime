@@ -8,6 +8,13 @@
 
 ## Improvements
 
+* `gg_season()` is now drawn with `coord_loop()`, keeping time continuous
+  rather than offsetting it into a single season. The lines connecting
+  consecutive seasons (e.g. December to January) are now drawn, split across
+  the left and right margins of the plot. Legacy `Date`, `POSIXct`, and tsibble
+  `yearweek()`/`yearmonth()`/`yearquarter()` indices are converted to mixtime
+  for this.
+
 * Looping `coord_radial()` with `coord_loop()` no longer labels the end of the
   loop with its start (e.g. "Jan/Jan").
 

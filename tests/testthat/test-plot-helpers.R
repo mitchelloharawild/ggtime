@@ -92,6 +92,50 @@ test_that("gg_season() facets", {
   )
 })
 
+test_that("gg_season() loops time, drawing seasonal connections in the margins", {
+  p <- gg_season(tsbl_co2, value)
+  expect_s3_class(p$coordinates, "CoordLoop")
+
+  # A single line per series, rather than one per season
+  d <- ggplot2::layer_data(p)
+  expect_length(unique(d$group), 1L)
+
+  # The line between seasons (Dec -> Jan) is cut at the loop boundary, with
+  # each half drawn in the panel's margins
+  b <- ggplot2::ggplot_build(p)
+  coord <- b@layout$coord
+  panel_params <- b@layout$panel_params[[1]]
+  coord$distance(d$x, d$y, panel_params)
+  drawn <- coord$transform(d, panel_params)
+  expect_equal(range(drawn$x), c(0, 1))
+  # The observations themselves (transformed without `distance()`, so as
+  # points rather than a connected line) are centred within their month
+  points <- coord$transform(d, panel_params)
+  expect_equal(range(points$x), c(1 / 24, 23 / 24), tolerance = 0.01)
+
+  p <- gg_season(tsbl_co2, value, polar = TRUE)
+  expect_s3_class(p$coordinates, "CoordRadial")
+  expect_no_error(ggplot2::ggplot_build(p))
+})
+
+test_that("gg_season() supports legacy Date and POSIXct indices", {
+  daily <- tsibble::tsibble(
+    date = as.Date("2020-01-06") + 0:27,
+    y = rep(1:7, 4),
+    index = date
+  )
+  d <- ggplot2::layer_data(gg_season(daily, y, "week"))
+  expect_equal(d$y, daily$y)
+  expect_equal(as.numeric(table(d$colour)), rep(7, 4))
+
+  p <- gg_season(tsbl_ped, Count, "week")
+  x <- ggplot2::ggplot_build(p)@layout$panel_params[[1]]$x
+  expect_equal(
+    x$get_labels()[!is.na(x$breaks)],
+    c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon")
+  )
+})
+
 test_that("gg_subseries() plots", {
   p <- gg_subseries(tsbl_co2, value)
 

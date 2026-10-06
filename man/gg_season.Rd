@@ -47,7 +47,8 @@ to always colour the lines. If labels are used, then max_col will be ignored.}
 
 \item{pal}{A colour palette to be used.}
 
-\item{polar}{If TRUE, the season plot will be shown on polar coordinates.}
+\item{polar}{If TRUE, the season plot will be shown on polar coordinates
+(looping \code{\link[ggplot2:coord_radial]{ggplot2::coord_radial()}}).}
 
 \item{labels}{Position of the labels for seasonal period identifier.}
 
@@ -65,6 +66,12 @@ Produces a time series seasonal plot. A seasonal plot is similar to a regular
 time series plot, except the x-axis shows data from within each season. This
 plot type allows the underlying seasonal pattern to be seen more clearly,
 and is especially useful in identifying years in which the pattern changes.
+}
+\details{
+The seasonal plot is drawn with \code{\link[=coord_loop]{coord_loop()}}, which loops the continuous
+time axis around each seasonal period. Since time remains continuous, the
+line connecting one season to the next (e.g. December to January) is drawn
+too, split between the right and left margins of the plot.
 }
 \examples{
 \dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}

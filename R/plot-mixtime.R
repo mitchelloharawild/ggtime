@@ -36,12 +36,13 @@ as_period_granule <- function(period, interval, arg = "period") {
     duration <- vecvec::unvecvec(period)
     return(scale_granule(duration@chronon, as.numeric(vctrs::vec_data(duration))))
   }
-  if (is.numeric(period)) {
-    # Multiples of the data's interval
-    return(scale_granule(interval, period))
-  }
   if (is.character(period)) {
     period <- lubridate::as.period(period)
+  }
+  # Before `is.numeric()`, which is also true of a lubridate period
+  if (is.numeric(period) && !lubridate::is.period(period)) {
+    # Multiples of the data's interval
+    return(scale_granule(interval, period))
   }
   if (lubridate::is.period(period)) {
     fields <- c(
@@ -115,6 +116,55 @@ default_period_granule <- function(interval, auto = c("largest", "smallest")) {
       n <- nominal_observations_per_period(interval, granule)
     }
     if (isTRUE(n > 1)) {
+      return(granule)
+    }
+  }
+  NULL
+}
+
+# A tsibble's interval as a mixtime granule, converting a legacy tsibble
+# interval (before the mixtime-based representation) by way of its period.
+interval_as_granule <- function(interval) {
+  if (is_granule(interval) || !inherits(interval, "interval")) {
+    return(interval)
+  }
+  as_period_granule(interval_to_period(interval), NULL, "interval")
+}
+
+# Convert an index of a legacy time class to the equivalent mixtime, so that
+# it can be looped by `coord_loop()`.
+as_mixtime_index <- function(x) {
+  if (mixtime::is_mixtime(x)) {
+    return(x)
+  }
+  if (inherits(x, "yearweek")) {
+    return(mixtime::yearweek(x))
+  }
+  if (inherits(x, "yearmonth")) {
+    return(mixtime::yearmonth(x))
+  }
+  if (inherits(x, "yearquarter")) {
+    return(mixtime::yearquarter(x))
+  }
+  if (inherits(x, c("Date", "POSIXct"))) {
+    return(mixtime::as_mixtime(x))
+  }
+  abort(sprintf(
+    "Seasonal plots require a time index, not an index of class <%s>.",
+    class(x)[1]
+  ))
+}
+
+# The granule to break a season's axis at: the largest calendar unit
+# dividing the period into a handful of parts (months of a year, days of a
+# week), or `NULL` to leave the breaks to the scale.
+season_break_granule <- function(period, interval) {
+  for (granule in period_granules()[c("month", "day", "hour", "minute")]) {
+    n <- nominal_observations_per_period(granule, period)
+    if (n > 12) {
+      return(NULL)
+    }
+    if (n > 1 && nominal_observations_per_period(interval, granule) >= 1) {
       return(granule)
     }
   }
