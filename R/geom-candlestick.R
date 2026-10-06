@@ -561,21 +561,23 @@ is_time_scale <- function(scale) {
 #'   `k` spans `at[k]` to `at[k + 1]`) and `bin` (each position's bin).
 #' @noRd
 candlestick_bins <- function(x, scale, granule, call = caller_env()) {
+  msg <- c(
+    "{.arg granule} could not be cut against this axis.",
+    i = "A candlestick summarises the values within a granule of time,
+         so the axis it is drawn against must measure time."
+  )
+  # Checked up front rather than left to mixtime's own error from cutting a
+  # non-time axis: building that error's backtrace forces a promise that S7
+  # dispatch is still evaluating, so it surfaces as "promise already under
+  # evaluation" instead.
+  if (!is_time_scale(scale)) {
+    cli::cli_abort(msg, call = call)
+  }
   trans <- scale$get_transformation()
   limits <- scale$get_limits()
   cuts <- try_fetch(
     loop_cuts_by_duration(trans$inverse(limits), granule),
-    error = function(cnd) {
-      cli::cli_abort(
-        c(
-          "{.arg granule} could not be cut against this axis.",
-          i = "A candlestick summarises the values within a granule of time,
-               so the axis it is drawn against must measure time."
-        ),
-        parent = cnd,
-        call = call
-      )
-    }
+    error = function(cnd) cli::cli_abort(msg, parent = cnd, call = call)
   )
   at <- as.numeric(trans$transform(cuts))
   list(at = at, bin = loop_index(x, at))
