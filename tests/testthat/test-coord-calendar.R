@@ -162,7 +162,7 @@ test_that("granules are labelled within the calendar", {
         panes = NULL,
         cols = mixtime::quarters(1L),
         label_blocks = "{cyc(month, year, label = TRUE, abbreviate = TRUE)}",
-        label_rows = "{cyc(cal_isoweek$week, year)}"
+        label_rows = "{cyc(cal_isoweek$week, cal_isoweek$year)}"
       ),
     writer = write_svg_r42
   )

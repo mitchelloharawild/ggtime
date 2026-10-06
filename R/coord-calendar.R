@@ -740,8 +740,6 @@ calendar_compute_cuts <- function(time_range, granules) {
   # cut short from it in `calendar_panel_cuts()` wherever a coarser granule
   # falls inside one.
   row_grid <- calendar_row_cuts(col_cuts, granules$rows)
-  # `max(diff(row_grid))` drops the time class to a plain number, but `+`
-  # onto the still-classed `row_grid[1]` restores it.
   row_window <- c(row_grid[1], row_grid[1] + max(diff(row_grid)))
   # `blocks`/`panes` cut over the whole calendar, like `rows`/`cols`, since
   # a row cannot straddle either.
