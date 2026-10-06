@@ -304,6 +304,10 @@ gg_season <- function(
 #' similar to a seasonal plot ([`gg_season()`]), and
 #'
 #' @inheritParams gg_season
+#' @param period The seasonal period to facet by. If NULL (default), the
+#' smallest common seasonal period of the data is used (e.g. a week for daily
+#' data, a day for hourly data). Otherwise, a string or duration as described
+#' in [gg_season()].
 #'
 #' @return A ggplot object showing a seasonal subseries plot of a time series.
 #'
@@ -328,94 +332,49 @@ gg_subseries <- function(data, y = NULL, period = NULL, ...) {
   ggtime_migrate_deprecate(match.call(), "feasts", "0.4.2")
 
   y <- guess_plot_var(data, !!enquo(y))
-  n_key <- n_keys(data)
   keys <- key(data)
   check_gaps(data)
-  idx <- index(data)
-  mt_index <- mixtime::is_mixtime(data[[as_name(idx)]])
-  ts_interval <- interval(data)
+  idx <- index_var(data)
+  ts_interval <- interval_as_granule(interval(data))
 
-  if (mt_index) {
-    period <- season_period(period, interval_as_granule(ts_interval))
-    data <- as_tibble(data) %>%
-      mutate(
-        id = season_position_factor(!!idx, period),
-        .yint = !!y
-      ) %>%
-      group_by(!!sym("id"), !!!keys) %>%
-      mutate(.yint = mean(!!sym(".yint"), na.rm = TRUE))
-  } else {
-    ts_interval <- interval_to_period(ts_interval)
+  # Each facet is a season position, so a smaller period gives fewer facets
+  # with more observations in each
+  period <- season_period(period, ts_interval, auto = "smallest")
 
-    if (is.null(period)) {
-      period <- legacy_default_period(data)
-    }
-    if (is.numeric(period) && !lubridate::is.period(period)) {
-      period <- period * ts_interval
-    }
-    period <- lubridate::as.period(period)
-    if (period <= 1) {
-      abort(
-        "The data must contain at least one observation per seasonal period."
-      )
-    }
+  data <- as_tibble(data)
+  data[[idx]] <- as_mixtime_index(data[[idx]])
+  data <- data %>%
+    mutate(
+      id = season_position_factor(!!sym(idx), period),
+      .yint = !!y
+    ) %>%
+    group_by(!!sym("id"), !!!keys) %>%
+    mutate(.yint = mean(!!sym(".yint"), na.rm = TRUE))
 
-    data <- as_tibble(data) %>%
-      mutate(
-        id = time_offset_origin(!!idx, !!period),
-        !!idx := !!idx,
-        .yint = !!y
-      ) %>%
-      group_by(!!sym("id"), !!!keys) %>%
-      mutate(.yint = mean(!!sym(".yint"), na.rm = TRUE))
-  }
+  # Break at the start of every few seasons, so each facet has only a handful
+  n_seasons <- length(unique(mixtime::time_floor(data[[idx]], period)))
+  break_step <- scale_granule(period, subseries_break_step(n_seasons))
 
-  fct_labeller <- if (mt_index) {
-    # Already a factor in seasonal order
-    identity
-  } else if (
-    inherits(
-      data[["id"]],
-      c("yearquarter", "yearmonth", "yearweek", "POSIXt", "Date")
-    )
-  ) {
-    within_time_identifier
-  } else if (is.numeric(data[["id"]])) {
-    function(x) format(x - 1969)
-  } else {
-    format
-  }
-
-  p <- ggplot(data, aes(x = !!idx, y = !!y)) +
+  ggplot(data, aes(x = !!sym(idx), y = !!y)) +
     geom_line(...) +
     facet_grid(
       rows = vars(!!!lapply(keys, function(x) expr(format(!!x)))),
-      cols = vars(fct_labeller(!!sym("id"))),
+      cols = vars(!!sym("id")),
       scales = "free_y"
     ) +
-    ggplot2::geom_hline(aes(yintercept = !!sym(".yint")), colour = "blue")
+    ggplot2::geom_hline(aes(yintercept = !!sym(".yint")), colour = "blue") +
+    scale_x_mixtime(
+      time_breaks = break_step,
+      labels = function(x) time_labels_at(x, chronon = period)
+    ) +
+    ggplot2::theme(axis.text.x.bottom = ggplot2::element_text(angle = 90))
+}
 
-  if (mt_index) {
-    p <- p +
-      scale_x_mixtime(
-        time_breaks = period,
-        labels = function(x) time_labels_at(x, chronon = period)
-      )
-  } else if (inherits(data[[as_name(idx)]], "Date")) {
-    p <- p + ggplot2::scale_x_date(labels = within_time_identifier)
-  } else if (inherits(data[[as_name(idx)]], "POSIXct")) {
-    p <- p + ggplot2::scale_x_datetime(labels = within_time_identifier)
-  } else {
-    scale_fn <- paste0("scale_x_", ggplot2::scale_type(data[[as_name(idx)]])[1])
-    scale_fn <- if (exists(scale_fn, parent.frame(), mode = "function")) {
-      get(scale_fn, parent.frame(), mode = "function")
-    } else {
-      get(scale_fn, asNamespace("feasts"), mode = "function")
-    }
-    p <- p + scale_fn(labels = within_time_identifier)
-  }
-
-  p + ggplot2::theme(axis.text.x.bottom = ggplot2::element_text(angle = 90))
+# The number of seasons between subseries axis breaks: a 1-2-5 step giving at
+# most `max_breaks` breaks per facet.
+subseries_break_step <- function(n_seasons, max_breaks = 3) {
+  steps <- c(1, 2, 5) * rep(10^(0:5), each = 3)
+  steps[which(n_seasons / steps <= max_breaks)[1]]
 }
 
 

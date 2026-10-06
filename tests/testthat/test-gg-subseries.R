@@ -19,6 +19,12 @@ expect_subseries_builds <- function(data, period = NULL) {
   invisible(p)
 }
 
+subseries_axis_labels <- function(p) {
+  x <- ggplot2::ggplot_build(p)$layout$panel_params[[1]]$x
+  labels <- as.character(x$get_labels())
+  labels[!is.na(labels)]
+}
+
 test_that("gg_subseries() supports mixtime indices", {
   p <- expect_subseries_builds(
     subseries_tsbl(mixtime::yearmonth(monthly_dates))
@@ -53,5 +59,54 @@ test_that("gg_subseries() supports legacy indices", {
   expect_subseries_builds(subseries_tsbl(tsibble::yearweek(weekly_dates)))
   expect_subseries_builds(subseries_tsbl(daily_dates), "week")
   expect_subseries_builds(subseries_tsbl(hourly_times), "day")
-  expect_subseries_builds(subseries_tsbl(1950:2000))
+})
+
+test_that("gg_subseries() labels legacy indices with times", {
+  p <- expect_subseries_builds(
+    subseries_tsbl(tsibble::yearmonth(monthly_dates))
+  )
+  expect_equal(levels(p$data$id), month.abb)
+  expect_equal(
+    subseries_axis_labels(p),
+    c("2018", "2020", "2022", "2024")
+  )
+
+  p <- expect_subseries_builds(
+    subseries_tsbl(tsibble::yearweek(weekly_dates))
+  )
+  expect_equal(
+    subseries_axis_labels(p),
+    c("2018", "2019", "2020", "2021")
+  )
+})
+
+test_that("gg_subseries() defaults to the smallest seasonal period", {
+  p <- expect_subseries_builds(subseries_tsbl(daily_dates))
+  expect_length(levels(p$data$id), 7)
+
+  p <- expect_subseries_builds(subseries_tsbl(hourly_times))
+  expect_length(levels(p$data$id), 24)
+
+  p <- expect_subseries_builds(
+    subseries_tsbl(mixtime::as_mixtime(hourly_times))
+  )
+  expect_length(levels(p$data$id), 24)
+})
+
+test_that("gg_subseries() breaks the axis every few seasons", {
+  p <- expect_subseries_builds(
+    subseries_tsbl(mixtime::as_mixtime(hourly_times)),
+    "day"
+  )
+  expect_lte(length(subseries_axis_labels(p)), 3)
+  expect_equal(subseries_break_step(3), 1)
+  expect_equal(subseries_break_step(21), 10)
+  expect_equal(subseries_break_step(37), 20)
+})
+
+test_that("gg_subseries() errors for series without a seasonal period", {
+  expect_error(
+    gg_subseries(subseries_tsbl(1950:2000), y),
+    "Could not find a seasonal period"
+  )
 })
