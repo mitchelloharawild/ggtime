@@ -367,11 +367,17 @@ mixtime_tsbl <- function(index) {
   tsibble::tsibble(t = index, y = seq_along(index), index = t)
 }
 
+# tsibble supports mixtime indices with either a granule interval or a
+# `<mixtime_interval>` (an interval record computed from the mixtime index)
 skip_if_no_mixtime_tsibble <- function() {
-  skip_if_not(
-    is_granule(tsibble::interval(
+  interval <- tryCatch(
+    tsibble::interval(
       mixtime_tsbl(mixtime::yearmonth(as.Date("2020-01-01") + c(0, 31)))
-    )),
+    ),
+    error = function(e) NULL
+  )
+  skip_if_not(
+    is_granule(interval) || inherits(interval, "mixtime_interval"),
     "tsibble doesn't support mixtime indices"
   )
 }
@@ -385,7 +391,7 @@ test_that("gg_season() and gg_subseries() support mixtime indices", {
   p <- gg_season(monthly, y)
   d <- ggplot2::layer_data(p)
   expect_equal(d$y, monthly$y)
-  expect_equal(as.numeric(table(d$group)), rep(12, 3))
+  expect_equal(as.numeric(table(d$colour)), rep(12, 3))
   expect_no_error(ggplot2::ggplot_build(gg_season(monthly, y, polar = TRUE)))
   expect_no_error(ggplot2::ggplot_build(gg_season(monthly, y, "2 years")))
   expect_no_error(ggplot2::ggplot_build(gg_season(monthly, y, 12)))
@@ -402,7 +408,7 @@ test_that("gg_season() and gg_subseries() support mixtime indices", {
     mixtime::date(seq(as.Date("2020-01-06"), by = "day", length.out = 28))
   )
   d <- ggplot2::layer_data(gg_season(daily, y, "week"))
-  expect_equal(as.numeric(table(d$group)), rep(7, 4))
+  expect_equal(as.numeric(table(d$colour)), rep(7, 4))
   expect_no_error(ggplot2::ggplot_build(gg_subseries(daily, y, "week")))
 })
 
@@ -434,9 +440,7 @@ test_that("gg_lag() supports mixtime indices", {
   )
 
   hourly <- mixtime_tsbl(
-    mixtime::datetime(
-      as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:71
-    )
+    mixtime::as_mixtime(as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:71)
   )
   expect_length(levels(gg_lag(hourly, y)$data$season), 24)
 })
@@ -484,10 +488,11 @@ test_that("autoplot.tbl_cf() plots lags as mixtime durations", {
   skip_if_no_mixtime_tsibble()
   skip_if_not_installed("feasts")
   loadNamespace("feasts")
+  monthly <- mixtime_tsbl(mixtime::yearmonth(as.Date("2020-01-01") + c(0, 31)))
   cf <- tibble::tibble(
     lag = vctrs::new_vctr(
       0:12,
-      interval = mixtime::cal_gregorian$month(1L),
+      interval = tsibble::interval(monthly),
       class = "cf_lag"
     ),
     acf = cos(0:12)
@@ -550,10 +555,10 @@ test_that("ACF-based plots support mixtime indices", {
       label = "lag [1D]"
     ),
     hourly = list(
-      index = mixtime::datetime(
+      index = mixtime::as_mixtime(
         as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:119
       ),
-      label = "lag [3600s]"
+      label = "lag [1h]"
     )
   )
   for (x in indices) {
