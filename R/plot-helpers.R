@@ -481,9 +481,15 @@ gg_lag <- function(
   ts_interval <- interval(data)
   mt_index <- mixtime::is_mixtime(data[[as_name(idx)]])
 
-  if (is_granule(ts_interval)) {
-    period <- season_period(period, ts_interval, auto = "smallest")
-    frequency <- observations_per_period(ts_interval, period)
+  if (mt_index || is_granule(ts_interval)) {
+    granule <- interval_as_granule(ts_interval)
+    if (is.null(period) && !interval_is_seasonal(granule)) {
+      # Non-seasonal data (e.g. yearly) isn't coloured by season
+      frequency <- 1
+    } else {
+      period <- season_period(period, granule, auto = "smallest")
+      frequency <- observations_per_period(granule, period)
+    }
   } else {
     frequency <- get_frequencies(period, data, .auto = "smallest")
   }
@@ -501,12 +507,12 @@ gg_lag <- function(
   data <- data %>%
     as_tibble %>%
     mutate(
-      season = if (mt_index) {
-        season_position_factor(!!idx, period)
-      } else {
+      season = if (!mt_index) {
         within_time_identifier(
           !!idx - period_units * (tz_units_since(!!idx) %/% period_units)
         )
+      } else if (!is.null(period)) {
+        season_position_factor(!!idx, period)
       },
       !!!lag_exprs
     )
@@ -605,8 +611,10 @@ gg_tsdisplay <- function(
 
   plot_type <- match.arg(plot_type)
   if (plot_type == "auto") {
-    seasonal <- if (is_granule(interval(data))) {
-      interval_is_seasonal(interval(data))
+    ts_interval <- interval(data)
+    mt_index <- mixtime::is_mixtime(data[[index_var(data)]])
+    seasonal <- if (mt_index || is_granule(ts_interval)) {
+      interval_is_seasonal(interval_as_granule(ts_interval))
     } else {
       any(get_frequencies(NULL, data, .auto = "all") > 1)
     }
