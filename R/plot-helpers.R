@@ -336,7 +336,7 @@ gg_subseries <- function(data, y = NULL, period = NULL, ...) {
   ts_interval <- interval(data)
 
   if (mt_index) {
-    period <- season_period(period, ts_interval)
+    period <- season_period(period, interval_as_granule(ts_interval))
     data <- as_tibble(data) %>%
       mutate(
         id = season_position_factor(!!idx, period),
