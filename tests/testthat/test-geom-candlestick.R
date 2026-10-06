@@ -171,7 +171,7 @@ test_that("`direction` colours fill and colour red/green by default, without an 
       geom_candlestick(granule = mixtime::days(1L))
   )
 
-  expect_s3_class(data$direction, "ggtime_candlestick_direction")
+  expect_s3_class(data$direction, "ggtime_candlestick")
   expect_equal(
     as.character(data$direction),
     c("rising", "falling", "unchanged")
