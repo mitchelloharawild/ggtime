@@ -8,6 +8,9 @@
 
 ## Improvements
 
+* Looping `coord_radial()` with `coord_loop()` no longer labels the end of the
+  loop with its start (e.g. "Jan/Jan").
+
 * `gg_season()` and related plots now give a clear error for zero-row data instead of failing with "object 'found_format' not found".
 
 * `coord_calendar()` gains `cell_ratio`, which fixes the aspect ratio of a

@@ -546,6 +546,42 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
     limits = list(
       theta = coord$limits[[coord$theta]] %||% coord$super()$limits$theta,
       r = coord$limits[[coord$r]] %||% coord$super()$limits$r
-    )
+    ),
+
+    setup_panel_params = function(self, scale_x, scale_y, params = list()) {
+      panel_params <- ggproto_parent(coord, self)$setup_panel_params(
+        scale_x,
+        scale_y,
+        params
+      )
+      drop_loop_end_break(panel_params)
+    }
   )
+}
+
+#' Drop the break at the end of a looped angular axis
+#'
+#' A loop ends where it starts, so on a full circle a break at the end of the
+#' axis repeats the break at its start (and `guide_axis_theta()` merges the
+#' two into labels like "Jan/Jan").
+#' @param panel_params Panel params of a `CoordLoopRadial`.
+#' @returns `panel_params`, without a break at the end of the theta range when
+#'   there's also one at its start.
+#' @noRd
+drop_loop_end_break <- function(panel_params) {
+  theta <- panel_params$theta
+  breaks <- theta$breaks
+  range <- panel_params$theta.range
+  tol <- 1e-8 * diff(range)
+  is_start <- abs(breaks - range[1]) < tol
+  is_end <- abs(breaks - range[2]) < tol
+  if (!any(is_start, na.rm = TRUE) || !any(is_end, na.rm = TRUE)) {
+    return(panel_params)
+  }
+  keep <- !(is_end %in% TRUE)
+  panel_params$theta <- ggplot2::ggproto(NULL, theta, breaks = breaks[keep])
+  if (length(panel_params$theta.major) == length(breaks)) {
+    panel_params$theta.major <- panel_params$theta.major[keep]
+  }
+  panel_params
 }

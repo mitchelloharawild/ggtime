@@ -181,7 +181,9 @@ test_that("looped axes are labelled cyclically", {
       p + coord_loop(time_loops = mixtime::years(1L), coord = coord_radial()),
       "theta"
     ),
-    c("Jan", "Mar", "May", "Jul", "Sep", "Nov", "Jan")
+    # The end of a radial loop is its start, so isn't broken (or labelled)
+    # again.
+    c("Jan", "Mar", "May", "Jul", "Sep", "Nov")
   )
   # A calendar breaks its axis at every one of the row's own cells rather than
   # wherever pretty breaks fall, so each cell of the row is named. A yearly
