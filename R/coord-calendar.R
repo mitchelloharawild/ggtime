@@ -125,7 +125,7 @@ utils::globalVariables(c("day", "week", "month", "quarter"))
 #' # activity at Birrarung Marr during the Australian Open in late January.
 #' pedestrian_2015 <- dplyr::filter(
 #'   pedestrian,
-#'   mixtime::year(Time) == mixtime::year(2015),
+#'   mixtime::year(Time) == mixtime::year(2015L),
 #'   Sensor == "Birrarung Marr"
 #' )
 #' ggplot(pedestrian_2015, aes(x = Time, y = Count, color = Sensor)) +
