@@ -458,6 +458,35 @@ test_that("granule intervals have default seasonal periods", {
   expect_null(default_period_granule(cal$year(1L)))
   expect_true(interval_is_seasonal(cal$month(1L)))
   expect_false(interval_is_seasonal(cal$year(1L)))
+  expect_false(interval_is_seasonal(NULL))
+})
+
+test_that("interval_as_granule() converts tsibble intervals to a granule", {
+  cal <- mixtime::cal_gregorian
+  interval_of <- function(index, ...) {
+    tsibble::interval(tsibble::tsibble(t = index, index = t, ...))
+  }
+  months <- seq(as.Date("2020-01-01"), by = "month", length.out = 3)
+  expect_s3_class(
+    interval_as_granule(interval_of(tsibble::yearmonth(months))),
+    "mixtime::tu_month"
+  )
+  expect_s3_class(
+    interval_as_granule(interval_of(as.POSIXct(months[1]) + c(0, 1800, 3600))),
+    "mixtime::tu_minute"
+  )
+  expect_s3_class(interval_as_granule(cal$day(1L)), "mixtime::tu_day")
+  expect_s3_class(
+    interval_as_granule(list(cal$day(1L))),
+    "mixtime::tu_day"
+  )
+
+  # Intervals without a single calendar unit
+  expect_null(interval_as_granule(interval_of(1:3)))
+  expect_null(interval_as_granule(
+    interval_of(months[c(1, 3)], regular = FALSE)
+  ))
+  expect_null(interval_as_granule(list(cal$hour(1L), cal$minute(30L))))
 })
 
 test_that("lag_to_duration() converts lags to mixtime durations", {

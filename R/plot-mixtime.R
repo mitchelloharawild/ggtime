@@ -105,6 +105,9 @@ nominal_observations_per_period <- function(interval, period) {
 # `fabletools::get_frequencies(.auto = )`).
 default_period_granule <- function(interval, auto = c("largest", "smallest")) {
   auto <- match.arg(auto)
+  if (is.null(interval)) {
+    return(NULL)
+  }
   units <- c("year", "month", "week", "day", "hour", "minute")
   if (auto == "smallest") {
     # Months vary in length, so aren't a natural smallest period
@@ -122,13 +125,22 @@ default_period_granule <- function(interval, auto = c("largest", "smallest")) {
   NULL
 }
 
-# A tsibble's interval as a mixtime granule, converting a legacy tsibble
+# A tsibble's interval as a single mixtime granule, converting a legacy tsibble
 # interval (before the mixtime-based representation) by way of its period.
+# Intervals without a single calendar unit (irregular, unitless or composite)
+# are `NULL`.
 interval_as_granule <- function(interval) {
-  if (is_granule(interval) || !inherits(interval, "interval")) {
+  if (is_granule(interval)) {
     return(interval)
   }
-  as_period_granule(interval_to_period(interval), NULL, "interval")
+  if (!inherits(interval, "interval")) {
+    # A composite interval (a list of granules)
+    return(if (length(interval) == 1) interval[[1]])
+  }
+  tryCatch(
+    as_period_granule(interval_to_period(interval), NULL, "interval"),
+    error = function(e) NULL
+  )
 }
 
 # Convert an index of a legacy time class to the equivalent mixtime, so that
@@ -272,17 +284,8 @@ lag_to_duration <- function(lag, interval = attr(lag, "interval")) {
     return(lag)
   }
   lags <- as.numeric(vctrs::vec_data(lag))
-  if (is.list(interval) && !inherits(interval, "interval")) {
-    # A composite interval has no single unit to count lags in
-    interval <- if (length(interval) == 1) interval[[1]] else NULL
-  } else if (inherits(interval, "interval")) {
-    # Legacy tsibble interval
-    interval <- tryCatch(
-      as_period_granule(interval_to_period(interval), NULL),
-      error = function(e) NULL
-    )
-  }
-  if (!is_granule(interval) || is.na(interval@n)) {
+  interval <- interval_as_granule(interval)
+  if (is.null(interval) || is.na(interval@n)) {
     return(lags)
   }
   mixtime::duration(lags, interval)
