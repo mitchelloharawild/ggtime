@@ -355,14 +355,6 @@ test_that("interval_to_period() converts mixtime granules", {
   )
 })
 
-test_that("time_origin() does not silently treat mixtime as numeric", {
-  expect_error(
-    time_origin(mixtime::yearmonth("2020 Jan")),
-    "mixtime"
-  )
-  expect_equal(time_origin(1:3), 0)
-})
-
 mixtime_tsbl <- function(index) {
   tsibble::tsibble(t = index, y = seq_along(index), index = t)
 }

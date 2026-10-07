@@ -1,61 +1,5 @@
 globalVariables("all_of")
 
-format_time <- function(x, format, ...) {
-  if (format == "%Y W%V") {
-    return(format(yearweek(x)))
-  }
-  out <- format(x, format = format)
-  if (grepl("%q", format)) {
-    qtr <- 1 + as.numeric(format(as.Date(x), "%m")) %/% 3
-    out <- split(out, qtr) %>%
-      imap(function(x, rpl) gsub("%q", rpl, x)) %>%
-      unsplit(qtr)
-  }
-
-  lvls <- switch(format, `W%V` = sprintf("W%02d", 1:53), unique(out[order(x)]))
-
-  ordered(out, levels = lvls)
-}
-
-tz_units_since <- function(x) {
-  if (!is.null(attr(x, "tz"))) {
-    x <- as.POSIXct(`attr<-`(as.POSIXlt(x), "tzone", "UTC"))
-  }
-  as.double(x)
-}
-
-within_time_identifier <- function(x) {
-  formats <- list(
-    Year = "%Y",
-    Quarter = "Q%q",
-    Month = "%b",
-    Week = "W%V",
-    Weekday = "%A",
-    Monthday = "%d",
-    Yearquarter = "%Y Q%q",
-    Yearmonth = "%Y %b",
-    Yearweek = "%G W%V",
-    Yearday = "%j",
-    Date = "%x",
-    Hour = "%H",
-    Minute = "%M",
-    HourMinute = "%H:%M",
-    Time = "%X",
-    Datetime = "%x %X"
-  )
-
-  y <- x
-  x <- unique(x[!is.na(x)])
-
-  for (fmt in formats) {
-    if (sum(duplicated(format_time(x[-length(x)], format = fmt))) == 0) {
-      break
-    }
-  }
-
-  format_time(y, format = fmt)
-}
-
 guess_plot_var <- function(x, y) {
   if (quo_is_null(enquo(y))) {
     mv <- measured_vars(x)
@@ -130,7 +74,6 @@ guess_plot_var <- function(x, y) {
 #'   gg_season(Turnover)
 #'
 #' @importFrom ggplot2 ggplot aes geom_line
-#' @importFrom fabletools get_frequencies
 #' @importFrom dplyr group_by summarise mutate filter
 #' @export
 gg_season <- function(
@@ -916,6 +859,7 @@ scale_type.cf_lag <- function(x) c("cf_lag", "continuous")
 #' @keywords internal
 #' @name scale_cf_lag
 #' @rdname scale_cf_lag
+#' @importFrom fabletools get_frequencies
 #' @export
 scale_x_cf_lag <- function(...) {
   scale <- ggplot2::ggproto(

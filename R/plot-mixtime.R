@@ -249,15 +249,6 @@ season_period <- function(
   period
 }
 
-# Frequencies for legacy time classes
-legacy_default_period <- function(data) {
-  interval <- interval(data)
-  if (is_granule(interval)) {
-    return(interval_to_period(season_period(NULL, interval)))
-  }
-  names(get_frequencies(NULL, data, .auto = "largest"))
-}
-
 # Whether a granule interval has any common seasonal period (cf.
 # `any(fabletools::get_frequencies(.auto = "all") > 1)`)
 interval_is_seasonal <- function(interval) {

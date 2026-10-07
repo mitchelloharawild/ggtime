@@ -1,6 +1,6 @@
-# `day()`/`week()`/`quarter()` name granules in quosures, resolved per-panel
+# `day()`/`week()`/`month()`/`quarter()` name granules in quosures, resolved per-panel
 # by `calendar_resolve_granules()`. Declared to satisfy `R CMD check`.
-utils::globalVariables(c("day", "week", "quarter"))
+utils::globalVariables(c("day", "week", "month", "quarter"))
 
 #' Calendar coordinates
 #'
