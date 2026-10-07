@@ -457,6 +457,19 @@ test_that("granule intervals have default seasonal periods", {
   expect_false(interval_is_seasonal(NULL))
 })
 
+test_that("observations_per_period() is NA for irregular cardinalities", {
+  cal <- mixtime::cal_gregorian
+  expect_equal(observations_per_period(cal$month(1L), cal$year(1L)), 12)
+  expect_equal(observations_per_period(cal$hour(1L), cal$day(1L)), 24)
+  expect_equal(observations_per_period(cal$minute(30L), cal$hour(1L)), 2)
+  expect_identical(observations_per_period(cal$day(1L), cal$month(1L)), NA_real_)
+  expect_identical(
+    observations_per_period(mixtime::cal_isoweek$week(1L), cal$year(1L)),
+    NA_real_
+  )
+  expect_identical(observations_per_period(NULL, cal$year(1L)), NA_real_)
+})
+
 test_that("interval_as_granule() converts tsibble intervals to a granule", {
   cal <- mixtime::cal_gregorian
   interval_of <- function(index, ...) {
