@@ -121,4 +121,6 @@ test_that("gg_tsdisplay() supports mixtime and legacy indices", {
   expect_false(inherits(p[[3]]$coordinates, "CoordLoop"))
   p <- gg_tsdisplay(lag_tsbl(1950:2000), y)
   expect_false(inherits(p[[3]]$coordinates, "CoordLoop"))
+  p <- gg_tsdisplay(lag_tsbl(seq(1, 100)), y)
+  expect_false(inherits(p[[3]]$coordinates, "CoordLoop"))
 })

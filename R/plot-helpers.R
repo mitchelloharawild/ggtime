@@ -552,14 +552,7 @@ gg_tsdisplay <- function(
 
   plot_type <- match.arg(plot_type)
   if (plot_type == "auto") {
-    ts_interval <- interval(data)
-    mt_index <- mixtime::is_mixtime(data[[index_var(data)]])
-    seasonal <- if (mt_index || is_granule(ts_interval)) {
-      interval_is_seasonal(interval_as_granule(ts_interval))
-    } else {
-      any(get_frequencies(NULL, data, .auto = "all") > 1)
-    }
-    if (!seasonal) {
+    if (!interval_is_seasonal(interval_as_granule(interval(data)))) {
       plot_type <- if (any(is.na(eval_tidy(y, data = data)))) {
         "partial"
       } else {
