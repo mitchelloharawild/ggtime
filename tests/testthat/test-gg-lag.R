@@ -27,8 +27,7 @@ test_that("gg_lag() supports mixtime indices", {
   p <- expect_lag_builds(lag_tsbl(mixtime::yearquarter(quarterly_dates)))
   expect_equal(levels(p$data$season), paste0("Q", 1:4))
 
-  p <- expect_lag_builds(lag_tsbl(mixtime::yearweek(weekly_dates)))
-  expect_equal(levels(p$data$season)[1:2], c("W01", "W02"))
+  expect_lag_builds(lag_tsbl(mixtime::yearweek(weekly_dates)))
 
   p <- expect_lag_builds(lag_tsbl(mixtime::as_mixtime(daily_dates)))
   expect_equal(
@@ -75,6 +74,27 @@ test_that("gg_lag() supports legacy indices", {
   # Non-seasonal data isn't coloured by season
   p <- expect_lag_builds(lag_tsbl(1950:2000))
   expect_null(p$mapping$colour)
+})
+
+test_that("gg_lag() requires a fixed number of observations per period", {
+  # Weeks per year vary, so weekly data isn't coloured by default
+  p <- expect_lag_builds(lag_tsbl(mixtime::yearweek(weekly_dates)))
+  expect_null(p$mapping$colour)
+  p <- expect_lag_builds(lag_tsbl(tsibble::yearweek(weekly_dates)))
+  expect_null(p$mapping$colour)
+
+  expect_error(
+    gg_lag(lag_tsbl(mixtime::yearweek(weekly_dates)), y, "year"),
+    "fixed number of observations"
+  )
+  expect_error(
+    gg_lag(lag_tsbl(daily_dates), y, "month"),
+    "fixed number of observations"
+  )
+  expect_error(
+    gg_lag(lag_tsbl(mixtime::as_mixtime(daily_dates)), y, "year"),
+    "fixed number of observations"
+  )
 })
 
 test_that("gg_lag() doesn't colour series without a calendar interval", {

@@ -455,6 +455,13 @@ test_that("granule intervals have default seasonal periods", {
   expect_true(interval_is_seasonal(cal$month(1L)))
   expect_false(interval_is_seasonal(cal$year(1L)))
   expect_false(interval_is_seasonal(NULL))
+  expect_equal(
+    default_period_granule(cal$day(1L), "smallest", fixed = TRUE),
+    mixtime::cal_isoweek$week(1L)
+  )
+  expect_null(
+    default_period_granule(mixtime::cal_isoweek$week(1L), fixed = TRUE)
+  )
 })
 
 test_that("observations_per_period() is NA for irregular cardinalities", {

@@ -139,8 +139,13 @@ nominal_observations_per_period <- function(interval, period) {
 
 # The default seasonal period for a granule interval: the largest (or
 # smallest) common calendar period containing more than one observation (cf.
-# `fabletools::get_frequencies(.auto = )`).
-default_period_granule <- function(interval, auto = c("largest", "smallest")) {
+# `fabletools::get_frequencies(.auto = )`). With `fixed = TRUE`, only periods
+# with a fixed number of observations (e.g. not weeks in a year) are used.
+default_period_granule <- function(
+  interval,
+  auto = c("largest", "smallest"),
+  fixed = FALSE
+) {
   auto <- match.arg(auto)
   if (is.null(interval)) {
     return(NULL)
@@ -152,7 +157,7 @@ default_period_granule <- function(interval, auto = c("largest", "smallest")) {
   }
   for (granule in period_granules()[units]) {
     n <- observations_per_period(interval, granule)
-    if (is.na(n)) {
+    if (is.na(n) && !fixed) {
       n <- nominal_observations_per_period(interval, granule)
     }
     if (isTRUE(n > 1)) {

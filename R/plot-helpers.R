@@ -382,12 +382,23 @@ gg_lag <- function(
 
   idx <- index_var(data)
   ts_interval <- interval_as_granule(interval(data))
-  if (is.null(period) && !interval_is_seasonal(ts_interval)) {
-    # Non-seasonal data (e.g. yearly) isn't coloured by season
+  # Seasons are coloured only for periods with a fixed number of observations,
+  # so that each lag is the same seasonal offset throughout the series
+  period <- if (is.null(period)) {
+    default_period_granule(ts_interval, "smallest", fixed = TRUE)
+  } else {
+    season_period(period, ts_interval)
+  }
+  if (is.null(period)) {
+    # Non-seasonal data (e.g. yearly or weekly) isn't coloured by season
     frequency <- 1
   } else {
-    period <- season_period(period, ts_interval, auto = "smallest")
     frequency <- observations_per_period(ts_interval, period)
+    if (is.na(frequency)) {
+      abort(
+        "The seasonal period must contain a fixed number of observations (e.g. not days in a month)."
+      )
+    }
   }
 
   lag_exprs <- map(lags, function(lag) expr(lag(!!y, !!lag))) %>%
