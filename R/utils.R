@@ -249,48 +249,6 @@ granule_unit <- function(x) {
   sub("^.*tu_", "", class(x)[1])
 }
 
-# Convert a tsibble interval (a mixtime granule, or a list of granules for a
-# composite interval) to a lubridate period.
-interval_to_period <- function(interval) {
-  # Legacy tsibble intervals (before the mixtime-based representation)
-  if (inherits(interval, "interval")) {
-    return(legacy_interval_to_period(interval))
-  }
-  granules <- if (is.list(interval) && !S7::S7_inherits(interval)) {
-    interval
-  } else {
-    list(interval)
-  }
-  periods <- lapply(granules, function(granule) {
-    n <- granule@n
-    if (is.na(n)) {
-      return(lubridate::period(0, units = "second"))
-    }
-    switch(
-      unit <- granule_unit(granule),
-      quarter = lubridate::period(3 * n, units = "month"),
-      lubridate::period(n, units = unit)
-    )
-  })
-  Reduce(`+`, periods)
-}
-
-legacy_interval_to_period <- function(interval) {
-  with(
-    interval,
-    lubridate::years(year) +
-      lubridate::period(3 * quarter + month, units = "month") +
-      lubridate::weeks(week) +
-      lubridate::days(day) +
-      lubridate::hours(hour) +
-      lubridate::minutes(minute) +
-      lubridate::seconds(second) +
-      lubridate::milliseconds(millisecond) +
-      lubridate::microseconds(microsecond) +
-      lubridate::nanoseconds(nanosecond)
-  )
-}
-
 within_bounds <- function(x, lim) {
   if (!inherits(lim, class(x))) {
     lim <- vctrs::vec_cast(lim, x)

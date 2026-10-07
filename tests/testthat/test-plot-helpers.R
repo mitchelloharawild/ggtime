@@ -330,29 +330,33 @@ test_that("gg_arma() plots", {
   )
 })
 
-test_that("interval_to_period() converts mixtime granules", {
+test_that("as_period_granule() parses periods without lubridate", {
   cal <- mixtime::cal_gregorian
+  expect_equal(as_period_granule("year", NULL), cal$year(1L))
+  expect_equal(as_period_granule("2 weeks", NULL), mixtime::cal_isoweek$week(2L))
+  expect_equal(as_period_granule("1y", NULL), cal$year(1L))
+  expect_equal(as_period_granule("3m", NULL), cal$month(3L))
+  expect_equal(as_period_granule("3M", NULL), cal$month(3L))
+  expect_equal(as_period_granule("10min", NULL), cal$minute(10L))
+  expect_equal(as_period_granule("10 mins", NULL), cal$minute(10L))
+  expect_equal(as_period_granule("Quarter", NULL), cal$quarter(1L))
+  expect_equal(as_period_granule("s", NULL), cal$second(1L))
+  expect_equal(as_period_granule(12, cal$month(1L)), cal$month(12L))
   expect_equal(
-    interval_to_period(cal$month(1L)),
-    lubridate::period(1, units = "month")
+    as_period_granule(mixtime::weeks(2L), NULL),
+    mixtime::cal_isoweek$week(2L)
   )
+
+  # lubridate periods are read from their slots
+  expect_equal(as_period_granule(lubridate::years(1), NULL), cal$year(1L))
   expect_equal(
-    interval_to_period(cal$quarter(1L)),
-    lubridate::period(3, units = "month")
+    as_period_granule(lubridate::weeks(2), NULL),
+    mixtime::cal_isoweek$week(2L)
   )
-  expect_equal(
-    interval_to_period(mixtime::cal_isoweek$week(2L)),
-    lubridate::period(2, units = "week")
-  )
-  expect_equal(
-    interval_to_period(cal$hour(1L)),
-    lubridate::period(1, units = "hour")
-  )
-  # Composite intervals are a list of granules
-  expect_equal(
-    interval_to_period(list(cal$hour(1L), cal$minute(30L))),
-    lubridate::hours(1) + lubridate::minutes(30)
-  )
+
+  expect_error(as_period_granule("fortnight", NULL), "must be a number")
+  expect_error(as_period_granule("1d 2h", NULL), "must be a number")
+  expect_error(as_period_granule("1.5 hours", NULL), "must be a number")
 })
 
 mixtime_tsbl <- function(index) {

@@ -52,7 +52,6 @@ Imports:
     tsibble,
     fabletools,
     dplyr,
-    lubridate (>= 1.7.1),
     tidyr,
     vctrs,
     cli,
@@ -63,6 +62,7 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     tsibbledata,
+    lubridate,
     feasts,
     fable,
     ggrepel,

@@ -37,14 +37,12 @@ as_period_granule <- function(period, interval, arg = "period") {
     return(scale_granule(duration@chronon, as.numeric(vctrs::vec_data(duration))))
   }
   if (is.character(period)) {
-    period <- lubridate::as.period(period)
-  }
-  # Before `is.numeric()`, which is also true of a lubridate period
-  if (is.numeric(period) && !lubridate::is.period(period)) {
-    # Multiples of the data's interval
-    return(scale_granule(interval, period))
-  }
-  if (lubridate::is.period(period)) {
+    granule <- parse_period_granule(period)
+    if (!is.null(granule)) {
+      return(granule)
+    }
+  } else if (inherits(period, "Period")) {
+    # A lubridate period, read from its slots
     fields <- c(
       year = period@year,
       month = period@month,
@@ -63,6 +61,9 @@ as_period_granule <- function(period, interval, arg = "period") {
       }
       return(scale_granule(granules[[unit]], unname(fields)))
     }
+  } else if (is.numeric(period)) {
+    # Multiples of the data's interval
+    return(scale_granule(interval, period))
   }
   abort(
     paste0(
@@ -72,6 +73,39 @@ as_period_granule <- function(period, interval, arg = "period") {
       "\"2 weeks\", or a mixtime granule or duration of a single unit."
     )
   )
+}
+
+# Parse a period string of a whole number of one unit (e.g. "year", "2 weeks"
+# or "3m") into a granule, or `NULL` if it can't be parsed. mixtime doesn't yet
+# export a parser for unit names, so this only aliases the unit names and
+# (lubridate-style) abbreviations documented for `period`, where "m" is a month
+# and "min" a minute.
+parse_period_granule <- function(x) {
+  parts <- regmatches(x, regexec("^\\s*([0-9]*)\\s*([[:alpha:]]+)\\s*$", x))[[1]]
+  if (length(parts) == 0) {
+    return(NULL)
+  }
+  n <- if (nzchar(parts[2])) as.integer(parts[2]) else 1L
+  # Singular unit names, keeping single letter abbreviations (e.g. "s")
+  unit <- sub("(.)s$", "\\1", tolower(parts[3]))
+  aliases <- c(
+    y = "year", yr = "year",
+    q = "quarter", qtr = "quarter",
+    m = "month", mon = "month", mth = "month",
+    w = "week", wk = "week",
+    d = "day",
+    h = "hour", hr = "hour",
+    min = "minute",
+    s = "second", sec = "second"
+  )
+  if (unit %in% names(aliases)) {
+    unit <- aliases[[unit]]
+  }
+  granules <- period_granules()
+  if (!unit %in% names(granules) || n < 1) {
+    return(NULL)
+  }
+  scale_granule(granules[[unit]], n)
 }
 
 # Number of observations (of the interval) in one period, or `NA` when that
@@ -137,10 +171,15 @@ interval_as_granule <- function(interval) {
     # A composite interval (a list of granules)
     return(if (length(interval) == 1) interval[[1]])
   }
-  tryCatch(
-    as_period_granule(interval_to_period(interval), NULL, "interval"),
-    error = function(e) NULL
-  )
+  # A legacy interval is a record of counts of each unit, of which a granule
+  # has exactly one
+  fields <- unlist(vctrs::vec_data(interval))
+  fields <- fields[fields != 0]
+  granules <- period_granules()
+  if (length(fields) != 1 || !(names(fields) %in% names(granules))) {
+    return(NULL)
+  }
+  scale_granule(granules[[names(fields)]], unname(fields))
 }
 
 # Convert an index of a legacy time class to the equivalent mixtime, so that

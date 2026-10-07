@@ -36,10 +36,11 @@ guess_plot_var <- function(x, y) {
 #' automatically selected from the data.
 #' @param period The seasonal period to display. If NULL (default),
 #' the largest frequency in the data is used. If numeric, it represents
-#' the frequency times the interval between observations. If a string
-#' (e.g., "1y" for 1 year, "3m" for 3 months, "1d" for 1 day,
-#' "1h" for 1 hour, "1min" for 1 minute, "1s" for 1 second),
-#' it's converted to a Period class object from the lubridate package.
+#' the frequency times the interval between observations. If a string, it is a
+#' whole number of a single unit (e.g., "year", "2 weeks", "1y" for 1 year,
+#' "3m" for 3 months, "1d" for 1 day, "1h" for 1 hour, "1min" for 1 minute,
+#' "1s" for 1 second). A mixtime duration (e.g. `mixtime::weeks(2L)`) or
+#' granule can also be used.
 #' Note that the data must have at least one observation per seasonal period,
 #' and the period cannot be smaller than the observation interval.
 #' @param facet_period A secondary seasonal period to facet by
