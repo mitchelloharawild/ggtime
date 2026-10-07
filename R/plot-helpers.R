@@ -436,28 +436,14 @@ gg_lag <- function(
     )
   }
 
-  idx <- index(data)
-  ts_interval <- interval(data)
-  mt_index <- mixtime::is_mixtime(data[[as_name(idx)]])
-
-  if (mt_index || is_granule(ts_interval)) {
-    granule <- interval_as_granule(ts_interval)
-    if (is.null(period) && !interval_is_seasonal(granule)) {
-      # Non-seasonal data (e.g. yearly) isn't coloured by season
-      frequency <- 1
-    } else {
-      period <- season_period(period, granule, auto = "smallest")
-      frequency <- observations_per_period(granule, period)
-    }
+  idx <- index_var(data)
+  ts_interval <- interval_as_granule(interval(data))
+  if (is.null(period) && !interval_is_seasonal(ts_interval)) {
+    # Non-seasonal data (e.g. yearly) isn't coloured by season
+    frequency <- 1
   } else {
-    frequency <- get_frequencies(period, data, .auto = "smallest")
-  }
-
-  if (!mt_index) {
-    if (is.na(frequency)) {
-      abort("The seasonal period must be a fixed number of observations.")
-    }
-    period_units <- frequency * default_time_units(ts_interval)
+    period <- season_period(period, ts_interval, auto = "smallest")
+    frequency <- observations_per_period(ts_interval, period)
   }
 
   lag_exprs <- map(lags, function(lag) expr(lag(!!y, !!lag))) %>%
@@ -466,12 +452,8 @@ gg_lag <- function(
   data <- data %>%
     as_tibble %>%
     mutate(
-      season = if (!mt_index) {
-        within_time_identifier(
-          !!idx - period_units * (tz_units_since(!!idx) %/% period_units)
-        )
-      } else if (!is.null(period)) {
-        season_position_factor(!!idx, period)
+      season = if (!is.null(period)) {
+        season_position_factor(as_mixtime_index(!!sym(idx)), period)
       },
       !!!lag_exprs
     )

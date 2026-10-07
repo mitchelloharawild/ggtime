@@ -77,6 +77,20 @@ test_that("gg_lag() supports legacy indices", {
   expect_null(p$mapping$colour)
 })
 
+test_that("gg_lag() doesn't colour series without a calendar interval", {
+  p <- expect_lag_builds(lag_tsbl(seq(1, 100)))
+  expect_null(p$mapping$colour)
+
+  irregular <- tsibble::tsibble(
+    t = daily_dates[c(1, 3, 4, 8, 9, 15)],
+    y = 1:6,
+    index = t,
+    regular = FALSE
+  )
+  p <- expect_lag_builds(irregular)
+  expect_null(p$mapping$colour)
+})
+
 expect_tsdisplay_season <- function(data) {
   p <- gg_tsdisplay(data, y)
   expect_s3_class(p, "gg_tsensemble")
