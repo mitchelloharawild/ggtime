@@ -392,10 +392,7 @@ test_that("skipping the snap leaves the cuts it would have made", {
 
 test_that("a zoned week cuts on its own boundaries with the snap skipped", {
   # The guard skips snapping over a range holding no offset change, so the cuts
-  # `seq()` returns are the cuts drawn, with nothing left to correct them. That
-  # made this the case a mixtime bug surfaced through -- `seq()` started a
-  # zoned weekly axis three days late, and snapping had been quietly covering
-  # for it (`mixtime/_dev/seq-bug.md`, fixed upstream 2026-08-19).
+  # `seq()` returns are the cuts drawn, with nothing left to correct them.
   tz <- "Australia/Melbourne"
   range <- mixtime::datetime(as.POSIXct(c("2015-06-01", "2015-08-15"), tz = tz))
   granule <- test_granules$weeks
