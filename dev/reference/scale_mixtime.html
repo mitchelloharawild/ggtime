@@ -143,7 +143,9 @@ omitted.</p></dd>
 <dt id="arg-time-breaks">time_breaks<a class="anchor" aria-label="anchor" href="#arg-time-breaks"></a></dt>
 <dd><p>A duration giving the distance between breaks, such as
 <code>mixtime::weeks(2L)</code> or <code>mixtime::years(10L)</code>. If both <code>breaks</code> and
-<code>time_breaks</code> are specified, <code>time_breaks</code> wins.</p></dd>
+<code>time_breaks</code> are specified, <code>time_breaks</code> wins. Each break is positioned
+within its granule by <code>align_discrete</code>, as data of that granule would be
+(e.g. monthly breaks fall mid-month, on monthly observations).</p></dd>
 
 
 <dt id="arg-minor-breaks">minor_breaks<a class="anchor" aria-label="anchor" href="#arg-minor-breaks"></a></dt>
@@ -183,7 +185,7 @@ in <code><a href="https://pkg.mitchelloharawild.com/mixtime/articles/time-format
 
 <dt id="arg-time-chronon">time_chronon<a class="anchor" aria-label="anchor" href="#arg-time-chronon"></a></dt>
 <dd><p>A time granule that defines the common chronon to use for
-mixed granularity (e.g. <code>mixtime::tu_day(1L)</code>). The default automatically
+mixed granularity (e.g. <code>mixtime::cal_gregorian$day(1L)</code>). The default automatically
 selects it as the finest chronon that all time points can be represented in.</p></dd>
 
 
@@ -313,7 +315,7 @@ if the data contains both monthly and daily time points, the common time scale
 will be daily, with the monthly points aligned according to the <code>align_discrete</code>
 argument. If multiple time zones are present, the common time zone will
 default to UTC. The common time scale can be manually specified using the
-<code>time_chronon</code> argument, which accepts a <code>mixtime::time_unit</code>.</p>
+<code>time_chronon</code> argument, which accepts a time granule.</p>
     </div>
 
     <div id="ref-examples">
