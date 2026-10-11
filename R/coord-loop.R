@@ -244,20 +244,27 @@ CoordLoop <- function(coord) {
     loop_granule = function(self, cuts) self$time_loops,
 
     # Hook: the granule the time axis is divided into, stepping breaks and
-    # naming labels unless the scale has breaks of its own. `NULL` here,
-    # since a loop has no divisions of its own to break at.
-    break_granule = function(self, cuts) NULL,
+    # naming labels unless the scale has breaks of its own. Here, a unit of
+    # the loop's calendar dividing it into a handful of parts (see
+    # `loop_division_granule()`).
+    break_granule = function(self, cuts, scale) {
+      loop_division_granule(self$time_loops, scale$time_chronon, cuts[1])
+    },
+
+    # Are the divisions broken where the scale positions time of that
+    # granule (`align_discrete`), rather than at their boundaries?
+    align_breaks = TRUE,
 
     # The time scale, re-labelled to describe a position within the loop
     # rather than a point in time.
     cyclical_scales = function(self, scale_x, scale_y, cuts) {
       cycle <- self$loop_granule(cuts)
-      divide <- self$break_granule(cuts)
-      if (identical(self$time, "x")) {
-        list(x = as_cyclical_scale(scale_x, cycle, divide), y = scale_y)
-      } else {
-        list(x = scale_x, y = as_cyclical_scale(scale_y, cycle, divide))
-      }
+      time_x <- identical(self$time, "x")
+      scale <- if (time_x) scale_x else scale_y
+      divide <- self$break_granule(cuts, scale)
+      align <- if (self$align_breaks) scale_break_align(scale) else 0
+      scale <- as_cyclical_scale(scale, cycle, divide, align)
+      if (time_x) list(x = scale, y = scale_y) else list(x = scale_x, y = scale)
     },
 
     # Hook: the window to zoom `self$limits[[self$time_scale]]` into (see
@@ -374,10 +381,12 @@ CoordLoop <- function(coord) {
 #'   `duration_as_granule()`.
 #' @param divisions The granule the coord divides the axis into, from
 #'   `CoordLoop$break_granule()`, or `NULL` if it has no divisions of its own.
+#' @param align The position of each division's break within it, from 0 (its
+#'   start) to 1 (its end); see `breaks_time_seq()`.
 #' @returns `scale` broken and labelled by the loop, or unchanged where it has
 #'   nothing to add.
 #' @noRd
-as_cyclical_scale <- function(scale, time_loops, divisions = NULL) {
+as_cyclical_scale <- function(scale, time_loops, divisions = NULL, align = 0) {
   cycle <- loop_cycle(time_loops)
 
   # A scale stepping its own breaks by a granule takes precedence over the
@@ -403,7 +412,11 @@ as_cyclical_scale <- function(scale, time_loops, divisions = NULL) {
 
   fields <- list()
   if (divide) {
-    fields$breaks <- breaks_time_granule(divisions)
+    fields$breaks <- if (align == 0) {
+      breaks_time_granule(divisions)
+    } else {
+      breaks_time_seq(divisions, align)
+    }
   }
   if (is_waiver(scale$labels)) {
     fields$labels <- function(x) {
@@ -437,6 +450,67 @@ breaks_time_granule <- function(granule) {
       error = function(cnd) NULL
     )
   }
+}
+
+#' The largest number of divisions `loop_division_granule()` breaks a loop
+#' into, enough for the hours of a day.
+#' @noRd
+loop_max_divisions <- 24L
+
+#' The granule dividing a loop into a handful of parts
+#'
+#' The finest unit of the loop's own calendar that the data is observed at
+#' (or more coarsely than), and that divides the loop into at most
+#' `loop_max_divisions` parts: months of a year for monthly or daily data,
+#' days of a week for daily or hourly data, hours of a day for hourly data.
+#' @param time_loops The loop duration given to [coord_loop()], as reduced by
+#'   `duration_as_granule()`.
+#' @param chronon The chronon of the time scale (`time_chronon`).
+#' @param at A time within the loop, for units varying in length (e.g. days
+#'   in a month).
+#' @returns A granule, or `NULL` if no unit of the calendar fits.
+#' @noRd
+loop_division_granule <- function(time_loops, chronon, at) {
+  if (!is_granule(time_loops) || !is_granule(chronon)) {
+    return(NULL)
+  }
+  calendar <- mixtime::time_calendar(time_loops)
+  units <- lapply(names(calendar), function(unit) calendar[[unit]](1L))
+  # Units of the calendar are ordered from coarsest to finest.
+  classes <- vapply(units, function(unit) class(unit)[1], character(1L))
+  finer <- seq_along(units) > match(class(time_loops)[1], classes)
+  cardinality <- function(x, y) {
+    tryCatch(mixtime::chronon_cardinality(x, y, at = at), error = function(e) NA)
+  }
+  for (granule in rev(units[finer])) {
+    # Half days divide too few hours to be a useful axis division.
+    if (granule_unit(granule) == "ampm") {
+      next
+    }
+    # Finer than the data, which has no observations in most of them.
+    if (!isTRUE(cardinality(chronon, granule) >= 1)) {
+      next
+    }
+    n <- cardinality(granule, time_loops)
+    if (isTRUE(n > 1 && n <= loop_max_divisions)) {
+      return(granule)
+    }
+  }
+  NULL
+}
+
+#' Where a scale positions time within a granule
+#'
+#' The `align_discrete` of a [scale_x_mixtime()] for its own aesthetic, or 0
+#' (the start) for a scale without one (e.g. [ggplot2::scale_x_date()]).
+#' @param scale The positional `Scale` handling the time aesthetic.
+#' @noRd
+scale_break_align <- function(scale) {
+  align <- scale$align_discrete
+  if (is.function(align)) {
+    align <- align(scale$aesthetics[1])
+  }
+  align %||% 0
 }
 
 #' The cycle that a looped time axis repeats over

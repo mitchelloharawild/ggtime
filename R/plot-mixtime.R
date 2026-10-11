@@ -131,7 +131,8 @@ nominal_observations_per_period <- function(interval, period) {
     week = 604800,
     month = 2629746,
     quarter = 7889238,
-    year = 31556952
+    year = 31556952,
+    isoyear = 31556952
   )
   nominal <- function(x) seconds[[granule_unit(x)]] * x@n
   nominal(period) / nominal(interval)
@@ -139,7 +140,9 @@ nominal_observations_per_period <- function(interval, period) {
 
 # The default seasonal period for a granule interval: the largest (or
 # smallest) common calendar period containing more than one observation (cf.
-# `fabletools::get_frequencies(.auto = )`). With `fixed = TRUE`, only periods
+# `fabletools::get_frequencies(.auto = )`). Periods are taken from the
+# interval's own calendar where it has them, so weekly data loops over ISO
+# week-years rather than Gregorian years. With `fixed = TRUE`, only periods
 # with a fixed number of observations (e.g. not weeks in a year) are used.
 default_period_granule <- function(
   interval,
@@ -155,7 +158,13 @@ default_period_granule <- function(
     # Months vary in length, so aren't a natural smallest period
     units <- rev(setdiff(units, "month"))
   }
-  for (granule in period_granules()[units]) {
+  calendar <- mixtime::time_calendar(interval)
+  for (unit in units) {
+    granule <- if (unit %in% names(calendar)) {
+      calendar[[unit]](1L)
+    } else {
+      period_granules()[[unit]]
+    }
     n <- observations_per_period(interval, granule)
     if (is.na(n) && !fixed) {
       n <- nominal_observations_per_period(interval, granule)
@@ -212,22 +221,6 @@ as_mixtime_index <- function(x) {
     "Seasonal plots require a time index, not an index of class <%s>.",
     class(x)[1]
   ))
-}
-
-# The granule to break a season's axis at: the largest calendar unit
-# dividing the period into a handful of parts (months of a year, days of a
-# week), or `NULL` to leave the breaks to the scale.
-season_break_granule <- function(period, interval) {
-  for (granule in period_granules()[c("month", "day", "hour", "minute")]) {
-    n <- nominal_observations_per_period(granule, period)
-    if (n > 12) {
-      return(NULL)
-    }
-    if (n > 1 && nominal_observations_per_period(interval, granule) >= 1) {
-      return(granule)
-    }
-  }
-  NULL
 }
 
 # The label of a season, named for the period granule it spans ("2020",

@@ -173,11 +173,6 @@ gg_season <- function(
       )
   }
 
-  break_granule <- season_break_granule(period, ts_interval)
-  if (!is.null(break_granule)) {
-    p <- p + scale_x_mixtime(time_breaks = break_granule)
-  }
-
   p <- p +
     if (polar) {
       coord_loop(time_loops = period, coord = ggplot2::coord_radial())

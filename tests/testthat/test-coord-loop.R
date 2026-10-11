@@ -172,25 +172,23 @@ test_that("looped axes are labelled cyclically", {
   p <- ggplot(df, aes(x = time, y = value)) + geom_line()
 
   # Monthly data looped over years shows months of the year, so the year in
-  # which each month fell is no longer meaningful.
+  # which each month fell is no longer meaningful. The loop is broken at each
+  # month, where the scale centres the monthly observations.
   expect_equal(
     loop_labels(p + coord_loop(time_loops = mixtime::years(1L))),
-    c("Jan", "Mar", "May", "Jul", "Sep", "Nov", "Jan")
+    month.abb
   )
   expect_equal(
     loop_labels(
       p + coord_loop(time_loops = mixtime::years(1L), coord = coord_radial()),
       "theta"
     ),
-    # The end of a radial loop is its start, so isn't broken (or labelled)
-    # again.
-    c("Jan", "Mar", "May", "Jul", "Sep", "Nov")
+    month.abb
   )
   # A calendar breaks its axis at every one of the row's own cells rather than
   # wherever pretty breaks fall, so each cell of the row is named. A yearly
   # row's default daily cells are far past `calendar_max_cell_breaks`, so
-  # `cells` is dropped and the axis falls back to the scale's own breaks --
-  # the same ones `coord_loop()` shows above.
+  # `cells` is dropped and the axis falls back to the scale's own breaks.
   expect_equal(
     loop_labels(p + coord_calendar(rows = mixtime::years(1L), cols = NULL)),
     c("Jan", "Mar", "May", "Jul", "Sep", "Nov", "Jan")
@@ -213,20 +211,47 @@ test_that("looped axes are labelled cyclically", {
 
   # Labels the user asked for are not overridden.
   expect_equal(
-    loop_labels(
-      p +
-        coord_loop(time_loops = mixtime::years(1L)) +
-        scale_x_mixtime(time_labels = "{lin(year)}-{cyc(month, year)}")
+    setdiff(
+      loop_labels(
+        p +
+          coord_loop(time_loops = mixtime::years(1L)) +
+          scale_x_mixtime(time_labels = "{lin(year)}-{cyc(month, year)}")
+      ),
+      "NA"
     ),
-    c(
-      "1973-01",
-      "1973-03",
-      "1973-05",
-      "1973-07",
-      "1973-09",
-      "1973-11",
-      "1974-01"
+    sprintf("1973-%02d", 1:12)
+  )
+})
+
+test_that("looped axes are broken at their observations", {
+  skip_if_cran_mixtime()
+  loop_breaks <- function(p) {
+    built <- ggplot_build(p)
+    x <- built$layout$panel_params[[1]]$x
+    list(
+      breaks = x$breaks[!is.na(x$breaks)],
+      labels = x$get_labels()[!is.na(x$breaks)],
+      data = built$data[[1]]$x
     )
+  }
+  hourly <- data.frame(
+    time = mixtime::as_mixtime(
+      as.POSIXct("2020-01-06", tz = "UTC") + 3600 * (0:335)
+    ),
+    value = seq_len(336)
+  )
+  p <- ggplot(hourly, aes(x = time, y = value)) + geom_line()
+
+  # The finest unit of the loop's calendar the data is observed at, unless
+  # it divides the loop into too many parts (hours of a week).
+  by_day <- loop_breaks(p + coord_loop(time_loops = mixtime::days(1L)))
+  expect_equal(by_day$labels, sprintf("h%02d", 0:23))
+  expect_true(all(by_day$breaks %in% by_day$data))
+
+  by_week <- loop_breaks(p + coord_loop(time_loops = mixtime::weeks(1L)))
+  expect_equal(
+    by_week$labels,
+    c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
   )
 })
 
@@ -338,7 +363,7 @@ test_that("the cycle of a looped axis follows the data's chronon", {
   # Daily data looped over weeks shows days of the week.
   expect_equal(
     loop_labels(p + coord_loop(time_loops = mixtime::weeks(1L))),
-    c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon")
+    c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
   )
   # The same data looped over months shows days of the month.
   expect_match(
@@ -356,7 +381,7 @@ test_that("the cycle of a looped axis follows the data's chronon", {
         geom_line() +
         coord_loop(time_loops = mixtime::years(1L))
     ),
-    c("Q1", "Q2", "Q3", "Q4", "Q1")
+    c("Q1", "Q2", "Q3", "Q4")
   )
 })
 

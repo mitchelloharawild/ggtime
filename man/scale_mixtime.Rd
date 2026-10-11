@@ -60,7 +60,9 @@ omitted.}
 
 \item{time_breaks}{A duration giving the distance between breaks, such as
 \code{mixtime::weeks(2L)} or \code{mixtime::years(10L)}. If both \code{breaks} and
-\code{time_breaks} are specified, \code{time_breaks} wins.}
+\code{time_breaks} are specified, \code{time_breaks} wins. Each break is positioned
+within its granule by \code{align_discrete}, as data of that granule would be
+(e.g. monthly breaks fall mid-month, on monthly observations).}
 
 \item{minor_breaks}{One of:
 \itemize{

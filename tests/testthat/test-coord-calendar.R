@@ -2638,7 +2638,7 @@ test_that("the calendar's breaks give way to the scale's own", {
     axis_labels(
       p + weekly + scale_x_mixtime(time_breaks = mixtime::days(2L))
     ),
-    c("Fri", "Sun", "Tue", "Thu")
+    c("Fri", "Sun", "Tue")
   )
   expect_length(
     axis_labels(

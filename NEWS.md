@@ -18,7 +18,8 @@
   `gg_tsdisplay()`, and `autoplot()` of ACF/PACF/CCF results) are now all
   built from mixtime. Legacy `Date`, `POSIXct`, and tsibble
   `yearweek()`/`yearmonth()`/`yearquarter()` indices are converted to mixtime
-  for plotting, so existing code continues to work.
+  for plotting, so existing code continues to work. Labels for cyclical displays
+  of time (e.g. time-of-day) have been improved as a result.
 
 * `gg_season()` is now drawn with `coord_loop()`, keeping time continuous
   rather than offsetting it into a single season. The lines connecting
@@ -45,6 +46,9 @@
 
 * `gg_season()` and related plots now give a clear error for zero-row data
   instead of failing with "object 'found_format' not found".
+
+* `gg_season()` now includes lines connecting observations across seasonalities
+  (e.g. from December of one year to January of the next).
 
 * ggtime no longer imports lubridate.
 

@@ -137,8 +137,30 @@ test_that("gg_season() supports legacy Date and POSIXct indices", {
   x <- ggplot2::ggplot_build(p)@layout$panel_params[[1]]$x
   expect_equal(
     x$get_labels()[!is.na(x$breaks)],
-    c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon")
+    c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
   )
+})
+
+test_that("gg_season() breaks the time axis at observations", {
+  skip_if_cran_mixtime()
+  p <- gg_season(tsbl_co2, value)
+  built <- ggplot2::ggplot_build(p)
+  x <- built@layout$panel_params[[1]]$x
+  breaks <- x$breaks[!is.na(x$breaks)]
+  expect_length(breaks, 12)
+  expect_true(all(breaks %in% built@data[[1]]$x))
+})
+
+test_that("gg_season() loops weekly data over ISO week-years", {
+  skip_if_cran_mixtime()
+  weekly <- tsibble::tsibble(
+    week = tsibble::yearweek(as.Date("2019-01-07") + 7 * (0:155)),
+    y = seq_len(156),
+    index = week
+  )
+  p <- gg_season(weekly, y)
+  expect_s3_class(p$coordinates$time_loops, "mixtime::tu_isoyear")
+  expect_no_error(ggplot2::ggplot_build(p))
 })
 
 test_that("gg_subseries() plots", {

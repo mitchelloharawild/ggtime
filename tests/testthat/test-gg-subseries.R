@@ -71,7 +71,7 @@ test_that("gg_subseries() labels legacy indices with times", {
   expect_equal(levels(p$data$id), month.abb)
   expect_equal(
     subseries_axis_labels(p),
-    c("2018", "2020", "2022", "2024")
+    c("2018", "2020", "2022")
   )
 
   p <- expect_subseries_builds(
@@ -79,7 +79,7 @@ test_that("gg_subseries() labels legacy indices with times", {
   )
   expect_equal(
     subseries_axis_labels(p),
-    c("2018", "2019", "2020", "2021")
+    c("2018", "2019", "2020")
   )
 })
 

@@ -423,7 +423,7 @@ CoordCalendar <- function(coord) {
     # gridlines (`calendar_cell_grid()`). Returns `NULL` (scale's own
     # breaks) when `cells` can't cut the axis or a row holds more cells
     # than `calendar_max_cell_breaks`.
-    break_granule = function(self, cuts) {
+    break_granule = function(self, cuts, scale) {
       cell <- cuts$granules$cells
       if (is.null(cell)) {
         return(NULL)
@@ -446,6 +446,9 @@ CoordCalendar <- function(coord) {
       }
       cell
     },
+
+    # Cell breaks stay on the cell gridlines, at the start of each cell.
+    align_breaks = FALSE,
 
     # Hook: zooms `self$limits[[self$time_scale]]` into one row's own
     # window, so expansion, breaks and user limits are all applied to the
