@@ -69,12 +69,14 @@
 </ul></div>
 <div class="section level3">
 <h3 id="improvements-development-version">Improvements<a class="anchor" aria-label="anchor" href="#improvements-development-version"></a></h3>
-<ul><li>
-<code><a href="../reference/coord_calendar.html">coord_calendar()</a></code> gains <code>cell_ratio</code>, which fixes the aspect ratio of a calendar cell as <code><a href="https://ggplot2.tidyverse.org/reference/coord_fixed.html" class="external-link">coord_fixed()</a></code> fixes that of the data units of the axes. <code>cell_ratio = 1</code> gives the square cells of a printed calendar.</li>
+<ul><li><p><code><a href="../reference/gg_season.html">gg_season()</a></code> is now drawn with <code><a href="../reference/coord_loop.html">coord_loop()</a></code>, keeping time continuous rather than offsetting it into a single season. The lines connecting consecutive seasons (e.g. December to January) are now drawn, split across the left and right margins of the plot. Legacy <code>Date</code>, <code>POSIXct</code>, and tsibble <code><a href="https://tsibble.tidyverts.org/reference/year-week.html" class="external-link">yearweek()</a></code>/<code><a href="https://tsibble.tidyverts.org/reference/year-month.html" class="external-link">yearmonth()</a></code>/<code><a href="https://tsibble.tidyverts.org/reference/year-quarter.html" class="external-link">yearquarter()</a></code> indices are converted to mixtime for this.</p></li>
+<li><p>Looping <code><a href="https://ggplot2.tidyverse.org/reference/coord_radial.html" class="external-link">coord_radial()</a></code> with <code><a href="../reference/coord_loop.html">coord_loop()</a></code> no longer labels the end of the loop with its start (e.g. “Jan/Jan”).</p></li>
+<li><p><code><a href="../reference/gg_season.html">gg_season()</a></code> and related plots now give a clear error for zero-row data instead of failing with “object ‘found_format’ not found”.</p></li>
+<li><p><code><a href="../reference/coord_calendar.html">coord_calendar()</a></code> gains <code>cell_ratio</code>, which fixes the aspect ratio of a calendar cell as <code><a href="https://ggplot2.tidyverse.org/reference/coord_fixed.html" class="external-link">coord_fixed()</a></code> fixes that of the data units of the axes. <code>cell_ratio = 1</code> gives the square cells of a printed calendar.</p></li>
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="page-header" data-toc-text="1.0.0" id="ggtime-100">ggtime 1.0.0<a class="anchor" aria-label="anchor" href="#ggtime-100"></a></h2>
+<h2 class="page-header" data-toc-text="1.0.0" id="ggtime-100">ggtime 1.0.0<small>2026-09-01</small><a class="anchor" aria-label="anchor" href="#ggtime-100"></a></h2>
 <p>This release introduces the grammar of temporal graphics: a set of time-aware geoms, scales, and coordinate systems that extend ggplot2 to work with mixtime time vectors. These grammar elements sit alongside the plot helper functions from previous releases, and are what the helpers are now built from.</p>
 <div class="section level3">
 <h3 id="new-features-1-0-0">New features<a class="anchor" aria-label="anchor" href="#new-features-1-0-0"></a></h3>
