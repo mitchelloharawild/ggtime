@@ -70,6 +70,7 @@ test_that("the scale converts offsets without them reaching the axis", {
 })
 
 test_that("offsets given at several granularities are each converted", {
+  skip_if_cran_mixtime()
   mel <- "Australia/Melbourne"
   hours <- mixtime::mixtime(
     as.POSIXct("2023-04-01 20:00", tz = mel) + 0:5 * 3600,
