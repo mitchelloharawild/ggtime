@@ -609,7 +609,9 @@ ScaleContinuousMixtime <- ggproto(
     # Store common time type for default backtransformation, labels, and more.
     # Maybe other attributes are needed (e.g. cycle for cyclical time)
     if (is_waiver(self$time_chronon)) {
-      self$time_chronon <- mixtime::chronon_glb(do.call(c, df[aesthetics]))
+      # TODO: Use `mixtime::chronon_glb()` once ggtime requires a mixtime
+      # release newer than 0.3.0 (where `chronon_common()` is deprecated).
+      self$time_chronon <- mixtime::chronon_common(do.call(c, df[aesthetics]))
     }
 
     # TODO - Consider applying the aes_nudge here, and calling ggplot2::Scale$transform_df.
