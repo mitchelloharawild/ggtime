@@ -23,7 +23,7 @@ patterns can be more easily seen when superimposed on top of each other."><meta 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">ggtime</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.0.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.0</span>
       </span>
     </div>
 
@@ -60,7 +60,7 @@ patterns can be more easily seen when superimposed on top of each other."><meta 
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Looped coordinates</h1>
-    <small class="dont-index">Source: <a href="https://github.com/mitchelloharawild/ggtime/blob/v1.0.0/R/coord-loop.R" class="external-link"><code>R/coord-loop.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/mitchelloharawild/ggtime/blob/main/R/coord-loop.R" class="external-link"><code>R/coord-loop.R</code></a></small>
     <div class="hidden name"><code>coord_loop.Rd</code></div>
     </div>
 
@@ -234,7 +234,8 @@ cut correctly.</p>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># utils::packageVersion("mixtime") &gt; "0.3.0"</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pkg.mitchelloharawild.com/ggtime/">ggtime</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/" class="external-link">mixtime</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
@@ -248,12 +249,10 @@ cut correctly.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Original plot</span></span></span>
 <span class="r-in"><span><span class="va">p</span></span></span>
-<span class="r-plt img"><img src="coord_loop-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With yearly looping to show seasonal patterns</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">+</span> <span class="fu">coord_loop</span><span class="op">(</span>time_loops <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration_helpers.html" class="external-link">years</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="coord_loop-2.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>
     </div>
   </div>

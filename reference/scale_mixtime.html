@@ -28,7 +28,7 @@ time_chronon argument."><meta property="og:image" content="https://pkg.mitchello
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">ggtime</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.0.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.0</span>
       </span>
     </div>
 
@@ -65,7 +65,7 @@ time_chronon argument."><meta property="og:image" content="https://pkg.mitchello
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Position scales for mixtime data</h1>
-    <small class="dont-index">Source: <a href="https://github.com/mitchelloharawild/ggtime/blob/v1.0.0/R/scale-time.R" class="external-link"><code>R/scale-time.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/mitchelloharawild/ggtime/blob/main/R/scale-time.R" class="external-link"><code>R/scale-time.R</code></a></small>
     <div class="hidden name"><code>scale_mixtime.Rd</code></div>
     </div>
 
@@ -143,7 +143,9 @@ omitted.</p></dd>
 <dt id="arg-time-breaks">time_breaks<a class="anchor" aria-label="anchor" href="#arg-time-breaks"></a></dt>
 <dd><p>A duration giving the distance between breaks, such as
 <code>mixtime::weeks(2L)</code> or <code>mixtime::years(10L)</code>. If both <code>breaks</code> and
-<code>time_breaks</code> are specified, <code>time_breaks</code> wins.</p></dd>
+<code>time_breaks</code> are specified, <code>time_breaks</code> wins. Each break is positioned
+within its granule by <code>align_discrete</code>, as data of that granule would be
+(e.g. monthly breaks fall mid-month, on monthly observations).</p></dd>
 
 
 <dt id="arg-minor-breaks">minor_breaks<a class="anchor" aria-label="anchor" href="#arg-minor-breaks"></a></dt>
@@ -183,7 +185,7 @@ in <code><a href="https://pkg.mitchelloharawild.com/mixtime/articles/time-format
 
 <dt id="arg-time-chronon">time_chronon<a class="anchor" aria-label="anchor" href="#arg-time-chronon"></a></dt>
 <dd><p>A time granule that defines the common chronon to use for
-mixed granularity (e.g. <code>mixtime::tu_day(1L)</code>). The default automatically
+mixed granularity (e.g. <code>mixtime::cal_gregorian$day(1L)</code>). The default automatically
 selects it as the finest chronon that all time points can be represented in.</p></dd>
 
 
@@ -313,12 +315,13 @@ if the data contains both monthly and daily time points, the common time scale
 will be daily, with the monthly points aligned according to the <code>align_discrete</code>
 argument. If multiple time zones are present, the common time zone will
 default to UTC. The common time scale can be manually specified using the
-<code>time_chronon</code> argument, which accepts a <code>mixtime::time_unit</code>.</p>
+<code>time_chronon</code> argument, which accepts a time granule.</p>
     </div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># utils::packageVersion("mixtime") &gt; "0.3.0"</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">uad_month</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  time <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">yearmonth</a></span><span class="op">(</span><span class="st">"1973 Jan"</span><span class="op">)</span> <span class="op">+</span> <span class="fl">0</span><span class="op">:</span><span class="fl">71</span>,</span></span>
@@ -336,8 +339,7 @@ default to UTC. The common time scale can be manually specified using the
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span>, color <span class="op">=</span> <span class="va">grain</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">scale_x_mixtime</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="scale_mixtime-1.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>
     </div>
   </div>
