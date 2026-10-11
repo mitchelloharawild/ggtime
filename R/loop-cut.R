@@ -248,7 +248,15 @@ cuts_can_drift <- function(cuts, to) {
     return(FALSE)
   }
 
-  offsets <- try_fetch(cut_utc_offsets(cuts), error = function(cnd) NULL)
+  zone <- unique(zone[!is.na(zone)])
+  # Cuts in several zones are snapped, rather than compared zone by zone.
+  if (length(zone) > 1L) {
+    return(TRUE)
+  }
+  offsets <- try_fetch(
+    cut_utc_offsets(cuts, zone),
+    error = function(cnd) NULL
+  )
   if (is.null(offsets) || anyNA(offsets) || length(offsets) != n) {
     return(TRUE)
   }
@@ -276,13 +284,17 @@ fixed_offset_zones <- c(
 #' microseconds; `mixtime::tz_offset()` answers the same question but takes
 #' hundreds of milliseconds, more than the snapping it would guard.
 #' @param cuts The stepped cutpoints.
+#' @param zone The time zone the cuts are in. A mixtime converted to
+#'   `POSIXct` keeps its instant but not its zone, so without this the offsets
+#'   would be read in the session's own zone.
 #' @returns Integer seconds east of UTC, one per cut. `NA` where the platform
 #'   does not report the offset, which `cuts_can_drift()` treats as unknown.
 #' @noRd
-cut_utc_offsets <- function(cuts) {
+cut_utc_offsets <- function(cuts, zone) {
   if (!inherits(cuts, "POSIXt")) {
     cuts <- as.POSIXct(cuts)
   }
+  attr(cuts, "tzone") <- zone
   as.POSIXlt(cuts)$gmtoff
 }
 
