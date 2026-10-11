@@ -4,25 +4,49 @@
 
 * `geom_candlestick()`/`stat_ohlc()`: summarises the values within each
   time granule by their first (`open`), largest (`high`), smallest (`low`), and
-  last (`close`) value, drawn as a candlestick chart.
+  last (`close`) value, drawn as a candlestick chart. Rising and falling
+  candles are coloured with `scale_colour_candlestick()` and
+  `scale_fill_candlestick()`.
+
+* `coord_calendar()` gains `cell_ratio`, which fixes the aspect ratio of a
+  calendar cell as `coord_fixed()` fixes that of the data units of the axes.
+  `cell_ratio = 1` gives the square cells of a printed calendar (#33).
 
 ## Improvements
+
+* The plot helpers (`gg_season()`, `gg_subseries()`, `gg_lag()`,
+  `gg_tsdisplay()`, and `autoplot()` of ACF/PACF/CCF results) are now all
+  built from mixtime. Legacy `Date`, `POSIXct`, and tsibble
+  `yearweek()`/`yearmonth()`/`yearquarter()` indices are converted to mixtime
+  for plotting, so existing code continues to work.
 
 * `gg_season()` is now drawn with `coord_loop()`, keeping time continuous
   rather than offsetting it into a single season. The lines connecting
   consecutive seasons (e.g. December to January) are now drawn, split across
-  the left and right margins of the plot. Legacy `Date`, `POSIXct`, and tsibble
-  `yearweek()`/`yearmonth()`/`yearquarter()` indices are converted to mixtime
-  for this.
+  the left and right margins of the plot.
+
+* The `period` of `gg_season()`, `gg_subseries()`, and `gg_lag()` can now be
+  a mixtime duration (e.g. `mixtime::weeks(2L)`) or a string of a whole number
+  of a single unit (e.g. `"year"` or `"2 weeks"`), and is no longer converted
+  to a lubridate period.
+
+* `gg_subseries()` now facets by the smallest seasonal period of the data by
+  default (e.g. a week for daily data, a day for hourly data).
+
+* `gg_lag()` now only colours by season for periods with a fixed number of
+  observations, and gives an informative error if the requested `period`
+  doesn't (e.g. days in a month).
+
+* `autoplot()` of ACF/PACF/CCF results now labels lags as durations of time
+  (e.g. "12 months") rather than a count of observations.
 
 * Looping `coord_radial()` with `coord_loop()` no longer labels the end of the
   loop with its start (e.g. "Jan/Jan").
 
-* `gg_season()` and related plots now give a clear error for zero-row data instead of failing with "object 'found_format' not found".
+* `gg_season()` and related plots now give a clear error for zero-row data
+  instead of failing with "object 'found_format' not found".
 
-* `coord_calendar()` gains `cell_ratio`, which fixes the aspect ratio of a
-  calendar cell as `coord_fixed()` fixes that of the data units of the axes.
-  `cell_ratio = 1` gives the square cells of a printed calendar.
+* ggtime no longer imports lubridate.
 
 # ggtime 1.0.0
 
