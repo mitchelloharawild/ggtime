@@ -61,6 +61,7 @@ Imports:
     utils
 Suggests:
     testthat (>= 3.0.0),
+    tibble,
     tsibbledata,
     lubridate,
     feasts,
