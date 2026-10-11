@@ -26,6 +26,7 @@ subseries_axis_labels <- function(p) {
 }
 
 test_that("gg_subseries() supports mixtime indices", {
+  skip_if_cran_mixtime()
   p <- expect_subseries_builds(
     subseries_tsbl(mixtime::yearmonth(monthly_dates))
   )
@@ -52,6 +53,7 @@ test_that("gg_subseries() supports mixtime indices", {
 })
 
 test_that("gg_subseries() supports legacy indices", {
+  skip_if_cran_mixtime()
   expect_subseries_builds(subseries_tsbl(tsibble::yearmonth(monthly_dates)))
   expect_subseries_builds(
     subseries_tsbl(tsibble::yearquarter(quarterly_dates))
@@ -62,6 +64,7 @@ test_that("gg_subseries() supports legacy indices", {
 })
 
 test_that("gg_subseries() labels legacy indices with times", {
+  skip_if_cran_mixtime()
   p <- expect_subseries_builds(
     subseries_tsbl(tsibble::yearmonth(monthly_dates))
   )
@@ -81,6 +84,7 @@ test_that("gg_subseries() labels legacy indices with times", {
 })
 
 test_that("gg_subseries() defaults to the smallest seasonal period", {
+  skip_if_cran_mixtime()
   p <- expect_subseries_builds(subseries_tsbl(daily_dates))
   expect_length(levels(p$data$id), 7)
 
@@ -94,6 +98,7 @@ test_that("gg_subseries() defaults to the smallest seasonal period", {
 })
 
 test_that("gg_subseries() breaks the axis every few seasons", {
+  skip_if_cran_mixtime()
   p <- expect_subseries_builds(
     subseries_tsbl(mixtime::as_mixtime(hourly_times)),
     "day"

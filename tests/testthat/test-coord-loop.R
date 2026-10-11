@@ -158,6 +158,7 @@ test_that("coord_loop rejects unsupported coords", {
 })
 
 test_that("looped axes are labelled cyclically", {
+  skip_if_cran_mixtime()
   loop_labels <- function(p, aes = "x") {
     params <- ggplot_build(p)$layout$panel_params[[1]][[aes]]
     labels <- params$get_labels()
@@ -230,6 +231,7 @@ test_that("looped axes are labelled cyclically", {
 })
 
 test_that("time_loops can be given as a granule directly", {
+  skip_if_cran_mixtime()
   df <- data.frame(
     time = mixtime::yearmonth(36L + 0:71),
     value = as.numeric(USAccDeaths)
@@ -320,6 +322,7 @@ test_that("time_loops rejects strings", {
 })
 
 test_that("the cycle of a looped axis follows the data's chronon", {
+  skip_if_cran_mixtime()
   loop_labels <- function(p) {
     params <- ggplot_build(p)$layout$panel_params[[1]]$x
     labels <- params$get_labels()

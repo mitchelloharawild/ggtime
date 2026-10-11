@@ -25,6 +25,7 @@ daily_ohlc <- function(days = 40) {
 layer_data1 <- function(p) ggplot_build(p)$data[[1]]
 
 test_that("open, high, low and close summarise each granule instance", {
+  skip_if_cran_mixtime()
   df <- hourly(3)
   data <- layer_data1(
     ggplot(df, aes(time, price)) +
@@ -48,6 +49,7 @@ test_that("open, high, low and close summarise each granule instance", {
 })
 
 test_that("values are summarised in time order, not row order", {
+  skip_if_cran_mixtime()
   df <- hourly(1)
   shuffled <- df[sample(nrow(df)), ]
 
@@ -60,6 +62,7 @@ test_that("values are summarised in time order, not row order", {
 })
 
 test_that("candlesticks are cut on the granule's own boundaries", {
+  skip_if_cran_mixtime()
   # Deliberately not starting on a boundary: the first candlestick covers the
   # whole of the day the data starts partway through, rather than a day
   # measured from the first observation.
@@ -80,6 +83,7 @@ test_that("candlesticks are cut on the granule's own boundaries", {
 })
 
 test_that("instances of uneven length are drawn at uneven widths", {
+  skip_if_cran_mixtime()
   data <- layer_data1(
     ggplot(
       daily_ohlc(90),
@@ -99,6 +103,7 @@ test_that("instances of uneven length are drawn at uneven widths", {
 })
 
 test_that("`width` sizes the body against its granule instance", {
+  skip_if_cran_mixtime()
   full <- layer_data1(
     ggplot(hourly(3), aes(time, price)) +
       geom_candlestick(granule = mixtime::days(1L), width = 1)
@@ -109,6 +114,7 @@ test_that("`width` sizes the body against its granule instance", {
 })
 
 test_that("already summarised values re-summarise onto a coarser granule", {
+  skip_if_cran_mixtime()
   df <- daily_ohlc(31)
   data <- layer_data1(
     ggplot(
@@ -132,6 +138,7 @@ test_that("already summarised values re-summarise onto a coarser granule", {
 })
 
 test_that("`direction` records how each candlestick closed", {
+  skip_if_cran_mixtime()
   df <- data.frame(
     time = mixtime::date(as.Date("2024-01-01") + rep(0:2, each = 2)),
     price = c(1, 2, 2, 1, 3, 3)
@@ -162,6 +169,7 @@ test_that("`direction` records how each candlestick closed", {
 })
 
 test_that("`direction` colours fill and colour red/green by default, without an explicit scale", {
+  skip_if_cran_mixtime()
   df <- data.frame(
     time = mixtime::date(as.Date("2024-01-01") + rep(0:2, each = 2)),
     price = c(1, 2, 2, 1, 3, 3)
@@ -187,6 +195,7 @@ test_that("`direction` colours fill and colour red/green by default, without an 
 })
 
 test_that("`change` records close minus open", {
+  skip_if_cran_mixtime()
   df <- data.frame(
     time = mixtime::date(as.Date("2024-01-01") + rep(0:2, each = 2)),
     price = c(1, 2, 2, 1, 3, 3)
@@ -201,6 +210,7 @@ test_that("`change` records close minus open", {
 })
 
 test_that("orientation follows whichever axis measures time", {
+  skip_if_cran_mixtime()
   df <- hourly(2)
 
   expect_false(layer_data1(
@@ -224,6 +234,7 @@ test_that("orientation follows whichever axis measures time", {
 })
 
 test_that("values are summarised separately for each group", {
+  skip_if_cran_mixtime()
   df <- rbind(
     transform(hourly(2), series = "a"),
     transform(hourly(2), price = price + 100, series = "b")
@@ -238,6 +249,7 @@ test_that("values are summarised separately for each group", {
 })
 
 test_that("the value axis transformation reaches every summary statistic", {
+  skip_if_cran_mixtime()
   # Pins the choice of `lower`/`upper`/`ymin`/`ymax` over names of our own:
   # a position scale only transforms (and only trains its limits on) the
   # aesthetics it claims, and `ggplot_global$y_aes` spells the `y` member of
@@ -258,6 +270,7 @@ test_that("the value axis transformation reaches every summary statistic", {
 })
 
 test_that("`granule` resolves bare granules against the axis's calendar", {
+  skip_if_cran_mixtime()
   df <- hourly(1)
   expect_equal(
     layer_data1(
@@ -275,6 +288,7 @@ test_that("`granule` resolves bare granules against the axis's calendar", {
 })
 
 test_that("a layer drawn with `stat = 'identity'` sizes bodies by resolution", {
+  skip_if_cran_mixtime()
   df <- daily_ohlc(5)
   data <- layer_data1(
     ggplot(
@@ -296,6 +310,7 @@ test_that("a layer drawn with `stat = 'identity'` sizes bodies by resolution", {
 })
 
 test_that("`granule` must be supplied, and must suit the axis", {
+  skip_if_cran_mixtime()
   df <- hourly(1)
   expect_error(
     ggplot_build(ggplot(df, aes(time, price)) + geom_candlestick()),
@@ -311,6 +326,7 @@ test_that("`granule` must be supplied, and must suit the axis", {
 })
 
 test_that("values to summarise must be mapped", {
+  skip_if_cran_mixtime()
   df <- hourly(1)
   expect_warning(
     ggplot_build(
@@ -321,6 +337,7 @@ test_that("values to summarise must be mapped", {
 })
 
 test_that("candlesticks draw a high-low line and an open-close body", {
+  skip_if_cran_mixtime()
   grob <- layer_grob(
     ggplot(hourly(3), aes(time, price)) +
       geom_candlestick(granule = mixtime::days(1L))

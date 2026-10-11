@@ -5,6 +5,7 @@ scale_labels <- function(p, aes = "x") {
 }
 
 test_that("durations are labelled as durations", {
+  skip_if_cran_mixtime()
   df <- data.frame(x = mixtime::days(1:10), y = 1:10)
   p <- ggplot(df, aes(x, y)) + geom_line()
 
@@ -14,6 +15,7 @@ test_that("durations are labelled as durations", {
 })
 
 test_that("mixed granularity durations share the finest chronon", {
+  skip_if_cran_mixtime()
   df <- data.frame(
     x = c(mixtime::days(1:5), mixtime::hours(c(140, 160))),
     y = 1:7
@@ -24,6 +26,7 @@ test_that("mixed granularity durations share the finest chronon", {
 })
 
 test_that("durations can't be scaled alongside other modes of time", {
+  skip_if_cran_mixtime()
   df <- data.frame(
     x = c(mixtime::days(1:3), mixtime::date("2021-01-01")),
     y = 1:4
@@ -34,6 +37,7 @@ test_that("durations can't be scaled alongside other modes of time", {
 })
 
 test_that("time points are unaffected by duration handling", {
+  skip_if_cran_mixtime()
   df <- data.frame(x = mixtime::yearmonth(600:611), y = 1:12)
   p <- ggplot(df, aes(x, y)) + geom_line()
 
@@ -70,6 +74,7 @@ test_that("break widths reject strings", {
 })
 
 test_that("break widths can be given as a granule directly", {
+  skip_if_cran_mixtime()
   df <- data.frame(x = mixtime::yearmonth(600:635), y = 1:36)
   p <- ggplot(df, aes(x, y)) + geom_line()
 
@@ -92,6 +97,7 @@ test_that("break widths can be given as a granule directly", {
 })
 
 test_that("time_breaks steps through the limits by a duration", {
+  skip_if_cran_mixtime()
   # `breaks_time_seq()` walks the limits with mixtime's calendrical arithmetic,
   # since `scales::fullseq()` has no method for the `<mt_time>` that a mixtime
   # scale's limits arrive as.
@@ -113,6 +119,7 @@ test_that("time_breaks steps through the limits by a duration", {
 })
 
 test_that("time_labels formats breaks with a mixtime format string", {
+  skip_if_cran_mixtime()
   # The weekday of a Gregorian date is a day within an ISO week, so labelling it
   # crosses calendars -- which is the point of mixtime's format strings.
   weekday <- "{cyc(day, cal_isoweek$week, label = TRUE, abbreviate = TRUE)}"
@@ -132,6 +139,7 @@ test_that("time_labels formats breaks with a mixtime format string", {
 })
 
 test_that("default labels drop the within-chronon position when breaks are whole", {
+  skip_if_cran_mixtime()
   # Daily breaks land at midnight, so every break's within-day position is
   # 0.0% -- format that as a plain date rather than "2024-01-08 0.0%".
   df <- data.frame(x = mixtime::date("2024-01-01") + 0:20, y = 1:21)
@@ -144,6 +152,7 @@ test_that("default labels drop the within-chronon position when breaks are whole
 })
 
 test_that("fractional within-chronon positions are still shown", {
+  skip_if_cran_mixtime()
   # A warp can place breaks partway through a chronon; that fractional
   # position should still be reported rather than always dropped.
   month_starts <- mixtime::yearmonth("2020 Dec") + 0:5
@@ -161,6 +170,7 @@ test_that("fractional within-chronon positions are still shown", {
 })
 
 test_that("time_labels formats timezone-aware breaks", {
+  skip_if_cran_mixtime()
   tz <- "Australia/Melbourne"
   df <- data.frame(
     x = mixtime::datetime(seq(
@@ -182,6 +192,7 @@ test_that("time_labels formats timezone-aware breaks", {
 })
 
 test_that("default labels leave the axis's timezone out", {
+  skip_if_cran_mixtime()
   # Every break of an axis shares its timezone, so naming it on each label
   # repeats what the axis as a whole says once.
   tz <- "Australia/Melbourne"
@@ -219,6 +230,7 @@ test_that("default labels leave the axis's timezone out", {
 })
 
 test_that("time_breaks labels name the granule the breaks step by", {
+  skip_if_cran_mixtime()
   df <- data.frame(
     x = mixtime::datetime("2015-01-01 00:00:00") + 3600 * (0:200),
     y = 1:201
@@ -256,6 +268,7 @@ test_that("time_breaks labels name the granule the breaks step by", {
 })
 
 test_that("break granules finer than the chronon fall within it", {
+  skip_if_cran_mixtime()
   # Daily breaks on monthly data ask for breaks the data's own chronon cannot
   # land on: casting them onto it would put every break within a month at that
   # month, giving a year's worth of breaks but only twelve positions to draw
@@ -303,6 +316,7 @@ test_that("break granules finer than the chronon fall within it", {
 })
 
 test_that("chronons measured from a non-zero epoch keep their own time", {
+  skip_if_cran_mixtime()
   # `mixtime::mixtime()` reads a bare `<mt_time>` as raw numbers to be measured
   # from the target chronon's epoch rather than as time to convert onto it, and
   # a year chronon's epoch is 1970 -- so year 2020 (stored as 50) was drawn at

@@ -126,7 +126,7 @@
 #'
 #' @return A `Coord` ggproto object that can be added to a ggplot.
 #'
-#' @examples
+#' @examplesIf utils::packageVersion("mixtime") > "0.3.0"
 #' library(ggplot2)
 #' library(ggtime)
 #' library(mixtime)

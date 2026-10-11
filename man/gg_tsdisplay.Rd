@@ -34,7 +34,7 @@ Plots a time series along with its ACF along with an customisable third
 graphic of either a PACF, histogram, lagged scatterplot or spectral density.
 }
 \examples{
-\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE) && utils::packageVersion("mixtime") > "0.3.0") withAutoprint(\{ # examplesIf}
 library(tsibble)
 library(dplyr)
 tsibbledata::aus_retail \%>\%

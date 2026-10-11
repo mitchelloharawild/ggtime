@@ -232,6 +232,7 @@ continuous colour or fill scale, e.g.
 }
 
 \examples{
+\dontshow{if (utils::packageVersion("mixtime") > "0.3.0") withAutoprint(\{ # examplesIf}
 library(ggplot2)
 
 prices <- data.frame(
@@ -297,7 +298,7 @@ ggplot(
   )
 ) +
   geom_candlestick(granule = mixtime::cal_isoweek$week(1L))
-
+\dontshow{\}) # examplesIf}
 }
 \section{Aesthetics}{
 

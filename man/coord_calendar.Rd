@@ -184,6 +184,7 @@ colliding.
 }
 
 \examples{
+\dontshow{if (utils::packageVersion("mixtime") > "0.3.0") withAutoprint(\{ # examplesIf}
 library(ggplot2)
 library(mixtime)
 
@@ -208,5 +209,5 @@ ggplot(pedestrian_2015, aes(x = Time, y = Count, color = Sensor)) +
     legend.position = "bottom",
     axis.text.y = element_blank(), axis.ticks.y = element_blank()
   )
-
+\dontshow{\}) # examplesIf}
 }

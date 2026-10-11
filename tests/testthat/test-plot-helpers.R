@@ -6,6 +6,7 @@ tsbl_ped <- dplyr::filter(
 )
 
 test_that("gg_season() plots", {
+  skip_if_cran_mixtime()
   p <- gg_season(tsbl_co2, value)
 
   expect_equal(
@@ -45,6 +46,7 @@ test_that("gg_season() plots", {
 
 
 test_that("gg_season() plot labels", {
+  skip_if_cran_mixtime()
   p <- gg_season(tsbl_co2, value, labels = "both")
 
   expect_equal(
@@ -69,6 +71,7 @@ test_that("gg_season() plot labels", {
 })
 
 test_that("gg_season() facets", {
+  skip_if_cran_mixtime()
   p <- gg_season(tsbl_co2, value, facet_period = "10 year", labels = "both")
 
   # expect_equal(
@@ -93,6 +96,7 @@ test_that("gg_season() facets", {
 })
 
 test_that("gg_season() loops time, drawing seasonal connections in the margins", {
+  skip_if_cran_mixtime()
   p <- gg_season(tsbl_co2, value)
   expect_s3_class(p$coordinates, "CoordLoop")
 
@@ -119,6 +123,7 @@ test_that("gg_season() loops time, drawing seasonal connections in the margins",
 })
 
 test_that("gg_season() supports legacy Date and POSIXct indices", {
+  skip_if_cran_mixtime()
   daily <- tsibble::tsibble(
     date = as.Date("2020-01-06") + 0:27,
     y = rep(1:7, 4),
@@ -137,6 +142,7 @@ test_that("gg_season() supports legacy Date and POSIXct indices", {
 })
 
 test_that("gg_subseries() plots", {
+  skip_if_cran_mixtime()
   p <- gg_subseries(tsbl_co2, value)
 
   expect_equal(
@@ -175,6 +181,7 @@ test_that("gg_subseries() plots", {
 })
 
 test_that("gg_lag() plots", {
+  skip_if_cran_mixtime()
   p <- gg_lag(tsbl_co2, value)
 
   expect_equal(
@@ -223,6 +230,7 @@ test_that("gg_lag() plots", {
 })
 
 test_that("gg_tsdisplay() plots", {
+  skip_if_cran_mixtime()
   p <- gg_tsdisplay(tsbl_co2, value)
 
   expect_s3_class(
@@ -379,6 +387,7 @@ skip_if_no_mixtime_tsibble <- function() {
 }
 
 test_that("gg_season() and gg_subseries() support mixtime indices", {
+  skip_if_cran_mixtime()
   skip_if_no_mixtime_tsibble()
   monthly <- mixtime_tsbl(
     mixtime::yearmonth(seq(as.Date("2018-01-01"), by = "month", length.out = 36))
@@ -418,6 +427,7 @@ test_that("autoplot.tbl_ts() labels the axis with the compact interval", {
 })
 
 test_that("gg_lag() supports mixtime indices", {
+  skip_if_cran_mixtime()
   skip_if_no_mixtime_tsibble()
   monthly <- mixtime_tsbl(
     mixtime::yearmonth(seq(as.Date("2018-01-01"), by = "month", length.out = 36))
@@ -530,6 +540,7 @@ test_that("lag_to_duration() converts lags to mixtime durations", {
 })
 
 test_that("autoplot.tbl_cf() plots lags as mixtime durations", {
+  skip_if_cran_mixtime()
   skip_if_no_mixtime_tsibble()
   skip_if_not_installed("feasts")
   loadNamespace("feasts")
@@ -563,6 +574,7 @@ test_that("lag_to_duration() passes mixtime durations through", {
 })
 
 test_that("autoplot.tbl_cf() accepts a mixtime duration lag index", {
+  skip_if_cran_mixtime()
   skip_if_no_mixtime_tsibble()
   cf <- tibble::tibble(
     lag = mixtime::duration(0:12, mixtime::cal_gregorian$month(1L)),

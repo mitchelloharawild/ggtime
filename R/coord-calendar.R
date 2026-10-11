@@ -114,7 +114,7 @@ utils::globalVariables(c("day", "week", "month", "quarter"))
 #' in a different default corner so several can be labelled at once without
 #' colliding.
 #'
-#' @examples
+#' @examplesIf utils::packageVersion("mixtime") > "0.3.0"
 #' library(ggplot2)
 #' library(mixtime)
 #'

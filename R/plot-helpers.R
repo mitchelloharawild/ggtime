@@ -64,7 +64,7 @@ guess_plot_var <- function(x, y) {
 #' Hyndman and Athanasopoulos (2019) Forecasting: principles and practice,
 #'  3rd edition, OTexts: Melbourne, Australia. https://OTexts.com/fpp3/
 #'
-#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE)
+#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE) && utils::packageVersion("mixtime") > "0.3.0"
 #' library(tsibble)
 #' library(dplyr)
 #' tsibbledata::aus_retail %>%
@@ -259,7 +259,7 @@ gg_season <- function(
 #' Hyndman and Athanasopoulos (2019) Forecasting: principles and practice,
 #'  3rd edition, OTexts: Melbourne, Australia. https://OTexts.com/fpp3/
 #'
-#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE)
+#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE) && utils::packageVersion("mixtime") > "0.3.0"
 #' library(tsibble)
 #' library(dplyr)
 #' tsibbledata::aus_retail %>%
@@ -337,7 +337,7 @@ subseries_break_step <- function(n_seasons, max_breaks = 3) {
 #'
 #' @return A ggplot object showing a lag plot of a time series.
 #'
-#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE)
+#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE) && utils::packageVersion("mixtime") > "0.3.0"
 #' library(tsibble)
 #' library(dplyr)
 #' tsibbledata::aus_retail %>%
@@ -466,7 +466,7 @@ gg_lag <- function(
 #' and practice}, 3rd edition, OTexts: Melbourne, Australia.
 #' \url{https://OTexts.com/fpp3/}
 #'
-#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE)
+#' @examplesIf requireNamespace("tsibbledata", quietly = TRUE) && utils::packageVersion("mixtime") > "0.3.0"
 #' library(tsibble)
 #' library(dplyr)
 #' tsibbledata::aus_retail %>%
@@ -599,7 +599,7 @@ gg_tsdisplay <- function(
 #' and practice}, 3rd edition, OTexts: Melbourne, Australia.
 #' \url{https://OTexts.com/fpp3/}
 #'
-#' @examplesIf requireNamespace("fable", quietly = TRUE) && requireNamespace("tsibbledata", quietly = TRUE)
+#' @examplesIf requireNamespace("fable", quietly = TRUE) && requireNamespace("tsibbledata", quietly = TRUE) && utils::packageVersion("mixtime") > "0.3.0"
 #' library(fable)
 #'
 #' tsibbledata::aus_production %>%

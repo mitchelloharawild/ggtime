@@ -25,7 +25,7 @@ A list of ggplot objects showing a useful plots of a time series model's residua
 Plots the residuals using a time series plot, ACF and histogram.
 }
 \examples{
-\dontshow{if (requireNamespace("fable", quietly = TRUE) && requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+\dontshow{if (requireNamespace("fable", quietly = TRUE) && requireNamespace("tsibbledata", quietly = TRUE) && utils::packageVersion("mixtime") > "0.3.0") withAutoprint(\{ # examplesIf}
 library(fable)
 
 tsibbledata::aus_production \%>\%

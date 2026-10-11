@@ -204,7 +204,7 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
 #' @returns A `<transform>` object, suitable for the `transform` argument of
 #'   [ggplot2::scale_x_continuous()] or [scale_x_mixtime()].
 #'
-#' @examples
+#' @examplesIf utils::packageVersion("mixtime") > "0.3.0"
 #' library(ggplot2)
 #'
 #' # Warp points need not be evenly spaced. A straight line makes the effect
