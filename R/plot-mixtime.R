@@ -111,13 +111,13 @@ parse_period_granule <- function(x) {
 # Number of observations (of the interval) in one period, or `NA` when that
 # isn't constant (e.g. weeks in a year) or the data has no calendar interval
 observations_per_period <- function(interval, period) {
-  if (
-    is.null(interval) ||
-      !mixtime::chronon_cardinality_is_fixed(interval, period)
-  ) {
+  if (is.null(interval)) {
     return(NA_real_)
   }
-  mixtime::chronon_cardinality(interval, period)
+  tryCatch(
+    mixtime::chronon_cardinality(interval, period),
+    error = function(e) NA_real_
+  )
 }
 
 # Approximate number of observations per period for calendar units of
