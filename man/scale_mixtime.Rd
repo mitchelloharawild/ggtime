@@ -94,7 +94,7 @@ notation.
 in \code{vignette("time-format-strings", package = "mixtime")}.}
 
 \item{time_chronon}{A time granule that defines the common chronon to use for
-mixed granularity (e.g. \code{mixtime::tu_day(1L)}). The default automatically
+mixed granularity (e.g. \code{mixtime::cal_gregorian$day(1L)}). The default automatically
 selects it as the finest chronon that all time points can be represented in.}
 
 \item{align_discrete}{Either a single number between 0 and 1, or a
@@ -228,7 +228,7 @@ if the data contains both monthly and daily time points, the common time scale
 will be daily, with the monthly points aligned according to the \code{align_discrete}
 argument. If multiple time zones are present, the common time zone will
 default to UTC. The common time scale can be manually specified using the
-\code{time_chronon} argument, which accepts a \code{mixtime::time_unit}.
+\code{time_chronon} argument, which accepts a time granule.
 }
 
 \examples{

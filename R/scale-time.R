@@ -19,7 +19,7 @@
 #' `minor_breaks` and `time_minor_breaks` are specified, `time_minor_breaks`
 #' wins.
 #' @param time_chronon A time granule that defines the common chronon to use for
-#' mixed granularity (e.g. `mixtime::tu_day(1L)`). The default automatically
+#' mixed granularity (e.g. `mixtime::cal_gregorian$day(1L)`). The default automatically
 #' selects it as the finest chronon that all time points can be represented in.
 #' @param align_discrete Either a single number between 0 and 1, or a
 #'   `aes_nudge()` object, defining how to align coarser granularities
@@ -101,7 +101,7 @@
 #' will be daily, with the monthly points aligned according to the `align_discrete`
 #' argument. If multiple time zones are present, the common time zone will
 #' default to UTC. The common time scale can be manually specified using the
-#' `time_chronon` argument, which accepts a `mixtime::time_unit`.
+#' `time_chronon` argument, which accepts a time granule.
 #'
 #' @examplesIf utils::packageVersion("mixtime") > "0.3.0"
 #' library(ggplot2)
