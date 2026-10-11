@@ -138,6 +138,7 @@ gg_season <- function(
 
   p <- ggplot(data, mapping) +
     geom_line(...) +
+    scale_x_mixtime() +
     ggplot2::labs(colour = NULL)
 
   if (num_ids <= max_col) {
@@ -828,6 +829,12 @@ autoplot.tbl_cf <- function(object, level = 95, ...) {
     geom_segment(aes(xend = !!sym("lag"), yend = 0)) +
     geom_hline(yintercept = 0) +
     xlab(paste0("lag [", format_interval(interval), "]"))
+
+  # An explicit scale, as mixtime's default scale lookup requires ggtime to be
+  # attached rather than only loaded (e.g. when called via `feasts::`)
+  if (mixtime::is_mixtime(object[["lag"]])) {
+    p <- p + scale_x_mixtime()
+  }
 
   if (!is.null(level)) {
     conf_int <- num_obs %>%
