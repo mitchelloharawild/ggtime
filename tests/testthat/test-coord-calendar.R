@@ -490,7 +490,6 @@ test_that("cuts a second apart survive on a modern time axis", {
 })
 
 test_that("a calendar of one-second rows is laid out row by row", {
-  skip_if_cran_mixtime()
   # End to end, through the granules rather than the numeric cuts: nothing else
   # in the suite exercises a granule finer than a day.
   time <- mixtime::datetime(
@@ -1622,7 +1621,6 @@ built_granules <- function(built, panel = 1L) {
 }
 
 test_that("a bare granule token resolves against the axis's own calendar", {
-  skip_if_cran_mixtime()
   # A plain `Date`/`POSIXct` axis (no `scale_x_mixtime()`) resolves bare
   # tokens against the Gregorian calendar, exactly as the durations they
   # replace as defaults did.
@@ -1671,7 +1669,6 @@ test_that("a namespace-qualified granule or duration bypasses the calendar mask"
 })
 
 test_that("a defaulted rows/cols falls back when the calendar lacks the granule", {
-  skip_if_cran_mixtime()
   # `cal_sym454` has no `quarter` granule, unlike Gregorian -- left at its
   # default, `cols` (`quarter(1L)`) quietly falls back to the duration it
   # names (`month(3L)`) instead of erroring, the same way a defaulted `panes`
@@ -1691,7 +1688,6 @@ test_that("a defaulted rows/cols falls back when the calendar lacks the granule"
 })
 
 test_that("a granule token missing from the calendar errors with a hint", {
-  skip_if_cran_mixtime()
   # The fallback above only applies to a defaulted `rows`/`cols` -- a granule
   # the user asked for by name still errors when their axis's calendar
   # cannot resolve it, exactly as any other unresolvable granule does.
@@ -2137,7 +2133,6 @@ test_that("a granule grouping rows is labelled against the row it starts", {
 })
 
 test_that("labels are formatted for both mixtime and Date axes", {
-  skip_if_cran_mixtime()
   labels_of <- function(p) {
     built <- ggplot_build(p)
     calendar_labels(
@@ -2576,7 +2571,6 @@ test_that("each panel's cyclical scale labels its own granule", {
 })
 
 test_that("the time axis is broken at every cell of a row", {
-  skip_if_cran_mixtime()
   axis_labels <- function(p) {
     labels <- ggplot_build(p)$layout$panel_params[[1]]$x$get_labels()
     labels[!is.na(labels)]
@@ -2620,7 +2614,6 @@ test_that("the time axis is broken at every cell of a row", {
 })
 
 test_that("the calendar's breaks give way to the scale's own", {
-  skip_if_cran_mixtime()
   axis_labels <- function(p) {
     labels <- ggplot_build(p)$layout$panel_params[[1]]$x$get_labels()
     labels[!is.na(labels)]

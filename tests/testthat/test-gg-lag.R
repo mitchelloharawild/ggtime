@@ -21,7 +21,6 @@ expect_lag_builds <- function(data, period = NULL) {
 }
 
 test_that("gg_lag() supports mixtime indices", {
-  skip_if_cran_mixtime()
   p <- expect_lag_builds(lag_tsbl(mixtime::yearmonth(monthly_dates)))
   expect_equal(levels(p$data$season), month.abb)
 
@@ -45,7 +44,6 @@ test_that("gg_lag() supports mixtime indices", {
 })
 
 test_that("gg_lag() accepts a period for mixtime indices", {
-  skip_if_cran_mixtime()
   monthly <- lag_tsbl(mixtime::yearmonth(monthly_dates))
   for (period in list("1y", "year", mixtime::years(1L))) {
     p <- expect_lag_builds(monthly, period)
@@ -63,7 +61,6 @@ test_that("gg_lag() accepts a period for mixtime indices", {
 })
 
 test_that("gg_lag() supports legacy indices", {
-  skip_if_cran_mixtime()
   p <- expect_lag_builds(lag_tsbl(tsibble::yearmonth(monthly_dates)))
   expect_equal(levels(p$data$season), month.abb)
   p <- expect_lag_builds(lag_tsbl(tsibble::yearquarter(quarterly_dates)))
@@ -126,7 +123,6 @@ expect_tsdisplay_season <- function(data) {
 }
 
 test_that("gg_tsdisplay() supports mixtime and legacy indices", {
-  skip_if_cran_mixtime()
   skip_if_not_installed("feasts")
   expect_tsdisplay_season(lag_tsbl(mixtime::yearmonth(monthly_dates)))
   expect_tsdisplay_season(lag_tsbl(mixtime::yearquarter(quarterly_dates)))

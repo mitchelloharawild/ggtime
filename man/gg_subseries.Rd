@@ -38,7 +38,7 @@ particularly useful in identifying changes in the seasonal pattern over time.
 similar to a seasonal plot (\code{\link[=gg_season]{gg_season()}}), and
 }
 \examples{
-\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE) && utils::packageVersion("mixtime") > "0.3.0") withAutoprint(\{ # examplesIf}
+\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(tsibble)
 library(dplyr)
 tsibbledata::aus_retail \%>\%

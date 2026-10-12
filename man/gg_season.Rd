@@ -75,7 +75,7 @@ line connecting one season to the next (e.g. December to January) is drawn
 too, split between the right and left margins of the plot.
 }
 \examples{
-\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE) && utils::packageVersion("mixtime") > "0.3.0") withAutoprint(\{ # examplesIf}
+\dontshow{if (requireNamespace("tsibbledata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(tsibble)
 library(dplyr)
 tsibbledata::aus_retail \%>\%

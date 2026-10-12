@@ -160,7 +160,6 @@ cut correctly.
 }
 
 \examples{
-\dontshow{if (utils::packageVersion("mixtime") > "0.3.0") withAutoprint(\{ # examplesIf}
 library(ggplot2)
 library(ggtime)
 library(mixtime)
@@ -178,5 +177,5 @@ p
 
 # With yearly looping to show seasonal patterns
 p + coord_loop(time_loops = mixtime::years(1L))
-\dontshow{\}) # examplesIf}
+
 }

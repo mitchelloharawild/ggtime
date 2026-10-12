@@ -83,7 +83,7 @@
 #'   \item{`width`}{The width of the candlestick's body, in data units.}
 #' }
 #'
-#' @examplesIf utils::packageVersion("mixtime") > "0.3.0"
+#' @examples
 #' library(ggplot2)
 #'
 #' prices <- data.frame(

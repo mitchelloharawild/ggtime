@@ -234,7 +234,6 @@ default to UTC. The common time scale can be manually specified using the
 }
 
 \examples{
-\dontshow{if (utils::packageVersion("mixtime") > "0.3.0") withAutoprint(\{ # examplesIf}
 library(ggplot2)
 library(dplyr)
 uad_month <- tibble(
@@ -253,5 +252,5 @@ bind_rows(
   ggplot(aes(time, value, color = grain)) +
   geom_line() +
   scale_x_mixtime()
-\dontshow{\}) # examplesIf}
+
 }

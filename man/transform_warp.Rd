@@ -55,7 +55,6 @@ of 28 day February and \code{614.5} the midpoint of 31 day March.
 }
 
 \examples{
-\dontshow{if (utils::packageVersion("mixtime") > "0.3.0") withAutoprint(\{ # examplesIf}
 library(ggplot2)
 
 # Warp points need not be evenly spaced. A straight line makes the effect
@@ -97,5 +96,5 @@ ggplot(pedestrians, aes(date, count)) +
     # + 0 indicates the start of each month (continuous time model)
     transform = transform_warp(month_starts + 0)
   )
-\dontshow{\}) # examplesIf}
+
 }

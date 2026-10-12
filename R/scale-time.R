@@ -105,7 +105,7 @@
 #' default to UTC. The common time scale can be manually specified using the
 #' `time_chronon` argument, which accepts a `mixtime::time_unit`.
 #'
-#' @examplesIf utils::packageVersion("mixtime") > "0.3.0"
+#' @examples
 #' library(ggplot2)
 #' library(dplyr)
 #' uad_month <- tibble(
