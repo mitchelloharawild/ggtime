@@ -233,9 +233,7 @@ season_labels <- function(start, period) {
 # so that seasons overlay one another. Labels for the positions are given by
 # `season_position_labels()`.
 season_position <- function(x, period, start = mixtime::time_floor(x, period)) {
-  # TODO: Revert to `min(start, na.rm = TRUE)` once ggtime requires a mixtime
-  # release newer than 0.3.0, where `min()` of a mixtime no longer errors.
-  origin <- sort(start)[1]
+  origin <- min(start, na.rm = TRUE)
   origin + (x - start)
 }
 

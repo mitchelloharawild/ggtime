@@ -137,7 +137,6 @@ test_that("gg_season() supports legacy Date and POSIXct indices", {
 })
 
 test_that("gg_season() breaks the time axis at observations", {
-  skip_if_cran_mixtime()
   p <- gg_season(tsbl_co2, value)
   built <- ggplot2::ggplot_build(p)
   x <- built@layout$panel_params[[1]]$x
@@ -147,7 +146,6 @@ test_that("gg_season() breaks the time axis at observations", {
 })
 
 test_that("gg_season() loops weekly data over ISO week-years", {
-  skip_if_cran_mixtime()
   weekly <- tsibble::tsibble(
     week = tsibble::yearweek(as.Date("2019-01-07") + 7 * (0:155)),
     y = seq_len(156),

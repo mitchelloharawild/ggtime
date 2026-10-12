@@ -223,7 +223,6 @@ test_that("looped axes are labelled cyclically", {
 })
 
 test_that("looped axes are broken at their observations", {
-  skip_if_cran_mixtime()
   loop_breaks <- function(p) {
     built <- ggplot_build(p)
     x <- built$layout$panel_params[[1]]$x
