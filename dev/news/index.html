@@ -20,7 +20,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">ggtime</a>
-        <span class="version label label-danger" data-toggle="tooltip" data-placement="bottom" title="In-development version">1.0.0.9000</span>
+        <span class="version label label-danger" data-toggle="tooltip" data-placement="bottom" title="In-development version">1.1.0.9000</span>
       </span>
     </div>
 
@@ -62,13 +62,16 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="ggtime-development-version">ggtime (development version)<a class="anchor" aria-label="anchor" href="#ggtime-development-version"></a></h2>
+</div>
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="1.1.0" id="ggtime-110">ggtime 1.1.0<a class="anchor" aria-label="anchor" href="#ggtime-110"></a></h2>
 <div class="section level3">
-<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<h3 id="new-features-1-1-0">New features<a class="anchor" aria-label="anchor" href="#new-features-1-1-0"></a></h3>
 <ul><li><p><code><a href="../reference/geom_candlestick.html">geom_candlestick()</a></code>/<code><a href="../reference/geom_candlestick.html">stat_ohlc()</a></code>: summarises the values within each time granule by their first (<code>open</code>), largest (<code>high</code>), smallest (<code>low</code>), and last (<code>close</code>) value, drawn as a candlestick chart. Rising and falling candles are coloured with <code><a href="../reference/scale_candlestick.html">scale_colour_candlestick()</a></code> and <code><a href="../reference/scale_candlestick.html">scale_fill_candlestick()</a></code>.</p></li>
 <li><p><code><a href="../reference/coord_calendar.html">coord_calendar()</a></code> gains <code>cell_ratio</code>, which fixes the aspect ratio of a calendar cell as <code><a href="https://ggplot2.tidyverse.org/reference/coord_fixed.html" class="external-link">coord_fixed()</a></code> fixes that of the data units of the axes. <code>cell_ratio = 1</code> gives the square cells of a printed calendar (<a href="https://github.com/mitchelloharawild/ggtime/issues/33" class="external-link">#33</a>).</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="improvements-development-version">Improvements<a class="anchor" aria-label="anchor" href="#improvements-development-version"></a></h3>
+<h3 id="improvements-1-1-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-1-1-0"></a></h3>
 <ul><li><p>The plot helpers (<code><a href="../reference/gg_season.html">gg_season()</a></code>, <code><a href="../reference/gg_subseries.html">gg_subseries()</a></code>, <code><a href="../reference/gg_lag.html">gg_lag()</a></code>, <code><a href="../reference/gg_tsdisplay.html">gg_tsdisplay()</a></code>, and <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code> of ACF/PACF/CCF results) are now all built from mixtime. Legacy <code>Date</code>, <code>POSIXct</code>, and tsibble <code><a href="https://tsibble.tidyverts.org/reference/year-week.html" class="external-link">yearweek()</a></code>/<code><a href="https://tsibble.tidyverts.org/reference/year-month.html" class="external-link">yearmonth()</a></code>/<code><a href="https://tsibble.tidyverts.org/reference/year-quarter.html" class="external-link">yearquarter()</a></code> indices are converted to mixtime for plotting, so existing code continues to work. Labels for cyclical displays of time (e.g. time-of-day) have been improved as a result.</p></li>
 <li><p><code><a href="../reference/gg_season.html">gg_season()</a></code> is now drawn with <code><a href="../reference/coord_loop.html">coord_loop()</a></code>, keeping time continuous rather than offsetting it into a single season. The lines connecting consecutive seasons (e.g. December to January) are now drawn, split across the left and right margins of the plot.</p></li>
 <li><p>The <code>period</code> of <code><a href="../reference/gg_season.html">gg_season()</a></code>, <code><a href="../reference/gg_subseries.html">gg_subseries()</a></code>, and <code><a href="../reference/gg_lag.html">gg_lag()</a></code> can now be a mixtime duration (e.g. <code>mixtime::weeks(2L)</code>) or a string of a whole number of a single unit (e.g. <code>"year"</code> or <code>"2 weeks"</code>), and is no longer converted to a lubridate period.</p></li>
