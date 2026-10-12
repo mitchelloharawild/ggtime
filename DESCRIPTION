@@ -56,7 +56,7 @@ Imports:
     vctrs,
     cli,
     vecvec,
-    mixtime (>= 0.3.0),
+    mixtime,
     S7,
     utils
 Suggests:
