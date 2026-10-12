@@ -114,6 +114,21 @@ test_that("time_breaks steps through the limits by a duration", {
   )
 })
 
+test_that("coarser discrete breaks are placed at the start of each time point", {
+  # mixtime refuses to convert a discrete month to days (which day?), so the
+  # breaks must be read as the continuous start of each month.
+  df <- data.frame(x = mixtime::date("2021-01-01") + 0:89, y = 1:90)
+  p <- ggplot(df, aes(x, y)) +
+    geom_line() +
+    scale_x_mixtime(breaks = mixtime::yearmonth("2021 Jan") + 0:2)
+
+  breaks <- ggplot_build(p)$layout$panel_params[[1]]$x$get_breaks()
+  expect_equal(
+    as.Date(breaks[!is.na(breaks)], origin = "1970-01-01"),
+    as.Date(c("2021-01-01", "2021-02-01", "2021-03-01"))
+  )
+})
+
 test_that("time_labels formats breaks with a mixtime format string", {
   # The weekday of a Gregorian date is a day within an ISO week, so labelling it
   # crosses calendars -- which is the point of mixtime's format strings.

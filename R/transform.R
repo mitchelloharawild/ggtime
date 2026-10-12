@@ -72,6 +72,13 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
       return(vctrs::vec_cast(x, ptype))
     }
 
+    # A discrete time point spans its whole chronon, so mixtime refuses to
+    # convert it to a finer one (which day of a month?). Breaks mark the start
+    # of each time point, which is exactly the continuous time of its value.
+    if (is.integer(S7::S7_data(x))) {
+      S7::S7_data(x) <- as.double(S7::S7_data(x))
+    }
+
     # TODO: merge with above vec_cast (needs mixtime::chronon_convert or
     # similar, which does continuous time granule conversions (not truncated))
     x <- mixtime::mixtime(

@@ -1,5 +1,11 @@
 # ggtime (development version)
 
+## Bug fixes
+
+* Time point `breaks` coarser than the data (e.g. `yearmonth()` breaks on a
+  daily axis) are now placed at the start of each time point, for compatibility
+  with mixtime refusing temporally indeterminate conversions of discrete time.
+
 # ggtime 1.1.0
 
 ## New features
