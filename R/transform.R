@@ -102,18 +102,6 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
     vctrs::vec_restore(vctrs::vec_data(x), ptype)
   }
 
-  # Breaks are chosen in mixtime space, so `breaks_pretty()` returns bare
-  # numbers. Restoring them to the limits' time type keeps the granularity
-  # attached, so it survives the trip back through `transform` on its way to
-  # becoming a position.
-  time_breaks <- function(x, n = 5) {
-    breaks <- scales::breaks_pretty()(x, n)
-    if (S7::S7_inherits(x, mixtime::mt_time)) {
-      breaks <- vctrs::vec_restore(breaks, x)
-    }
-    breaks
-  }
-
   # Breaks land on continuous (double) positions even when every one of them
   # falls exactly on a chronon boundary (e.g. daily breaks at midnight), so the
   # default format would print a "0.0%" within-chronon position that is always
@@ -160,7 +148,7 @@ transform_mixtime <- function(transform = NULL, ptype = NULL) {
       }
       to_mixtime(x)
     },
-    breaks = time_breaks,
+    breaks = breaks_mixtime(),
     format = format_breaks,
     # Much like `scales::transform_compose()`
     domain = transform$domain %||% c(-Inf, Inf)

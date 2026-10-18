@@ -571,6 +571,11 @@ test_that("autoplot.tbl_cf() plots lags as mixtime durations", {
   expect_true(mixtime::is_mixtime(p$data$lag))
   expect_equal(p$labels$x, "lag [1M]")
   expect_no_error(ggplot2::ggplot_build(p))
+
+  # Seasonal lags are broken at, labelled as counts since the axis title has
+  # the unit (#37).
+  labels <- ggplot2::ggplot_build(p)$layout$panel_params[[1]]$x$get_labels()
+  expect_equal(labels[!is.na(labels)], c("0", "3", "6", "9", "12"))
 })
 
 test_that("lag_to_duration() passes mixtime durations through", {

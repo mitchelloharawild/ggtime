@@ -2605,12 +2605,12 @@ test_that("the time axis is broken at every cell of a row", {
   )
   # Without cells there is nothing to break at, so the scale's own breaks are
   # used (and labelled cyclically, as they were before).
-  expect_lt(
-    length(axis_labels(
+  expect_false(any(
+    axis_labels(
       p + coord_calendar(rows = mixtime::weeks(1L), cells = NULL, cols = NULL)
-    )),
-    8L
-  )
+    ) %in%
+      c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+  ))
 })
 
 test_that("the calendar's breaks give way to the scale's own", {

@@ -410,6 +410,156 @@ breaks_time_seq <- function(width, align = 0) {
   }
 }
 
+#' The coarser granules a chronon nests within
+#'
+#' A chronon nests a fixed number of times within some coarser granules (3
+#' months to a quarter, 12 to a year; 7 days to a week), and these define the
+#' natural break steps along a time scale. Coarser granules are searched for
+#' among those of mixtime's calendars, as a chronon's own calendar may not hold
+#' them all (weeks are not in the Gregorian calendar of a `date()`).
+#'
+#' @param chronon The chronon to nest, as a time granule.
+#' @returns A list of `multiple`s (the number of chronons in each granule,
+#'   starting with `1` for the chronon itself) and their `granule`s, ordered
+#'   from finest to coarsest. Each multiple divides the next, so that every
+#'   coarser granule is made up of whole finer ones.
+#' @noRd
+chronon_nesting <- function(chronon) {
+  # Searching the calendars is slow (each granule without a fixed path errors),
+  # and the breaks of every panel and axis ask again.
+  key <- rlang::hash(chronon)
+  if (!is.null(nested <- chronon_nesting_cache[[key]])) {
+    return(nested)
+  }
+
+  calendars <- list(
+    mixtime::time_calendar(chronon),
+    mixtime::cal_gregorian,
+    mixtime::cal_isoweek,
+    mixtime::cal_time_civil
+  )
+  granules <- unlist(
+    lapply(calendars, function(cal) lapply(names(cal), function(u) cal[[u]](1L))),
+    recursive = FALSE
+  )
+
+  multiples <- vapply(
+    granules,
+    function(granule) {
+      # Granules without a fixed path from the chronon (days within a month)
+      # error, and are no natural step.
+      tryCatch(
+        as.numeric(mixtime::chronon_cardinality_fixed(chronon, granule)),
+        error = function(e) NA_real_
+      )
+    },
+    numeric(1L)
+  )
+  keep <- !is.na(multiples) & multiples > 1 & multiples == round(multiples)
+  keep <- keep & !duplicated(multiples)
+  ord <- order(multiples[keep])
+  multiples <- multiples[keep][ord]
+  granules <- granules[keep][ord]
+
+  # Granules which don't nest within one another (if any) can't share an
+  # alignment, so only the finest of them is kept.
+  nested <- list(multiple = 1, granule = list(chronon))
+  for (i in seq_along(multiples)) {
+    if (multiples[i] %% nested$multiple[length(nested$multiple)] == 0) {
+      nested$multiple <- c(nested$multiple, multiples[i])
+      nested$granule <- c(nested$granule, granules[i])
+    }
+  }
+
+  # Calendars' granules are time zone naive, but a day starts at midnight in
+  # the chronon's own time zone.
+  if (S7::S7_inherits(chronon, mixtime::mt_tz_unit)) {
+    nested$granule <- lapply(nested$granule, function(granule) {
+      if (S7::S7_inherits(granule, mixtime::mt_tz_unit)) {
+        granule@tz <- chronon@tz
+      }
+      granule
+    })
+  }
+
+  chronon_nesting_cache[[key]] <- nested
+  nested
+}
+
+chronon_nesting_cache <- new.env(parent = emptyenv())
+
+#' Breaks along a time scale which follow its calendar structure
+#'
+#' The mixtime equivalent of [scales::breaks_pretty()]. Rather than stepping by
+#' round numbers of the scale's chronon (20 months), breaks step by the
+#' divisors of how the chronon nests within coarser granules (1, 3 or 6 months
+#' within a year), or round multiples of the coarsest of them (1, 2, 5 or 10
+#' years). Time points are aligned to the coarser granule, so that 3 monthly
+#' breaks fall on each quarter, and lengths of time count from zero.
+#'
+#' Chronons which nest in no coarser granule (years) use
+#' [scales::breaks_pretty()].
+#' @param n The desired number of breaks.
+#' @noRd
+breaks_mixtime <- function(n = 5) {
+  n_default <- n
+  function(x, n = n_default) {
+    pretty <- function() {
+      breaks <- scales::breaks_pretty()(x, n)
+      if (S7::S7_inherits(x, mixtime::mt_time)) {
+        breaks <- vctrs::vec_restore(breaks, x)
+      }
+      breaks
+    }
+    if (!S7::S7_inherits(x, mixtime::mt_time)) {
+      return(pretty())
+    }
+    rng <- range(vctrs::vec_data(x), na.rm = TRUE, finite = TRUE)
+    span <- diff(rng)
+    nesting <- chronon_nesting(attr(x, "chronon"))
+    multiple <- nesting$multiple
+    # Fewer than two whole chronons is better broken into fractions of one.
+    if (length(multiple) < 2L || !is.finite(span) || span < 2) {
+      return(pretty())
+    }
+
+    # Divisors of each granule within the next, then round multiples of the
+    # coarsest granule.
+    top <- multiple[length(multiple)]
+    steps <- unlist(Map(
+      function(fine, coarse) {
+        ratio <- coarse %/% fine
+        fine * which(ratio %% seq_len(ratio - 1) == 0)
+      },
+      multiple[-length(multiple)],
+      multiple[-1L]
+    ))
+    magnitude <- 10^seq(0, max(0, ceiling(log10(span / top))))
+    steps <- c(steps, top * as.vector(outer(c(1, 2, 5), magnitude)))
+    # Ties go to the coarser step.
+    steps <- rev(steps)
+    step <- steps[which.min(abs(span / steps - n))]
+
+    # Lengths of time and cyclical time count from zero, but time points are
+    # counted from the start of the granule the steps divide.
+    origin <- 0
+    if (S7::S7_inherits(x, mixtime::mt_linear)) {
+      if (step <= top) {
+        granule <- nesting$granule[[which(multiple >= step & multiple %% step == 0)[1L]]]
+      } else {
+        granule <- nesting$granule[[length(multiple)]]
+        granule@n <- granule@n * step / top
+      }
+      start <- mixtime::time_floor(wrap_mixtime(vctrs::vec_restore(rng[1], x)), granule)
+      origin <- vctrs::vec_data(vecvec::unvecvec(start))
+    }
+
+    breaks <- origin +
+      step * seq(floor((rng[1] - origin) / step), ceiling((rng[2] - origin) / step))
+    vctrs::vec_restore(breaks, x)
+  }
+}
+
 #' Label time values by the granule they fall in
 #'
 #' Breaks are continuous positions on a time scale, but a label naming the
@@ -453,7 +603,7 @@ time_labels_at <- function(x, chronon = NULL, cycle = NULL) {
 mixtime_scale <- function(
   aesthetics,
   palette,
-  breaks = scales::breaks_pretty(),
+  breaks = breaks_mixtime(),
   time_breaks = waiver(),
   minor_breaks = waiver(),
   time_minor_breaks = waiver(),

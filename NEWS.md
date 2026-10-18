@@ -1,5 +1,16 @@
 # ggtime (development version)
 
+## Improvements
+
+* The default breaks of mixtime scales now follow the calendar structure of
+  the time being plotted, stepping by how its chronon nests within coarser
+  granules (e.g. every 3 or 6 months within a year, every 7 days within a week)
+  and aligning time points to them (each January, each Monday), rather than
+  round numbers of the chronon (#37).
+
+* `autoplot()` of ACF/PACF/CCF results labels lags with plain numbers, as their
+  unit is already in the axis title (#37).
+
 ## Bug fixes
 
 * Time point `breaks` coarser than the data (e.g. `yearmonth()` breaks on a

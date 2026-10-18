@@ -884,9 +884,13 @@ autoplot.tbl_cf <- function(object, level = 95, ...) {
     xlab(paste0("lag [", format_interval(interval), "]"))
 
   # An explicit scale, as mixtime's default scale lookup requires ggtime to be
-  # attached rather than only loaded (e.g. when called via `feasts::`)
+  # attached rather than only loaded (e.g. when called via `feasts::`). Lags
+  # are labelled as plain counts, since their unit is in the axis title.
   if (mixtime::is_mixtime(object[["lag"]])) {
-    p <- p + scale_x_mixtime()
+    p <- p +
+      scale_x_mixtime(
+        labels = function(x) as.character(vctrs::vec_data(x))
+      )
   }
 
   if (!is.null(level)) {

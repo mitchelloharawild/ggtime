@@ -13,6 +13,43 @@ test_that("durations are labelled as durations", {
   expect_match(scale_labels(p), "days$")
 })
 
+test_that("default breaks step by how the chronon nests in coarser granules", {
+  breaks_of <- function(x) {
+    p <- ggplot(data.frame(x = x, y = 1), aes(x, y)) + geom_point()
+    scale_labels(p)
+  }
+
+  # Four quarters to a year, not round numbers of quarters (#37).
+  expect_equal(
+    breaks_of(mixtime::quarters(0:20)),
+    paste(seq(0, 20, by = 4), "quarters")
+  )
+  # Seven days to a week.
+  expect_equal(
+    breaks_of(mixtime::days(0:28)),
+    paste(seq(0, 28, by = 7), "days")
+  )
+  # Time points are aligned to the coarser granule: every second January
+  # rather than every 20th month.
+  expect_equal(
+    breaks_of(mixtime::yearmonth(600:720)),
+    paste(seq(2020, 2030, by = 2), "Jan")
+  )
+  # Weeks start on a Monday.
+  expect_equal(
+    breaks_of(mixtime::date("2021-01-01") + 0:27),
+    c("2021-01-04", "2021-01-11", "2021-01-18", "2021-01-25")
+  )
+  # And days at midnight in the chronon's own time zone.
+  expect_match(
+    breaks_of(
+      mixtime::datetime("2021-01-01 05:00:00", tz = "Australia/Melbourne") +
+        mixtime::hours(0:72)
+    ),
+    "(00|12):00:00$"
+  )
+})
+
 test_that("mixed granularity durations share the finest chronon", {
   df <- data.frame(
     x = c(mixtime::days(1:5), mixtime::hours(c(140, 160))),

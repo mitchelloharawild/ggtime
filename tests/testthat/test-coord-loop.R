@@ -187,10 +187,11 @@ test_that("looped axes are labelled cyclically", {
   # A calendar breaks its axis at every one of the row's own cells rather than
   # wherever pretty breaks fall, so each cell of the row is named. A yearly
   # row's default daily cells are far past `calendar_max_cell_breaks`, so
-  # `cells` is dropped and the axis falls back to the scale's own breaks.
+  # `cells` is dropped and the axis falls back to the scale's own breaks,
+  # which step by the quarters months nest in.
   expect_equal(
     loop_labels(p + coord_calendar(rows = mixtime::years(1L), cols = NULL)),
-    c("Jan", "Mar", "May", "Jul", "Sep", "Nov", "Jan")
+    c("Jan", "Apr", "Jul", "Oct", "Jan")
   )
   # Cells the axis can be cut by are named as themselves.
   expect_equal(
