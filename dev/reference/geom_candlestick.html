@@ -325,8 +325,7 @@ continuous colour or fill scale, e.g.
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># utils::packageVersion("mixtime") &gt; "0.3.0"</span></span></span>
-<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">prices</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  time <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">datetime</a></span><span class="op">(</span></span></span>
@@ -339,10 +338,12 @@ continuous colour or fill scale, e.g.
 <span class="r-in"><span><span class="co"># `direction` by default</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">prices</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">price</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_candlestick</span><span class="op">(</span>granule <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration_helpers.html" class="external-link">days</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_candlestick-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># `granule` accepts a bare granule of the axis's own calendar</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">prices</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">price</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_candlestick</span><span class="op">(</span>granule <span class="op">=</span> <span class="fu">hour</span><span class="op">(</span><span class="fl">6L</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_candlestick-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Any other discrete diverging scale overrides the red/green default;</span></span></span>
 <span class="r-in"><span><span class="co"># `colour` needs its own scale too, or it stays red/green</span></span></span>
@@ -350,6 +351,7 @@ continuous colour or fill scale, e.g.
 <span class="r-in"><span>  <span class="fu">geom_candlestick</span><span class="op">(</span>granule <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration_helpers.html" class="external-link">days</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_fill_brewer</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"div"</span>, palette <span class="op">=</span> <span class="st">"RdBu"</span>, drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_colour_brewer</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"div"</span>, palette <span class="op">=</span> <span class="st">"RdBu"</span>, drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_candlestick-3.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use after_stat(change) with a diverging colour scale for extent of change</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">prices</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">price</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
@@ -359,6 +361,7 @@ continuous colour or fill scale, e.g.
 <span class="r-in"><span>  <span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_gradient.html" class="external-link">scale_fill_gradient2</a></span><span class="op">(</span>low <span class="op">=</span> <span class="st">"red"</span>, mid <span class="op">=</span> <span class="st">"grey90"</span>, high <span class="op">=</span> <span class="st">"green"</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_gradient.html" class="external-link">scale_colour_gradient2</a></span><span class="op">(</span>low <span class="op">=</span> <span class="st">"red"</span>, mid <span class="op">=</span> <span class="st">"grey90"</span>, high <span class="op">=</span> <span class="st">"green"</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_candlestick-4.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Already summarised prices can be plotted with stat = "identity"</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span></span></span>
@@ -380,6 +383,7 @@ continuous colour or fill scale, e.g.
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_candlestick</span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_candlestick-5.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using stat = "ohlc" (the default) with complete OHLC data will</span></span></span>
 <span class="r-in"><span><span class="co"># compute the OHLC prices at coarser granules</span></span></span>
@@ -391,7 +395,8 @@ continuous colour or fill scale, e.g.
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_candlestick</span><span class="op">(</span>granule <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/calendar_isoweek.html" class="external-link">cal_isoweek</a></span><span class="op">$</span><span class="fu">week</span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-plt img"><img src="geom_candlestick-6.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </div>

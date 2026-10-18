@@ -62,9 +62,13 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="ggtime-development-version">ggtime (development version)<a class="anchor" aria-label="anchor" href="#ggtime-development-version"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
+<ul><li>Time point <code>breaks</code> coarser than the data (e.g. <code><a href="https://tsibble.tidyverts.org/reference/year-month.html" class="external-link">yearmonth()</a></code> breaks on a daily axis) are now placed at the start of each time point, for compatibility with mixtime refusing temporally indeterminate conversions of discrete time.</li>
+</ul></div>
 </div>
     <div class="section level2">
-<h2 class="page-header" data-toc-text="1.1.0" id="ggtime-110">ggtime 1.1.0<a class="anchor" aria-label="anchor" href="#ggtime-110"></a></h2>
+<h2 class="page-header" data-toc-text="1.1.0" id="ggtime-110">ggtime 1.1.0<small>2026-10-12</small><a class="anchor" aria-label="anchor" href="#ggtime-110"></a></h2>
 <div class="section level3">
 <h3 id="new-features-1-1-0">New features<a class="anchor" aria-label="anchor" href="#new-features-1-1-0"></a></h3>
 <ul><li><p><code><a href="../reference/geom_candlestick.html">geom_candlestick()</a></code>/<code><a href="../reference/geom_candlestick.html">stat_ohlc()</a></code>: summarises the values within each time granule by their first (<code>open</code>), largest (<code>high</code>), smallest (<code>low</code>), and last (<code>close</code>) value, drawn as a candlestick chart. Rising and falling candles are coloured with <code><a href="../reference/scale_candlestick.html">scale_colour_candlestick()</a></code> and <code><a href="../reference/scale_candlestick.html">scale_fill_candlestick()</a></code>.</p></li>
