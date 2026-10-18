@@ -225,14 +225,15 @@ gg_season <- function(
     # Labels are placed at the season's boundaries rather than its first and
     # last observations, keeping them clear of the lines connecting seasons
     # (drawn up to the loop's edges). `+ 0` gives the continuous start of
-    # the season's first time point.
+    # the season's first time point. A space on the side facing the lines
+    # separates them a little (ggplot2 has no absolute nudge for text).
     if (labels %in% c("left", "both")) {
       labels_left <- data[season_rows(FALSE), ]
       labels_left[[idx]] <- mixtime::time_floor(labels_left[[idx]], period) + 0
 
       p <- p +
         labeller(
-          aes(label = !!sym("id")),
+          aes(label = paste0(!!sym("id"), " ")),
           data = labels_left,
           hjust = "outward",
           nudge_x = labels_left_nudge
@@ -248,7 +249,7 @@ gg_season <- function(
 
       p <- p +
         labeller(
-          aes(label = !!sym("id")),
+          aes(label = paste0(" ", !!sym("id"))),
           data = labels_right,
           hjust = "outward",
           nudge_x = labels_right_nudge
@@ -267,7 +268,7 @@ season_label_padding <- function(labels, left, right) {
   function(theme) {
     geom <- ggplot2::calc_element("geom", theme)
     text <- grid::textGrob(
-      labels,
+      paste0(labels, " "),
       gp = grid::gpar(
         fontsize = geom@fontsize * ggplot2::.pt,
         fontfamily = geom@family
