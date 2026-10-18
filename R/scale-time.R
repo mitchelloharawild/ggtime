@@ -377,8 +377,15 @@ scale_linewidth_mixtime <- function(
   # the scale's common chronon.
   unit <- size
   unit@n <- 1L
+  # A duration range stays a duration, rather than being measured from the
+  # epoch as a time point.
+  convert <- if (S7::S7_inherits(range, mixtime::mt_duration)) {
+    mixtime::duration
+  } else {
+    mixtime::mixtime
+  }
   range <- vecvec::unvecvec(
-    mixtime::mixtime(wrap_mixtime(range), chronon = unit, discrete = FALSE)
+    convert(wrap_mixtime(range), chronon = unit, discrete = FALSE)
   )
 
   seq(
@@ -404,9 +411,15 @@ scale_linewidth_mixtime <- function(
 breaks_time_seq <- function(width, align = 0) {
   force(width)
   function(x) {
+    breaks <- scales::fullseq(x, width)
+    # A duration is a length rather than a time point, and has no granule to
+    # be positioned within: the scale doesn't align duration data either.
+    if (S7::S7_inherits(breaks, mixtime::mt_duration)) {
+      return(breaks)
+    }
     # `fullseq()` steps in single units of `width`'s granule, so this is
     # a position within the unit each break starts.
-    scales::fullseq(x, width) + align
+    breaks + align
   }
 }
 
@@ -588,15 +601,37 @@ time_labels_at <- function(x, chronon = NULL, cycle = NULL) {
     return(labels)
   }
 
-  args <- list(wrap_mixtime(x[finite]), discrete = TRUE)
+  labels[finite] <- format(
+    time_discrete_at(x[finite], chronon = chronon, cycle = cycle),
+    attr = FALSE
+  )
+  labels
+}
+
+#' Discretise time values to a granule
+#'
+#' Time points become the granule they fall in, while durations stay durations
+#' counted in whole granules: converting a duration with `mixtime::mixtime()`
+#' would measure it from the epoch, labelling "4 quarters" as "1971 Q1".
+#'
+#' @inheritParams time_labels_at
+#' @returns A discrete `mixtime`.
+#' @noRd
+time_discrete_at <- function(x, chronon = NULL, cycle = NULL) {
+  if (is_mixtime(x)) {
+    x <- vecvec::unvecvec(x)
+  }
+  args <- list(wrap_mixtime(x), discrete = TRUE)
   if (!is.null(chronon)) {
     args$chronon <- chronon
+  }
+  if (S7::S7_inherits(x, mixtime::mt_duration)) {
+    return(inject(mixtime::duration(!!!args)))
   }
   if (!is.null(cycle)) {
     args$cycle <- cycle
   }
-  labels[finite] <- format(inject(mixtime::mixtime(!!!args)), attr = FALSE)
-  labels
+  inject(mixtime::mixtime(!!!args))
 }
 
 #' @keywords internal
@@ -635,11 +670,7 @@ mixtime_scale <- function(
     labels <- function(self, x) {
       granule <- self$time_breaks
       if (!is_waiver(granule) && !is.null(granule)) {
-        x <- mixtime::mixtime(
-          wrap_mixtime(x),
-          discrete = TRUE,
-          chronon = granule
-        )
+        x <- time_discrete_at(x, chronon = granule)
       }
       format(x, format = time_labels)
     }

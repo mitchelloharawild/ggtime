@@ -13,6 +13,19 @@ test_that("durations are labelled as durations", {
   expect_match(scale_labels(p), "days$")
 })
 
+test_that("time_breaks on durations are labelled as durations", {
+  df <- data.frame(x = mixtime::quarters(0:20), y = 1)
+  p <- ggplot(df, aes(x, y)) +
+    geom_point() +
+    scale_x_mixtime(time_breaks = mixtime::quarters(4L))
+
+  # Not "1970 Q1", "1971 Q1", ... measured from the epoch (#38).
+  expect_equal(scale_labels(p), paste(seq(0, 20, by = 4), "quarters"))
+  # Durations aren't aligned within a granule, so neither are their breaks.
+  breaks <- ggplot_build(p)$layout$panel_params[[1]]$x$get_breaks()
+  expect_equal(breaks[!is.na(breaks)], seq(0, 20, by = 4))
+})
+
 test_that("default breaks step by how the chronon nests in coarser granules", {
   breaks_of <- function(x) {
     p <- ggplot(data.frame(x = x, y = 1), aes(x, y)) + geom_point()
