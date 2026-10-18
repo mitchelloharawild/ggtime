@@ -488,7 +488,9 @@ loop_division_granule <- function(time_loops, chronon, at) {
       next
     }
     # Finer than the data, which has no observations in most of them.
-    if (!isTRUE(cardinality(chronon, granule) >= 1)) {
+    # Measured in chronons, since converting `at` to a much finer granule
+    # (e.g. nanoseconds) overflows.
+    if (!isTRUE(cardinality(granule, chronon) <= 1)) {
       next
     }
     n <- cardinality(granule, time_loops)
