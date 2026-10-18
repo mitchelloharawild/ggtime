@@ -597,8 +597,119 @@ specialize_coord_loop.CoordCartesian <- function(coord, ...) {
     "CoordLoopCartesian",
     coord,
 
-    time_scale = coord$time
+    time_scale = coord$time,
+
+    # Absolute space reserved before and after the loop window along the time
+    # axis, such as for `gg_season()`'s labels. Expanding the scale can't
+    # provide this, since data space only maps onto absolute space once the
+    # panel is drawn. A unit giving the start and end padding, a function of
+    # the theme returning one, or `NULL` for none.
+    time_padding = NULL,
+
+    resolve_time_padding = function(self, theme) {
+      padding <- self$time_padding
+      if (is.function(padding)) {
+        padding <- padding(theme)
+      }
+      if (is.null(padding)) NULL else rep_len(padding, 2L)
+    },
+
+    draw_panel = function(self, panel, params, theme) {
+      padding <- self$resolve_time_padding(theme)
+      if (is.null(padding)) {
+        return(ggproto_parent(coord, self)$draw_panel(panel, params, theme))
+      }
+      inset <- loop_inset_viewport(padding, self$time)
+      other <- if (identical(self$time, "x")) "y" else "x"
+
+      # The background, border and the other axis's gridlines span the whole
+      # panel, while the data and time gridlines are inset to line up with
+      # the (also inset) time axis.
+      bg <- self$render_bg(params, theme_blank_grid(theme, self$time))
+      inset_theme <- theme_blank_grid(theme, other)
+      inset_theme[["panel.background"]] <- ggplot2::element_blank()
+      grid_inset <- grid::gTree(
+        children = grid::gList(self$render_bg(params, inset_theme)),
+        vp = inset
+      )
+      layers <- grid::gTree(children = inject(grid::gList(!!!panel)), vp = inset)
+      fg <- self$render_fg(params, theme)
+
+      panel <- if (isTRUE(theme$panel.ontop)) {
+        list(layers, bg, grid_inset, fg)
+      } else {
+        list(bg, grid_inset, layers, fg)
+      }
+      grid::gTree(
+        children = inject(grid::gList(!!!panel)),
+        vp = grid::viewport(clip = self$clip)
+      )
+    },
+
+    render_axis_h = function(self, panel_params, theme) {
+      axes <- ggproto_parent(coord, self)$render_axis_h(panel_params, theme)
+      if (identical(self$time, "x")) {
+        axes <- inset_axes(axes, self$resolve_time_padding(theme), "x")
+      }
+      axes
+    },
+
+    render_axis_v = function(self, panel_params, theme) {
+      axes <- ggproto_parent(coord, self)$render_axis_v(panel_params, theme)
+      if (identical(self$time, "y")) {
+        axes <- inset_axes(axes, self$resolve_time_padding(theme), "y")
+      }
+      axes
+    }
   )
+}
+
+#' A viewport inset along the time axis by `CoordLoopCartesian$time_padding`
+#' @param padding A unit of length 2, the start and end padding.
+#' @param time The time aesthetic, `"x"` or `"y"`.
+#' @noRd
+loop_inset_viewport <- function(padding, time) {
+  if (identical(time, "x")) {
+    grid::viewport(
+      x = padding[1],
+      width = grid::unit(1, "npc") - sum(padding),
+      just = "left"
+    )
+  } else {
+    grid::viewport(
+      y = padding[1],
+      height = grid::unit(1, "npc") - sum(padding),
+      just = "bottom"
+    )
+  }
+}
+
+#' Inset rendered axes to line up with an inset panel
+#'
+#' Pushed as the axis grobs' own viewport, so the size ggplot2 measures for
+#' laying them out is unchanged.
+#' @param axes A list of axis grobs, from `render_axis_h()`/`render_axis_v()`.
+#' @inheritParams loop_inset_viewport
+#' @noRd
+inset_axes <- function(axes, padding, time) {
+  if (is.null(padding)) {
+    return(axes)
+  }
+  inset <- loop_inset_viewport(padding, time)
+  lapply(axes, function(axis) {
+    axis$vp <- if (is.null(axis$vp)) inset else grid::vpStack(inset, axis$vp)
+    axis
+  })
+}
+
+#' Remove an axis's gridlines from a theme
+#' @param aes The axis, `"x"` or `"y"`.
+#' @noRd
+theme_blank_grid <- function(theme, aes) {
+  for (el in paste0(c("panel.grid.major.", "panel.grid.minor."), aes)) {
+    theme[[el]] <- ggplot2::element_blank()
+  }
+  theme
 }
 
 #' @export

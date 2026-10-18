@@ -178,12 +178,28 @@ gg_season <- function(
     if (polar) {
       coord_loop(time_loops = period, coord = ggplot2::coord_radial())
     } else {
-      # Loops fill the time axis exactly unless room is needed for labels,
-      # but the value axis is expanded as usual (top, right, bottom, left).
-      coord_loop(
+      # Loops fill the time axis exactly, but the value axis is expanded as
+      # usual (top, right, bottom, left).
+      loop <- coord_loop(
         time_loops = period,
-        expand = c(TRUE, labels != "none", TRUE, labels != "none")
+        expand = c(TRUE, FALSE, TRUE, FALSE)
       )
+      if (labels == "none") {
+        loop
+      } else {
+        # Room for labels outside the loop window, sized in absolute units
+        # to fit the widest label however wide the panel is drawn. (A new
+        # name, since ggproto looks up the parent `loop` by name later.)
+        ggplot2::ggproto(
+          NULL,
+          loop,
+          time_padding = season_label_padding(
+            levels(data$id),
+            left = labels %in% c("left", "both"),
+            right = labels %in% c("right", "both")
+          )
+        )
+      }
     }
 
   if (labels != "none") {
@@ -195,10 +211,24 @@ gg_season <- function(
     } else {
       ggplot2::geom_text
     }
+    # Rows of each season's first and last observations, ordered and grouped
+    # once for all seasons: grouped dplyr verbs dispatch mixtime's S7 methods
+    # (and format times for `%in%`) once per season, which is very slow.
+    season <- vctrs::vec_group_id(
+      data[c(vapply(keys, as_string, character(1L)), "facet_id", "id")]
+    )
+    season_order <- order(season, xtfrm(data[[idx]]))
+    season_rows <- function(from_last) {
+      season_order[!duplicated(season[season_order], fromLast = from_last)]
+    }
+
+    # Labels are placed at the season's boundaries rather than its first and
+    # last observations, keeping them clear of the lines connecting seasons
+    # (drawn up to the loop's edges). `+ 0` gives the continuous start of
+    # the season's first time point.
     if (labels %in% c("left", "both")) {
-      labels_left <- data %>%
-        group_by(!!!syms(c("facet_id", "id"))) %>%
-        filter(!!sym(idx) %in% min(!!sym(idx)))
+      labels_left <- data[season_rows(FALSE), ]
+      labels_left[[idx]] <- mixtime::time_floor(labels_left[[idx]], period) + 0
 
       p <- p +
         labeller(
@@ -209,9 +239,12 @@ gg_season <- function(
         )
     }
     if (labels %in% c("right", "both")) {
-      labels_right <- data %>%
-        group_by(!!!syms(c("facet_id", "id"))) %>%
-        filter(!!sym(idx) %in% max(!!sym(idx)))
+      labels_right <- data[season_rows(TRUE), ]
+      # Just before the next season starts, so it isn't folded into the start
+      # of the loop.
+      labels_right[[idx]] <- mixtime::time_ceiling(labels_right[[idx]], period) +
+        0 -
+        1e-3
 
       p <- p +
         labeller(
@@ -226,6 +259,25 @@ gg_season <- function(
   }
 
   p
+}
+
+# The space `gg_season()` reserves either side of the loop for its labels, as
+# a function of the theme (giving the labels' font), measured when drawn.
+season_label_padding <- function(labels, left, right) {
+  function(theme) {
+    geom <- ggplot2::calc_element("geom", theme)
+    text <- grid::textGrob(
+      labels,
+      gp = grid::gpar(
+        fontsize = geom@fontsize * ggplot2::.pt,
+        fontfamily = geom@family
+      )
+    )
+    # A little extra room keeps the labels off the panel's edge.
+    width <- grid::grobWidth(text) + grid::unit(0.5, "lines")
+    none <- grid::unit(0, "pt")
+    grid::unit.c(if (left) width else none, if (right) width else none)
+  }
 }
 
 #' Seasonal subseries plots
