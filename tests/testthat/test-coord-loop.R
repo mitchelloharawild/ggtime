@@ -83,7 +83,7 @@ test_that("annotations spanning the panel are drawn", {
     geom_path() +
     geom_hline(yintercept = 0.5, colour = "red") +
     geom_vline(xintercept = as.Date("2025-04-10"), colour = "blue") +
-    annotate("segment", x = -Inf, xend = Inf, y = 1, yend = 1)
+    annotate("segment", x = as.Date(-Inf), xend = as.Date(Inf), y = 1, yend = 1)
 
   vdiffr::expect_doppelganger(
     "annotations span the panel",
