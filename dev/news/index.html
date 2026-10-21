@@ -63,6 +63,11 @@
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="ggtime-development-version">ggtime (development version)<a class="anchor" aria-label="anchor" href="#ggtime-development-version"></a></h2>
 <div class="section level3">
+<h3 id="improvements-development-version">Improvements<a class="anchor" aria-label="anchor" href="#improvements-development-version"></a></h3>
+<ul><li><p>The default breaks of mixtime scales now follow the calendar structure of the time being plotted, stepping by how its chronon nests within coarser granules (e.g. every 3 or 6 months within a year, every 7 days within a week) and aligning time points to them (each January, each Monday), rather than round numbers of the chronon (<a href="https://github.com/mitchelloharawild/ggtime/issues/37" class="external-link">#37</a>).</p></li>
+<li><p><code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code> of ACF/PACF/CCF results labels lags with plain numbers, as their unit is already in the axis title (<a href="https://github.com/mitchelloharawild/ggtime/issues/37" class="external-link">#37</a>).</p></li>
+</ul></div>
+<div class="section level3">
 <h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
 <ul><li>Time point <code>breaks</code> coarser than the data (e.g. <code><a href="https://tsibble.tidyverts.org/reference/year-month.html" class="external-link">yearmonth()</a></code> breaks on a daily axis) are now placed at the start of each time point, for compatibility with mixtime refusing temporally indeterminate conversions of discrete time.</li>
 </ul></div>
