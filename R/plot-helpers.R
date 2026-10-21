@@ -113,6 +113,9 @@ gg_season <- function(
   facet_period <- season_period(facet_period, ts_interval, "facet_period")
 
   data <- as_tibble(data)
+  y_lab <- as_label(y)
+  data <- eval_plot_var(data, y)
+  y <- sym(".y")
   # Time stays continuous, and is looped over the period by `coord_loop()`
   data[[idx]] <- as_mixtime_index(data[[idx]])
   data[["id"]] <- season_id(data[[idx]], period)
@@ -139,7 +142,7 @@ gg_season <- function(
   p <- ggplot(data, mapping) +
     geom_line(...) +
     scale_x_mixtime() +
-    ggplot2::labs(colour = NULL)
+    ggplot2::labs(y = y_lab, colour = NULL)
 
   if (num_ids <= max_col) {
     breaks <- if (num_ids <= max_col_discrete) {
@@ -335,6 +338,9 @@ gg_subseries <- function(data, y = NULL, period = NULL, ...) {
   period <- season_period(period, ts_interval, auto = "smallest")
 
   data <- as_tibble(data)
+  y_lab <- as_label(y)
+  data <- eval_plot_var(data, y)
+  y <- sym(".y")
   data[[idx]] <- as_mixtime_index(data[[idx]])
   data <- data %>%
     mutate(
@@ -350,6 +356,7 @@ gg_subseries <- function(data, y = NULL, period = NULL, ...) {
 
   ggplot(data, aes(x = !!sym(idx), y = !!y)) +
     geom_line(...) +
+    ggplot2::labs(y = y_lab) +
     facet_grid(
       rows = vars(!!!lapply(keys, function(x) expr(format(!!x)))),
       cols = vars(!!sym("id")),
@@ -361,6 +368,14 @@ gg_subseries <- function(data, y = NULL, period = NULL, ...) {
       labels = function(x) time_labels_at(x, chronon = period)
     ) +
     ggplot2::theme(axis.text.x.bottom = ggplot2::element_text(angle = 90))
+}
+
+# Evaluate the plot variable into `.y` while the index is still in its
+# original class, so expressions of it (e.g. `days_in_month(Month)`) work
+# before the index is converted with `as_mixtime_index()`.
+eval_plot_var <- function(data, y) {
+  data[[".y"]] <- eval_tidy(y, data)
+  data
 }
 
 # The number of seasons between subseries axis breaks: a 1-2-5 step giving at

@@ -110,3 +110,17 @@ test_that("gg_subseries() errors for series without a seasonal period", {
     "Could not find a seasonal period"
   )
 })
+
+test_that("gg_subseries() and gg_season() evaluate y with the original index", {
+  skip_if_not_installed("lubridate")
+  data <- subseries_tsbl(tsibble::yearmonth(monthly_dates))
+
+  p <- gg_subseries(data, y / lubridate::days_in_month(t))
+  expect_no_error(ggplot2::ggplotGrob(p))
+  expect_equal(p$data$.y, data$y / lubridate::days_in_month(data$t))
+  expect_equal(p$labels$y, "y/lubridate::days_in_month(t)")
+
+  p <- gg_season(data, y / lubridate::days_in_month(t))
+  expect_no_error(ggplot2::ggplotGrob(p))
+  expect_equal(p$labels$y, "y/lubridate::days_in_month(t)")
+})
