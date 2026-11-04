@@ -298,11 +298,18 @@ interval_is_seasonal <- function(interval) {
 # Format an interval (a mixtime granule or list of granules, or a legacy
 # tsibble interval) in tsibble's compact style, e.g. "1M" or "1h 30m".
 format_interval <- function(x) {
-  if (is_granule(x) || (is.list(x) && !inherits(x, "interval"))) {
-    tsibble::format_interval(x)
-  } else {
-    format(x)
+  if (inherits(x, "interval")) {
+    return(format(x))
   }
+  granules <- if (is_granule(x)) list(x) else as.list(x)
+  paste(
+    vapply(
+      granules,
+      function(g) paste0(g@n, mixtime::time_unit_abbr(g)),
+      character(1)
+    ),
+    collapse = " "
+  )
 }
 
 # Convert the lags of an ACF/PACF/CCF (a `cf_lag` holding a count of lags and

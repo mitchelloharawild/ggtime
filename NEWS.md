@@ -6,7 +6,11 @@
   the time being plotted, stepping by how its chronon nests within coarser
   granules (e.g. every 3 or 6 months within a year, every 7 days within a week)
   and aligning time points to them (each January, each Monday), rather than
-  round numbers of the chronon (#37).
+  round numbers of the chronon (#37). Durations keep their unit in breaks and
+  labels.
+
+* `gg_season()` places its labels outside the seasonal lines, slightly separated
+  from them.
 
 * `autoplot()` of ACF/PACF/CCF results labels lags with plain numbers, as their
   unit is already in the axis title (#37).
@@ -16,6 +20,12 @@
 * Time point `breaks` coarser than the data (e.g. `yearmonth()` breaks on a
   daily axis) are now placed at the start of each time point, for compatibility
   with mixtime refusing temporally indeterminate conversions of discrete time.
+
+* `gg_season()` and `gg_subseries()` evaluate `y` before converting the index,
+  so `y` can use the original index.
+
+* `coord_loop()` no longer warns about integer overflow when comparing the
+  cardinality of looped time.
 
 # ggtime 1.1.0
 
