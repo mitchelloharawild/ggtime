@@ -1,6 +1,13 @@
 url: https://pkg.mitchelloharawild.com/ggtime/
 
 template:
+  opengraph:
+    image:
+      src: pkgdown/social-card.png
+      alt: "The ggtime hex sticker"
+    twitter:
+      creator: "@mitchoharawild"
+      card: summary
   params:
     bootswatch: cosmo
   includes:
