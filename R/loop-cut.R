@@ -476,7 +476,9 @@ granule_seq_by <- function(x, granule) {
   if (is_mixtime(x) || S7::S7_inherits(x, mixtime::mt_time)) {
     return(granule)
   }
-  paste(granule@n, mixtime::time_unit_plural(granule))
+  scheme <- mixtime::unit_labels(granule)
+  n <- granule@n
+  cli::pluralize(paste("{n}", scheme$vocab("wide", scheme$locale)))
 }
 
 # helpers -----------------------------------------------------------------

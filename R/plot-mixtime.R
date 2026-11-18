@@ -305,7 +305,7 @@ format_interval <- function(x) {
   paste(
     vapply(
       granules,
-      function(g) paste0(g@n, mixtime::time_unit_abbr(g)),
+      function(g) paste0(g@n, mixtime::unit_labels(g)$symbol),
       character(1)
     ),
     collapse = " "
