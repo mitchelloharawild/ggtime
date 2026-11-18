@@ -517,6 +517,22 @@ chronon_nesting_cache <- new.env(parent = emptyenv())
 breaks_mixtime <- function(n = 5) {
   n_default <- n
   function(x, n = n_default) {
+    # Lengths of time are handed over as the `mixtime` wrapper, which hides
+    # the chronon and class that the nesting is read from.
+    wrapped <- is_mixtime(x)
+    if (wrapped) {
+      x <- vecvec::unvecvec(x)
+    }
+    breaks <- breaks_mixtime_impl(x, n)
+    if (wrapped && S7::S7_inherits(breaks, mixtime::mt_time)) {
+      breaks <- wrap_mixtime(breaks)
+    }
+    breaks
+  }
+}
+
+breaks_mixtime_impl <- function(x, n) {
+  {
     pretty <- function() {
       breaks <- scales::breaks_pretty()(x, n)
       if (S7::S7_inherits(x, mixtime::mt_time)) {
