@@ -62,6 +62,7 @@ reference:
     - starts_with("geom_")
     - starts_with("stat_")
     - starts_with("scale_")
+    - starts_with("guide_")
     - starts_with("coord_")
     - starts_with("facet_")
     - starts_with("theme_")

@@ -695,6 +695,11 @@ mixtime_scale <- function(
   # x/y position aesthetics should use ScaleContinuousMixtime; others use ScaleContinuous
   if (all(aesthetics %in% c(ggplot_global$x_aes, ggplot_global$y_aes))) {
     scale_class <- ScaleContinuousMixtime
+    if (is_waiver(guide)) {
+      # Labels of discrete time name a granule rather than a point, so they are
+      # placed between the granule's boundaries.
+      guide <- guide_axis_mixtime()
+    }
   } else {
     scale_class <- ScaleContinuous
   }
@@ -781,6 +786,10 @@ ScaleContinuousMixtime <- ggproto(
   ScaleContinuous,
   secondary.axis = waiver(),
 
+  # Whether the data occupies whole granules, set from the data in
+  # `transform_df()`. `NA` until any data has been seen.
+  time_discrete = NA,
+
   # The granule the breaks step by, allows control by coord_calendar's cells
   time_breaks = waiver(),
 
@@ -821,6 +830,16 @@ ScaleContinuousMixtime <- ggproto(
     # Maybe other attributes are needed (e.g. cycle for cyclical time)
     if (is_waiver(self$time_chronon)) {
       self$time_chronon <- mixtime::chronon_glb(do.call(c, df[aesthetics]))
+    }
+
+    # A granule spans an interval of time, so a discrete scale is labelled
+    # between the granule's boundaries rather than at a point (see
+    # `guide_axis_mixtime()`). Every layer must be discrete for the scale to be.
+    discrete <- all(vapply(df[aesthetics], is_discrete_time, logical(1L)))
+    self$time_discrete <- if (is.na(self$time_discrete)) {
+      discrete
+    } else {
+      self$time_discrete && discrete
     }
 
     # TODO - Consider applying the aes_nudge here, and calling ggplot2::Scale$transform_df.
@@ -947,6 +966,27 @@ ScaleContinuousMixtime <- ggproto(
     vctrs::vec_assign(scaled, is.na(scaled), self$na.value)
   }
 )
+
+# Discrete time models count whole granules of their chronon, which mixtime
+# stores as an integer. A double is a position within a granule instead, and so
+# identifies an instant rather than a span of time. Durations are lengths of
+# time, with no granule to span.
+is_discrete_time <- function(x) {
+  if (!is_mixtime(x)) {
+    if (is_bare_numeric(x)) {
+      return(FALSE)
+    }
+    x <- mixtime::mixtime(x)
+  }
+  all(vapply(
+    x@x,
+    function(v) {
+      is.integer(vctrs::vec_data(v)) &&
+        !S7::S7_inherits(v, mixtime::mt_duration)
+    },
+    logical(1L)
+  ))
+}
 
 #' Aesthetic specific alignment of discrete time
 #'
