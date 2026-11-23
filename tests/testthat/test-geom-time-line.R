@@ -302,3 +302,60 @@ test_that("transitions are not resolved when the scale has no naive chronon", {
   p <- ggplot(df, aes(time, value)) + geom_time_line()
   expect_equal(sum(layer_grob(p)[[1]]$gp$lty == 2), 0)
 })
+
+test_that("transitions at the instant of an observation keep correct slopes", {
+  # Hours since the first observation that each segment starts and ends at
+  segments <- function(time) {
+    df <- data.frame(value = seq_along(time))
+    df$time <- time
+    p <- ggplot(df, aes(time, value)) +
+      geom_time_line() +
+      scale_x_mixtime(
+        time_chronon = mixtime::cal_gregorian$hour(1L, tz = NA),
+        align_discrete = 0
+      )
+    built <- ggplot_build(p)
+    rng <- built$layout$panel_params[[1]]$x.range
+    hours <- function(x) {
+      x <- rng[1] + as.numeric(x) * diff(rng) - built$data[[1]]$x[1]
+      # Inserted rows are a second either side of the transition
+      round(as.numeric(x), 2)
+    }
+    grob <- layer_grob(p)[[1]]
+    out <- data.frame(
+      from = hours(grob$x0),
+      to = hours(grob$x1),
+      dashed = grob$gp$lty == 2
+    )
+    # The inserted row and the observation coincide
+    out[out$from != out$to, ]
+  }
+  melbourne_hours <- function(start, n) {
+    as.POSIXct(start, tz = "Australia/Melbourne") + 3600 * seq(0, n - 1)
+  }
+
+  # DST ends at 3AM, which is the 4th observation
+  ends <- segments(melbourne_hours("2025-04-06 00:00:00", 6))
+  expect_equal(ends$from, c(0, 1, 2, 3, 2, 3))
+  expect_equal(ends$to, c(1, 2, 3, 2, 3, 4))
+  expect_equal(which(ends$dashed), 4)
+
+  # DST starts at 2AM, which is the 3rd observation
+  starts <- segments(melbourne_hours("2025-10-05 00:00:00", 5))
+  expect_equal(starts$from, c(0, 1, 2, 3, 4))
+  expect_equal(starts$to, c(1, 2, 3, 4, 5))
+  expect_equal(which(starts$dashed), 3)
+
+  # The last observation is at the transition
+  ends_last <- segments(melbourne_hours("2025-04-06 00:00:00", 4))
+  expect_equal(ends_last$to, c(1, 2, 3, 2))
+  expect_equal(which(ends_last$dashed), 4)
+
+  starts_last <- segments(melbourne_hours("2025-10-05 00:00:00", 3))
+  expect_equal(starts_last$to, c(1, 2, 3))
+  expect_equal(which(starts_last$dashed), 3)
+
+  # The first observation is at the transition
+  first <- segments(melbourne_hours("2025-10-05 03:00:00", 3))
+  expect_false(any(first$dashed))
+})

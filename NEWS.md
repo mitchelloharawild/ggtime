@@ -6,6 +6,11 @@
   summarises values within time granules. Implicit missing values are filled
   with `NA` so that incomplete granules aren't mistaken for complete ones.
 
+## Bug fixes
+
+* `geom_time_line()` now draws correct slopes when an observation is at the
+  exact instant of a time zone transition.
+
 # ggtime 1.1.1
 
 ## Improvements

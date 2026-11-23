@@ -675,7 +675,8 @@ resolve_time_transitions <- function(
         rng <- range(data$time_instant[data[[id_col]] == id], na.rm = TRUE)
         tr <- mixtime::tz_transitions(
           as.POSIXct(rng[1], origin = "1970-01-01", tz = id),
-          as.POSIXct(rng[2], origin = "1970-01-01", tz = id)
+          # One second later, as `tz_transitions()` excludes its `end`
+          as.POSIXct(rng[2] + 1, origin = "1970-01-01", tz = id)
         )
         tr$id <- rep(id, nrow(tr))
         tr
@@ -706,9 +707,12 @@ resolve_time_transitions <- function(
       drop = FALSE
     ]
   }
+  # An observation at the instant of a transition is already at the new offset,
+  # so a transition at the last observation is needed to reach it, but one at
+  # the first observation isn't.
   rng <- range(data$time_instant, na.rm = TRUE)
   transitions <- transitions[
-    transitions$time_num > rng[1] & transitions$time_num < rng[2],
+    transitions$time_num > rng[1] & transitions$time_num <= rng[2],
     ,
     drop = FALSE
   ]
@@ -771,10 +775,11 @@ resolve_time_transitions <- function(
     pair
   })
 
-  # `order()` uses a stable sort for the short numeric `time_instant` here, so
-  # ties (a pair's `before`/`after` rows share one `tr$time_num`) are left in
-  # insertion order, keeping `before` ahead of `after`.
-  out <- rbind(data, do.call(rbind, new_rows))
+  # `order()` is stable, so ties in `time_instant` are left in insertion order.
+  # This keeps a pair's `before` row ahead of its `after` row, and both ahead of
+  # an observation at the instant of the transition (which is already at the new
+  # offset).
+  out <- rbind(do.call(rbind, new_rows), data)
   out <- out[order(out$time_instant), , drop = FALSE]
   out$time_instant <- NULL
   out
