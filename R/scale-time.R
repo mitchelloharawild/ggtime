@@ -516,7 +516,7 @@ chronon_nesting_cache <- new.env(parent = emptyenv())
 #' @noRd
 breaks_mixtime <- function(n = 5) {
   n_default <- n
-  function(x, n = n_default) {
+  breaks <- function(x, n = n_default) {
     # Lengths of time are handed over as the `mixtime` wrapper, which hides
     # the chronon and class that the nesting is read from.
     wrapped <- is_mixtime(x)
@@ -529,6 +529,8 @@ breaks_mixtime <- function(n = 5) {
     }
     breaks
   }
+  # Identifies the default breaks, which may be labelled at a coarser granule.
+  structure(breaks, class = c("breaks_mixtime", "function"))
 }
 
 breaks_mixtime_impl <- function(x, n) {
@@ -587,6 +589,55 @@ breaks_mixtime_impl <- function(x, n) {
       step * seq(floor((rng[1] - origin) / step), ceiling((rng[2] - origin) / step))
     vctrs::vec_restore(breaks, x)
   }
+}
+
+#' The coarsest granule that simplifies the labels of breaks
+#'
+#' Breaks which all start a coarser granule are more simply labelled by it:
+#' "2020" and "2022" rather than "2020 Jan" and "2022 Jan". This only removes
+#' redundant detail, as the coarser label must be the start of the finer one. A
+#' granule with a different name (the quarter "2020 Q1" for "2020 Jan", or the
+#' week "2020 W02" for "2020-01-06") is not used.
+#'
+#' @param x Break positions, as a continuous `<mt_time>`.
+#' @returns A time granule, or `NULL` if there is nothing simpler than the
+#'   chronon of `x`.
+#' @noRd
+promote_granule <- function(x) {
+  if (is_mixtime(x)) {
+    x <- vecvec::unvecvec(x)
+  }
+  if (!S7::S7_inherits(x, mixtime::mt_linear)) {
+    return(NULL)
+  }
+  x <- x[is.finite(vctrs::vec_data(x))]
+  # The step between breaks isn't known from fewer than two of them.
+  if (length(x) < 2L) {
+    return(NULL)
+  }
+  nesting <- chronon_nesting(attr(x, "chronon"))
+  labels <- time_labels_at(x)
+  position <- vctrs::vec_data(x)
+  for (i in rev(seq_along(nesting$multiple)[-1L])) {
+    granule <- nesting$granule[[i]]
+    start <- granule_bounds(x, granule)$start
+    if (
+      isTRUE(all.equal(vctrs::vec_data(start), position, tolerance = 1e-8)) &&
+        all(startsWith(labels, time_labels_at(x, chronon = granule)))
+    ) {
+      return(granule)
+    }
+  }
+  NULL
+}
+
+#' Convert time points to continuous time of a chronon
+#' @noRd
+time_convert <- function(x, chronon) {
+  if (!is_mixtime(x)) {
+    x <- wrap_mixtime(x)
+  }
+  vecvec::unvecvec(mixtime::mixtime(x, chronon = chronon, discrete = FALSE))
 }
 
 #' Label time values by the granule they fall in
@@ -793,9 +844,25 @@ ScaleContinuousMixtime <- ggproto(
   # The granule the breaks step by, allows control by coord_calendar's cells
   time_breaks = waiver(),
 
-  get_labels = function(self, breaks = self$get_breaks()) {
+  # The granule that labels name, `NULL` for the scale's common chronon.
+  label_granule = function(self, breaks = self$get_breaks()) {
     granule <- self$time_breaks
-    if (is_waiver(granule) || is.null(granule) || !is_waiver(self$labels)) {
+    if (!is_waiver(granule) && !is.null(granule)) {
+      return(granule)
+    }
+    if (!isTRUE(self$time_discrete) || !is_waiver(self$labels)) {
+      return(NULL)
+    }
+    # Breaks given explicitly name the granules they were given as.
+    if (!is_waiver(self$breaks) && !inherits(self$breaks, "breaks_mixtime")) {
+      return(NULL)
+    }
+    promote_granule(self$get_transformation()$inverse(breaks))
+  },
+
+  get_labels = function(self, breaks = self$get_breaks()) {
+    granule <- self$label_granule(breaks)
+    if (is.null(granule) || !is_waiver(self$labels)) {
       return(ggproto_parent(ScaleContinuous, self)$get_labels(breaks))
     }
     # A child rather than a mutation of `self`: `get_labels()` may be called

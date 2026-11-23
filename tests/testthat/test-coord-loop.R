@@ -207,7 +207,7 @@ test_that("looped axes are labelled cyclically", {
   )
 
   # Without a loop, time is linear and labelled as points in time.
-  expect_match(loop_labels(p + coord_loop()), "^19[0-9]{2} [A-Z][a-z]{2}")
+  expect_match(loop_labels(p + coord_loop()), "^19[0-9]{2}$")
 
   # Labels the user asked for are not overridden.
   expect_equal(

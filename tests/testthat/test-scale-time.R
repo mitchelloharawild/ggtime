@@ -43,10 +43,10 @@ test_that("default breaks step by how the chronon nests in coarser granules", {
     paste(seq(0, 28, by = 7), "days")
   )
   # Time points are aligned to the coarser granule: every second January
-  # rather than every 20th month.
+  # rather than every 20th month, labelled by the years they start.
   expect_equal(
     breaks_of(mixtime::yearmonth(600:720)),
-    paste(seq(2020, 2030, by = 2), "Jan")
+    as.character(seq(2020, 2030, by = 2))
   )
   # Weeks start on a Monday.
   expect_equal(
@@ -59,7 +59,7 @@ test_that("default breaks step by how the chronon nests in coarser granules", {
       mixtime::datetime("2021-01-01 05:00:00", tz = "Australia/Melbourne") +
         mixtime::hours(0:72)
     ),
-    "(00|12):00:00$"
+    "(00|12):00$"
   )
 })
 
@@ -262,10 +262,10 @@ test_that("default labels leave the axis's timezone out", {
   )
   p <- ggplot(df, aes(x, y)) + geom_line()
 
-  # Breaks labelled at their own (second) chronon, ...
+  # Breaks of seconds labelled by the minutes they start, ...
   expect_match(
     scale_labels(p),
-    "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$"
+    "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$"
   )
   # ... and breaks labelled at the granule they step by.
   expect_match(

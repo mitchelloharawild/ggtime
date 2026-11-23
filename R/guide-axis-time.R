@@ -12,10 +12,13 @@
 #' have no granule to bracket, so the guide then behaves exactly like
 #' [ggplot2::guide_axis()].
 #'
-#' Granule boundaries are shared: a granule ends where the next one begins, so
-#' contiguous breaks produce a single row of ticks with one extra tick closing
-#' the final granule. Breaks which skip granules cannot share boundaries, and
-#' are instead bracketed by a tick on either side of each labelled granule.
+#' Every granule in the panel has its boundaries ticked, whether or not it is
+#' labelled, so labels which skip granules (such as every 6 months) still show
+#' the width of what they name. Where this would be too many ticks to tell apart,
+#' only granules of a coarser unit, or those with labels, are ticked.
+#'
+#' The default breaks are labelled by the coarsest granule which simplifies them,
+#' so 10 years of monthly data has years labelled (and ticked) rather than months.
 #'
 #' Angular axes of [ggplot2::coord_radial()] are drawn as by
 #' [ggplot2::guide_axis_theta()], with a tick at each break.
@@ -107,17 +110,17 @@ GuideAxisMixtime <- ggproto(
     # the granule as it is drawn - under `transform_warp()`, granules are not all
     # the same width.
     transform <- scale$get_transformation()
-    granules <- granule_bounds(transform$inverse(major$.value), time_scale)
+    x <- transform$inverse(major$.value)
+    # All breaks, as the labels were found from them (see `$get_labels()`).
+    unit <- label_unit(time_scale, scale$get_breaks(), x)
+    granules <- granule_bounds(x, unit)
     start <- as.numeric(transform$transform(granules$start))
     end <- as.numeric(transform$transform(granules$end))
-
-    # Contiguous granules share boundaries, so a full row of granules needs only
-    # one extra tick to close the last of them.
-    bounds <- unique(sort(c(start, end)))
 
     # The panel is drawn only over `range`, so a boundary or label beyond it
     # would be drawn outside the panel rather than clipped to it.
     range <- scale$continuous_range %||% scale$get_limits()
+    bounds <- granule_ticks(range, transform, unit, start, end)
     bounds <- bounds[bounds >= range[1] & bounds <= range[2]]
 
     # The label names the granule as a whole, so it belongs between the
@@ -179,40 +182,89 @@ is_theta_axis <- function(params) {
   isTRUE(params$position %in% c("theta", "theta.sec"))
 }
 
-#' The bounds of the granules that breaks fall in
+#' The unit of time that the labels of breaks name
 #'
-#' Breaks from `time_breaks` are labelled at (and positioned within) a unit of
-#' its granule, which may be coarser than the scale's common chronon. All other
-#' breaks are labelled at the common chronon.
+#' Breaks from `time_breaks` step by its granule, but each names only the first
+#' unit of the step.
 #'
-#' @param x Break positions, as a continuous `<mt_time>` of the common chronon.
 #' @param scale The `ScaleContinuousMixtime` that the breaks belong to.
+#' @param breaks All of the scale's breaks, on the transformed scale.
+#' @param x The breaks as a continuous `<mt_time>` of the common chronon.
+#' @noRd
+label_unit <- function(scale, breaks, x) {
+  unit <- scale$label_granule(breaks)
+  if (is.null(unit)) {
+    return(attr(x, "chronon"))
+  }
+  unit@n <- 1L
+  unit
+}
+
+#' The bounds of the granules that time points fall in
+#'
+#' @param x A continuous `<mt_time>`.
+#' @param unit The granule to find the bounds of.
 #' @returns A list of the `start` and `end` of each granule, like `x`.
 #' @noRd
-granule_bounds <- function(x, scale) {
+granule_bounds <- function(x, unit) {
   chronon <- attr(x, "chronon")
-  unit <- scale$time_breaks
-  if (is_waiver(unit) || is.null(unit)) {
-    start <- floor(vctrs::vec_data(x))
-    return(list(
-      start = vctrs::vec_restore(start, x),
-      end = vctrs::vec_restore(start + 1, x)
-    ))
-  }
-
-  # Breaks step by `unit`, but each names only the first unit of the step.
-  unit@n <- 1L
-  convert <- function(x, chronon) {
-    vecvec::unvecvec(
-      mixtime::mixtime(wrap_mixtime(x), chronon = chronon, discrete = FALSE)
-    )
-  }
-  position <- convert(x, unit)
-  # As for the labels, a break names the granule it falls in. Rounding absorbs
-  # error in the conversions.
+  position <- time_convert(x, unit)
+  # As for the labels, a time is named by the granule it falls in. Rounding
+  # absorbs error in the conversions.
   start <- floor(round(vctrs::vec_data(position), 6))
   list(
-    start = convert(vctrs::vec_restore(start, position), chronon),
-    end = convert(vctrs::vec_restore(start + 1, position), chronon)
+    start = time_convert(vctrs::vec_restore(start, position), chronon),
+    end = time_convert(vctrs::vec_restore(start + 1, position), chronon)
   )
+}
+
+#' The most granules of an axis to tick, beyond which the ticks of a typical
+#' plot are too close together to tell apart.
+#' @noRd
+axis_max_granules <- 60L
+
+#' Positions of the granule boundaries along an axis
+#'
+#' Every boundary of `unit` is ticked unless there would be too many of them, in
+#' which case those of the finest coarser granule which fits are used. Labels
+#' must each lie in a ticked granule that starts with theirs, and so if there
+#' isn't one then only the labelled granules are ticked.
+#'
+#' @param range The range of the axis, on the transformed scale.
+#' @param transform The scale's transformation.
+#' @param unit The granule that labels name.
+#' @param start,end The bounds of the labelled granules, on the transformed
+#'   scale.
+#' @returns Sorted boundaries on the transformed scale, covering `range`.
+#' @noRd
+granule_ticks <- function(range, transform, unit, start, end) {
+  labelled <- unique(sort(c(start, end)))
+  limits <- transform$inverse(range)
+  # The limits are outside of what some transformations can invert.
+  if (!all(is.finite(vctrs::vec_data(limits)))) {
+    return(labelled)
+  }
+  chronon <- attr(limits, "chronon")
+
+  for (granule in chronon_nesting(unit)$granule) {
+    position <- time_convert(limits, granule)
+    from <- floor(min(vctrs::vec_data(position)))
+    to <- ceiling(max(vctrs::vec_data(position)))
+    if (to - from > axis_max_granules) {
+      next
+    }
+    ticks <- as.numeric(seq(from, to))
+    ticks <- time_convert(vctrs::vec_restore(ticks, position), chronon)
+    ticks <- as.numeric(transform$transform(ticks))
+    ticks <- ticks[is.finite(ticks)]
+    starts <- vapply(
+      start,
+      function(at) any(abs(ticks - at) < 1e-6 * max(1, abs(at))),
+      logical(1L)
+    )
+    if (all(starts[start >= range[1] & start <= range[2]])) {
+      return(ticks)
+    }
+  }
+  labelled
 }

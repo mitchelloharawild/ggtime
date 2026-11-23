@@ -77,10 +77,13 @@ data occupies whole granules. Continuous time points sit at an instant and
 have no granule to bracket, so the guide then behaves exactly like
 \code{\link[ggplot2:guide_axis]{ggplot2::guide_axis()}}.
 
-Granule boundaries are shared: a granule ends where the next one begins, so
-contiguous breaks produce a single row of ticks with one extra tick closing
-the final granule. Breaks which skip granules cannot share boundaries, and
-are instead bracketed by a tick on either side of each labelled granule.
+Every granule in the panel has its boundaries ticked, whether or not it is
+labelled, so labels which skip granules (such as every 6 months) still show
+the width of what they name. Where this would be too many ticks to tell apart,
+only granules of a coarser unit, or those with labels, are ticked.
+
+The default breaks are labelled by the coarsest granule which simplifies them,
+so 10 years of monthly data has years labelled (and ticked) rather than months.
 
 Angular axes of \code{\link[ggplot2:coord_radial]{ggplot2::coord_radial()}} are drawn as by
 \code{\link[ggplot2:guide_axis_theta]{ggplot2::guide_axis_theta()}}, with a tick at each break.

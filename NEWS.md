@@ -9,8 +9,13 @@
 * Added `guide_axis_mixtime()`, the new default axis guide for `scale_x_mixtime()`.
   Discrete time points span a granule rather than sit at an instant, so the axis
   now places ticks at the granule boundaries with the label between them, much
-  like a discrete axis in {ggplot2}. Continuous time and durations are unaffected,
+  like a discrete axis in {ggplot2}. Every granule is ticked when only some are
+  labelled. Continuous time and durations are unaffected,
   and `guide = guide_axis()` restores the previous appearance.
+
+* The default breaks of discrete time are labelled by the granule they step by
+  when this is simpler (e.g. `2020` and `2022` rather than `2020 Jan` and
+  `2022 Jan`).
 
 ## Bug fixes
 
