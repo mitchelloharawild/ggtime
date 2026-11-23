@@ -1,3 +1,11 @@
+# ggtime (development version)
+
+## New features
+
+* Added `stat_summary_time()`, a variation of `ggplot2::stat_summary()` which
+  summarises values within time granules. Implicit missing values are filled
+  with `NA` so that incomplete granules aren't mistaken for complete ones.
+
 # ggtime 1.1.1
 
 ## Improvements

@@ -271,7 +271,7 @@ StatOhlc <- ggproto(
     na.rm = FALSE,
     orientation = NA
   ) {
-    flipped_aes <- candlestick_flipped_aes(scales, orientation)
+    flipped_aes <- time_flipped_aes(scales, orientation)
     data <- flip_data(data, flipped_aes)
     # Both the time axis and the calendar its granules resolve against come
     # from whichever scale carries time, which flipping has just made `x`.
@@ -303,7 +303,7 @@ StatOhlc <- ggproto(
       data$lower <- data$upper <- data$ymin <- data$ymax <- data$y
     }
 
-    bins <- candlestick_bins(data$x, scale, granule)
+    bins <- granule_bins(data$x, scale, granule)
 
     # Sorted so that "first" and "last" within a bin mean first and last in
     # time, rather than in row order. `order()` is stable, so observations
@@ -517,8 +517,8 @@ GeomCandlestick <- ggproto(
 #' Which axis carries time?
 #'
 #' Decided by time-typing rather than by `ggplot2::has_flipped_aes()`'s
-#' discreteness heuristic, matching the rule `geom_time_line()` uses: a
-#' candlestick's value axis is continuous just like its time axis, so
+#' discreteness heuristic, matching the rule `geom_time_line()` uses: the
+#' value axis being summarised is continuous just like the time axis, so
 #' discreteness cannot tell them apart. `x` wins when both, or neither, axis
 #' is time-valued.
 #' @param scales The panel's scales, as `Stat$compute_panel()` receives them.
@@ -526,7 +526,7 @@ GeomCandlestick <- ggproto(
 #'   from the scales.
 #' @returns `TRUE` when time is on `y`, `FALSE` when it is on `x`.
 #' @noRd
-candlestick_flipped_aes <- function(scales, orientation = NA) {
+time_flipped_aes <- function(scales, orientation = NA) {
   if (!is.null(orientation) && !is.na(orientation)) {
     return(identical(orientation, "y"))
   }
@@ -549,6 +549,8 @@ is_time_scale <- function(scale) {
 
 #' Assign each time position to a granule instance
 #'
+#' Shared by `stat_ohlc()` and `stat_summary_time()`.
+#'
 #' Cuts the axis at the granule's own boundaries (`loop_cuts_by_duration()`,
 #' shared with `coord_loop()`/`coord_calendar()`), rather than stepping a
 #' fixed length of time from the start of the data, so that each bin covers
@@ -560,11 +562,11 @@ is_time_scale <- function(scale) {
 #' @returns A list of `at` (the bin boundaries, in transformed data space; bin
 #'   `k` spans `at[k]` to `at[k + 1]`) and `bin` (each position's bin).
 #' @noRd
-candlestick_bins <- function(x, scale, granule, call = caller_env()) {
+granule_bins <- function(x, scale, granule, call = caller_env()) {
   msg <- c(
     "{.arg granule} could not be cut against this axis.",
-    i = "A candlestick summarises the values within a granule of time,
-         so the axis it is drawn against must measure time."
+    i = "Values are summarised within a granule of time, so the axis they are
+         drawn against must measure time."
   )
   # Checked up front rather than left to mixtime's own error from cutting a
   # non-time axis: building that error's backtrace forces a promise that S7
@@ -574,12 +576,18 @@ candlestick_bins <- function(x, scale, granule, call = caller_env()) {
     cli::cli_abort(msg, call = call)
   }
   trans <- scale$get_transformation()
-  limits <- scale$get_limits()
+  limits <- range(scale$get_limits(), x)
+  range <- trans$inverse(limits)
+  # tsibble's index classes are positioned by date
+  is_index <- inherits(range, c("yearweek", "yearmonth", "yearquarter"))
+  if (is_index) {
+    range <- as.Date(range)
+  }
   cuts <- try_fetch(
-    loop_cuts_by_duration(trans$inverse(limits), granule),
+    loop_cuts_by_duration(range, granule),
     error = function(cnd) cli::cli_abort(msg, parent = cnd, call = call)
   )
-  at <- as.numeric(trans$transform(cuts))
+  at <- as.numeric(if (is_index) cuts else trans$transform(cuts))
   list(at = at, bin = loop_index(x, at))
 }
 
