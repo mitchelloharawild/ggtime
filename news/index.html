@@ -61,6 +61,20 @@
     </div>
 
     <div class="section level2">
+<h2 class="page-header" data-toc-text="development version" id="ggtime-development-version">ggtime (development version)<a class="anchor" aria-label="anchor" href="#ggtime-development-version"></a></h2>
+<div class="section level3">
+<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<ul><li><p>Added <code><a href="../reference/stat_summary_time.html">stat_summary_time()</a></code>, a variation of <code><a href="https://ggplot2.tidyverse.org/reference/stat_summary.html" class="external-link">ggplot2::stat_summary()</a></code> which summarises values within time granules. Implicit missing values are filled with <code>NA</code> so that incomplete granules aren’t mistaken for complete ones.</p></li>
+<li><p>Added <code><a href="../reference/guide_axis_mixtime.html">guide_axis_mixtime()</a></code>, the new default axis guide for <code><a href="../reference/scale_mixtime.html">scale_x_mixtime()</a></code>. Discrete time points span a granule rather than sit at an instant, so the axis now places ticks at the granule boundaries with the label between them, much like a discrete axis in {ggplot2}. Every granule is ticked when only some are labelled. Continuous time and durations are unaffected, and <code>guide = guide_axis()</code> restores the previous appearance.</p></li>
+<li><p>The default breaks of discrete time are labelled by the granule they step by when this is simpler (e.g. <code>2020</code> and <code>2022</code> rather than <code>2020 Jan</code> and <code>2022 Jan</code>).</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/geom_time_line.html">geom_time_line()</a></code> now draws correct slopes when an observation is at the exact instant of a time zone transition.</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="page-header" data-toc-text="1.1.1" id="ggtime-111">ggtime 1.1.1<small>2026-11-08</small><a class="anchor" aria-label="anchor" href="#ggtime-111"></a></h2>
 <div class="section level3">
 <h3 id="improvements-1-1-1">Improvements<a class="anchor" aria-label="anchor" href="#improvements-1-1-1"></a></h3>
