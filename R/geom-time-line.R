@@ -9,7 +9,7 @@
 #' `[x/y]timeoffset` aesthetics. Changes in time offsets are drawn using dashed lines,
 #' which are most commonly used for timezone changes and daylight savings time transitions.
 #' Timezone offsets are automatically used when times from the `mixtime` package are
-#' plotted in local time, which is the scale's default behaviour (see the `time_chronon`
+#' plotted in local time (see the `time_chronon`
 #' argument of [scale_x_mixtime()]).
 #'
 #' This geometry also respects implicit missing values in regular time series, and will
@@ -52,15 +52,14 @@
 #'
 #' Most notably, `geom_time_line()` works closely with the time scale
 #' ([scale_x_mixtime()]) to correctly display time in local
-#' and absolute time formats. Local time (the scale's default whenever all
-#' time points share a timezone) shows time as experienced in that timezone, it
-#' is the time on clocks in that timezone. Absolute time shows time as a
-#' continuous timeline without timezone adjustments. Which of these is shown is
-#' controlled by the scale's `time_chronon`: a chronon with `tz = NA` combines
-#' time points by their local wall-clock reading (local time), while a chronon
-#' with a fixed timezone (such as UTC, the default when a common chronon must
-#' be identified across timezones) aligns them by the instant they occurred
-#' (absolute time).
+#' and absolute time formats. Local time shows time as experienced in a
+#' timezone, it is the time on clocks in that timezone. Absolute time shows time
+#' as a continuous timeline without timezone adjustments. Which of these is shown
+#' is controlled by the scale's `time_chronon`: a chronon with a timezone aligns
+#' time points by the instant they occurred (absolute time), while a chronon with
+#' `tz = NA` combines time points by their local wall-clock reading (local time).
+#' The default is absolute time, labelled in the timezone of the data, or in UTC
+#' if the data has multiple timezones.
 #'
 #'
 #' When time series are visualised in local time, timezone offset changes (e.g.
@@ -707,10 +706,10 @@ resolve_time_transitions <- function(
       drop = FALSE
     ]
   }
+  rng <- range(data$time_instant, na.rm = TRUE)
   # An observation at the instant of a transition is already at the new offset,
   # so a transition at the last observation is needed to reach it, but one at
   # the first observation isn't.
-  rng <- range(data$time_instant, na.rm = TRUE)
   transitions <- transitions[
     transitions$time_num > rng[1] & transitions$time_num <= rng[2],
     ,
