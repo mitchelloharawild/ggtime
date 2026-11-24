@@ -327,8 +327,10 @@ test_that("transitions at the instant of an observation keep correct slopes", {
       to = hours(grob$x1),
       dashed = grob$gp$lty == 2
     )
-    # The inserted row and the observation coincide
-    out[out$from != out$to, ]
+    # The inserted row and the observation coincide. Both axes are compared, as
+    # a vertical segment is a fault that should be kept.
+    height <- abs(as.numeric(grob$y1) - as.numeric(grob$y0))
+    out[out$from != out$to | height > 1e-6, ]
   }
   melbourne_hours <- function(start, n) {
     as.POSIXct(start, tz = "Australia/Melbourne") + 3600 * seq(0, n - 1)
