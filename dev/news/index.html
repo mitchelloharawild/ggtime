@@ -70,8 +70,9 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
-<ul><li>
-<code><a href="../reference/geom_time_line.html">geom_time_line()</a></code> now draws correct slopes when an observation is at the exact instant of a time zone transition.</li>
+<ul><li><p><code><a href="../reference/gg_lag.html">gg_lag()</a></code>, <code><a href="../reference/gg_arma.html">gg_arma()</a></code>, <code>gg_acf()</code> and friends, and <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code> of multiple variables no longer use the retired <code><a href="https://tidyr.tidyverse.org/reference/gather.html" class="external-link">tidyr::gather()</a></code>, which stripped the vecvec base vector of mixtime columns (“<code>x</code> is not a vecvec base vector”). They now use <code><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">tidyr::pivot_longer()</a></code>.</p></li>
+<li><p><code><a href="../reference/geom_time_line.html">geom_time_line()</a></code> now draws correct slopes when an observation is at the exact instant of a time zone transition, or when <code>align_discrete</code> places it across one.</p></li>
+<li><p><code><a href="../reference/geom_time_line.html">geom_time_line()</a></code> now identifies missing and duplicated time values separately for each granularity, and no longer errors when granularities without a fixed ratio (e.g. months and days) are used together. All discrete mixtime granularities are regular, including those finer than a day.</p></li>
 </ul></div>
 </div>
     <div class="section level2">
