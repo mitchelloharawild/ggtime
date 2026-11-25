@@ -19,6 +19,15 @@
 
 ## Bug fixes
 
+* `coord_loop()` now sizes its loops after time is transformed, so loops warped
+  to the same length with `transform_warp()` fill the panel (and complete the
+  circle of `coord_radial()`).
+
+* `coord_loop(loops = )` now labels `scale_x_mixtime()` axes with the time since
+  the start of the loop, or the proportion of the loop if it is warped with
+  `transform_warp()`. The axis was previously labelled with the time of the first
+  loop.
+
 * `gg_lag()`, `gg_arma()`, `gg_acf()` and friends, and `autoplot()` of
   multiple variables no longer use the retired `tidyr::gather()`, which
   stripped the vecvec base vector of mixtime columns ("`x` is not a vecvec

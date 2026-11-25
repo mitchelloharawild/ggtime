@@ -95,6 +95,14 @@ used. Labels given with the \code{labels} or \code{time_labels} options of
 \code{\link[=scale_x_mixtime]{scale_x_mixtime()}} are used unchanged, since they say how the user wants
 time written.
 
+Loops given as time points (\code{loops}) have no cycle to name positions within, so
+a \code{\link[=scale_x_mixtime]{scale_x_mixtime()}} axis is labelled with the time since the start of the
+loop instead ("0 years", "2 years", ...). If the scale is warped so that every
+loop has the same width (see \code{\link[=transform_warp]{transform_warp()}}), it is labelled with the
+proportion of the loop ("0\%", "25\%", ...). The scale's \code{breaks},
+\code{labels} and \code{time_labels} replace these defaults, and \code{time_breaks} step from
+the start of the loop (unless the scale is warped).
+
 The justification of looping can be controlled using the \code{align_discrete} option
 of \code{\link[=scale_x_mixtime]{scale_x_mixtime()}}, where values from 0 to 1 specify the alignment.
 Left alignment (\code{align_discrete = 0}) places inter-seasonal connections on the

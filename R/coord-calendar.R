@@ -453,7 +453,7 @@ CoordCalendar <- function(coord) {
     # Hook: zooms `self$limits[[self$time_scale]]` into one row's own
     # window, so expansion, breaks and user limits are all applied to the
     # window that is actually drawn.
-    window = function(self, cuts) cuts$row_window,
+    window = function(self, cuts, trans, limits) cuts$row_window,
 
     # Hook: attaches the cut-specific fields to the panel params. The work
     # is done by `calendar_panel_cuts()`; this supplies the coord's own

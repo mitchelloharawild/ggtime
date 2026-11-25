@@ -64,6 +64,14 @@
 #' [scale_x_mixtime()] are used unchanged, since they say how the user wants
 #' time written.
 #'
+#' Loops given as time points (`loops`) have no cycle to name positions within, so
+#' a [scale_x_mixtime()] axis is labelled with the time since the start of the
+#' loop instead ("0 years", "2 years", ...). If the scale is warped so that every
+#' loop has the same width (see [transform_warp()]), it is labelled with the
+#' proportion of the loop ("0%", "25%", ...). The scale's `breaks`,
+#' `labels` and `time_labels` replace these defaults, and `time_breaks` step from
+#' the start of the loop (unless the scale is warped).
+#'
 #' The justification of looping can be controlled using the `align_discrete` option
 #' of [scale_x_mixtime()], where values from 0 to 1 specify the alignment.
 #' Left alignment (`align_discrete = 0`) places inter-seasonal connections on the
@@ -209,13 +217,18 @@ CoordLoop <- function(coord) {
 
       # Labels a looped axis as a position within the loop, not a point in
       # time.
-      scales <- self$cyclical_scales(scale_x, scale_y, cuts)
+      limits <- uncut_params[[self$time_scale]]$limits
+      scales <- self$cyclical_scales(scale_x, scale_y, cuts, limits)
 
       # Zoomed into the loop window, so expansion, breaks and user limits
       # apply to what is actually drawn.
       old_limits <- self$limits
       on.exit(self$limits <- old_limits, add = TRUE)
-      self$limits[[self$time_scale]] <- self$window(cuts)
+      self$limits[[self$time_scale]] <- self$window(
+        cuts,
+        trans,
+        limits
+      )
       cut_params <- ggproto_parent(coord, self)$setup_panel_params(
         scales$x,
         scales$y,
@@ -257,28 +270,34 @@ CoordLoop <- function(coord) {
 
     # The time scale, re-labelled to describe a position within the loop
     # rather than a point in time.
-    cyclical_scales = function(self, scale_x, scale_y, cuts) {
+    cyclical_scales = function(self, scale_x, scale_y, cuts, limits) {
       cycle <- self$loop_granule(cuts)
       time_x <- identical(self$time, "x")
       scale <- if (time_x) scale_x else scale_y
       divide <- self$break_granule(cuts, scale)
       align <- if (self$align_breaks) scale_break_align(scale) else 0
-      scale <- as_cyclical_scale(scale, cycle, divide, align)
+      scale <- if (is.null(loop_cycle(cycle)) && has_loop_points(self$loops)) {
+        # Loops at time points have no cycle to name positions within.
+        as_elapsed_scale(scale, cuts, limits)
+      } else {
+        as_cyclical_scale(scale, cycle, divide, align)
+      }
       if (time_x) list(x = scale, y = scale_y) else list(x = scale_x, y = scale)
     },
 
     # Hook: the window to zoom `self$limits[[self$time_scale]]` into (see
     # `setup_panel_params()`): the first time point to the end of the
-    # longest loop.
-    window = function(self, cuts) {
-      c(cuts[1], cuts[1] + max(diff(cuts)))
+    # longest loop. Data is folded in transformed space, so that is where the
+    # longest loop is measured (warping can change which loop that is).
+    window = function(self, cuts, trans, limits) {
+      loop_window(cuts, trans, limits)
     },
 
     # Hook: attaches the cut-specific fields to the panel params.
     panel_cuts = function(self, cut_params, cuts, trans) {
       cut_params$time_cuts <- cuts
       # Transformed, since cutting happens in transformed data space.
-      cut_params$loop_cuts <- as.numeric(trans$transform(cuts))
+      cut_params$loop_cuts <- transform_cuts(cuts, trans)
       cut_params
     },
 
@@ -363,6 +382,60 @@ CoordLoop <- function(coord) {
   )
 }
 
+#' Loop points in transformed space
+#'
+#' The final cut only closes the last loop, and can be beyond the domain of the
+#' transformation (e.g. past the last point of [transform_warp()]).
+#' @param cuts Loop points, in the scale's own time type.
+#' @param trans The time scale's transformation.
+#' @returns Numeric loop points.
+#' @noRd
+transform_cuts <- function(cuts, trans) {
+  at <- as.numeric(trans$transform(cuts))
+  n <- length(at)
+  if (n > 2L && is.na(at[n])) {
+    at[n] <- at[n - 1L] + max(diff(at[-n]))
+  }
+  at
+}
+
+#' The time window covered by the longest loop
+#'
+#' @inheritParams transform_cuts
+#' @param limits The un-looped limits of the time scale, in transformed space.
+#' @returns The start and end of a window starting at the first loop point, as
+#'   wide as the longest loop is drawn.
+#' @noRd
+loop_window <- function(cuts, trans, limits) {
+  at <- transform_cuts(cuts, trans)
+  widths <- as.numeric(diff(cuts))
+  ratio <- diff(at) / widths
+  # Time is moved directly where it is drawn linearly, which avoids
+  # un-transforming it (e.g. beyond the range of the data).
+  if (
+    length(ratio) < 2L ||
+      anyNA(ratio) ||
+      diff(range(ratio)) <= 1e-8 * max(abs(ratio))
+  ) {
+    return(c(cuts[1], cuts[1] + max(diff(cuts))))
+  }
+
+  # Warped time: un-transform the end of the longest loop as it is drawn. The
+  # final loop is closed arbitrarily, so is only as long as the data in it.
+  n <- length(at)
+  at[n] <- min(at[n], max(at[n - 1L], limits))
+  end <- trans$inverse(at[1] + max(diff(at)))
+  start <- if (is_mixtime(cuts)) vecvec::unvecvec(cuts[1]) else cuts[1]
+  # Warp points can have a different granularity to the data.
+  if (
+    S7::S7_inherits(end, mixtime::mt_time) &&
+      !identical(attr(end, "chronon"), attr(start, "chronon"))
+  ) {
+    return(c(wrap_mixtime(start), wrap_mixtime(end)))
+  }
+  c(start, end)
+}
+
 # cyclical labels ---------------------------------------------------------
 
 #' Label a time scale by position within the loop, broken at its divisions
@@ -427,6 +500,198 @@ as_cyclical_scale <- function(scale, time_loops, divisions = NULL, align = 0) {
   # A child, not a mutation: the view scale formats labels at draw time,
   # long after `setup_panel_params()` returns.
   inject(ggplot2::ggproto(NULL, scale, !!!fields))
+}
+
+#' Are loops given as time points?
+#' @param loops The `loops` given to [coord_loop()].
+#' @noRd
+has_loop_points <- function(loops) !is_waiver(loops) && !is.null(loops)
+
+#' Label a time scale by position since the start of the loop
+#'
+#' Loops at time points have no cycle of known length, so an axis shared by them
+#' is labelled with the time since the start of each loop, or the proportion of
+#' the loop where warping draws every loop at the same width. As in
+#' `as_cyclical_scale()`, these are only defaults for `breaks` and `labels`.
+#'
+#' Neither describes loops which are warped to different widths, so these scales
+#' are unchanged. So are scales of other time types (e.g. `Date`).
+#' @param scale The positional `Scale` handling the time aesthetic.
+#' @param cuts Loop points, in the scale's own time type.
+#' @param limits The un-looped limits of the scale, in transformed space.
+#' @noRd
+as_elapsed_scale <- function(scale, cuts, limits) {
+  if (!inherits(scale, "ScaleContinuousMixtime")) {
+    return(scale)
+  }
+  trans <- scale$get_transformation()
+  at <- transform_cuts(cuts, trans)
+  linear <- identical(trans$name, "mixtime")
+  # `time_breaks` step from the start of the loop, but can't evenly divide loops
+  # which are warped.
+  default_breaks <- is_waiver(scale$breaks) ||
+    inherits(scale$breaks, "breaks_mixtime") ||
+    (linear && is_granule(scale$time_breaks))
+  default_labels <- is_waiver(scale$labels)
+
+  if (linear) {
+    fields <- elapsed_time_fields(scale, trans, at)
+  } else {
+    width <- loop_common_width(at, limits)
+    if (is.null(width)) {
+      return(scale)
+    }
+    fields <- elapsed_proportion_fields(trans, at[1], width)
+  }
+
+  if (!default_labels) {
+    fields$labels <- NULL
+    fields$time_discrete <- NULL
+  }
+  if (!default_breaks) {
+    fields$breaks <- NULL
+  }
+  # A child, not a mutation, as in `as_cyclical_scale()`.
+  inject(ggplot2::ggproto(NULL, scale, !!!fields))
+}
+
+#' The width that all loops are drawn with
+#'
+#' @param at Loop points in transformed space, from `transform_cuts()`.
+#' @inheritParams as_elapsed_scale
+#' @returns The width in transformed space, or `NULL` if loops vary in width.
+#' @noRd
+loop_common_width <- function(at, limits) {
+  n <- length(at)
+  # The final cut only closes the last loop, which is as long as its data.
+  widths <- diff(at[-n])
+  if (length(widths) == 0L || anyNA(widths)) {
+    return(NULL)
+  }
+  tol <- 1e-8 * max(abs(widths))
+  last <- min(at[n], max(limits)) - at[n - 1L]
+  if (diff(range(widths)) > tol || last > widths[1] + tol) {
+    return(NULL)
+  }
+  widths[1]
+}
+
+#' Breaks and labels for the time since the start of the loop
+#'
+#' @param scale The positional `Scale` handling the time aesthetic.
+#' @param trans The scale's transformation, which doesn't warp time.
+#' @param at Loop points in transformed space, from `transform_cuts()`.
+#' @returns A list of fields for `as_elapsed_scale()`.
+#' @noRd
+elapsed_time_fields <- function(scale, trans, at) {
+  origin <- trans$inverse(at[1])
+  is_duration <- S7::S7_inherits(origin, mixtime::mt_duration)
+  unit <- attr(origin, "chronon")
+
+  # Time is counted in units of `time_breaks`, when the scale has them.
+  step <- NULL
+  if (is_granule(scale$time_breaks) && !is_duration) {
+    tz <- mixtime::tz_name(unit)
+    unit <- scale$time_breaks
+    step <- unit@n
+    unit@n <- 1L
+    if (S7::S7_inherits(unit, mixtime::mt_tz_unit) && !is.na(tz)) {
+      unit@tz <- tz
+    }
+  }
+  position <- function(x) {
+    if (is_mixtime(x)) {
+      x <- vecvec::unvecvec(x)
+    }
+    if (!identical(attr(x, "chronon"), unit)) {
+      x <- time_convert(x, unit)
+    }
+    as.numeric(vctrs::vec_data(x))
+  }
+  start <- position(origin)
+
+  # Discrete time is counted in whole granules, if these nest within the loop.
+  whole <- isTRUE(scale$time_discrete) && abs(start - round(start)) < 1e-6
+  align <- if (whole) scale_break_align(scale) else 0
+
+  elapsed <- function(x) {
+    vecvec::unvecvec(mixtime::duration(x, chronon = unit, discrete = FALSE))
+  }
+  # The scale's own breaks count lengths of time from zero.
+  pretty <- if (inherits(scale$breaks, "breaks_mixtime")) {
+    scale$breaks
+  } else {
+    breaks_mixtime()
+  }
+  end <- max(diff(at))
+
+  breaks <- function(x, n = NULL) {
+    if (is.null(step)) {
+      args <- list(elapsed(c(0, end)))
+      args$n <- n
+      steps <- as.numeric(vctrs::vec_data(inject(pretty(!!!args))))
+      steps <- steps[steps >= 0 & steps <= end + 1e-8 * end]
+      return(trans$inverse(at[1] + steps))
+    }
+    last <- max(position(trans$inverse(at[1] + end)) - start, 0)
+    steps <- seq(0, last + 1e-6, by = step) + align
+    vctrs::vec_restore(start + steps, time_convert(origin, unit))
+  }
+
+  labels <- function(x) {
+    if (is_mixtime(x)) {
+      x <- vecvec::unvecvec(x)
+    }
+    out <- rep(NA_character_, vctrs::vec_size(x))
+    finite <- is.finite(vctrs::vec_data(x))
+    if (!any(finite)) {
+      return(out)
+    }
+    # Rounding absorbs error in the conversions.
+    since <- round(position(x[finite]) - start, 6)
+    if (whole) {
+      since <- floor(since)
+    }
+    discrete <- all(since == round(since))
+    out[finite] <- format(
+      mixtime::duration(
+        if (discrete) as.integer(since) else since,
+        chronon = unit,
+        discrete = discrete
+      ),
+      attr = FALSE
+    )
+    out
+  }
+
+  # Otherwise `guide_axis_mixtime()` would bracket granules of the calendar,
+  # rather than units of time since the start of the loop.
+  list(breaks = breaks, labels = labels, time_discrete = whole)
+}
+
+#' Breaks and labels for the proportion of the loop
+#'
+#' @param trans The scale's transformation.
+#' @param start,width The start of the first loop and the width of all loops, in
+#'   transformed space.
+#' @returns A list of fields for `as_elapsed_scale()`.
+#' @noRd
+elapsed_proportion_fields <- function(trans, start, width) {
+  list(
+    breaks = function(x, n = 4) {
+      # The end of the loop is the start of the next.
+      parts <- c(2, 4, 5, 10, 20)
+      parts <- parts[which.min(abs(parts - n))]
+      trans$inverse(start + width * (seq_len(parts) - 1) / parts)
+    },
+    labels = function(x) {
+      at <- as.numeric(trans$transform(x))
+      # Rounding avoids labels like "-0%" from error in the conversions.
+      scales::label_percent()(round((at - start) / width, 6))
+    },
+    # A proportion is a position, and not a granule for the guide to bracket.
+    time_discrete = FALSE
+  )
 }
 
 #' Breaks at every boundary of a granule

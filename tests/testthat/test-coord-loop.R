@@ -445,3 +445,122 @@ test_that("self$limits is restored even if the parent setup_panel_params() error
   )
   expect_identical(coord$limits, before)
 })
+
+test_that("looped windows are as wide as the longest warped loop", {
+  window <- function(p) {
+    ggplot_build(p)$layout$panel_params[[1]]$x.range
+  }
+  lynx <- tsibbledata::pelt
+  lynx <- data.frame(year = mixtime::year(as.integer(lynx$Year)), y = lynx$Lynx)
+  lynx <- lynx[8:85, ]
+  troughs <- mixtime::year(
+    c(1852L, 1861L, 1872L, 1880L, 1891L, 1900L, 1908L, 1919L, 1930L)
+  )
+  p <- ggplot(lynx, aes(year, y)) +
+    geom_line() +
+    scale_x_mixtime(
+      transform = transform_warp(troughs + 0),
+      expand = expansion(0)
+    )
+  expect_equal(window(p + coord_loop(loops = troughs)), c(0, 1))
+  # The last loop is closed by the data rather than a loop point
+  expect_equal(window(p + coord_loop(loops = troughs[-9])), c(0, 1))
+  # The cut closing the last loop is beyond the last warp point
+  expect_no_error(ggplotGrob(p + coord_loop(loops = troughs)))
+
+  # Warp points of a different granularity, starting with a short loop
+  days <- data.frame(day = mixtime::date("2021-02-01") + 0:119, y = 1:120)
+  p <- ggplot(days, aes(day, y)) +
+    geom_line() +
+    scale_x_mixtime(
+      transform = transform_warp(mixtime::yearmonth("2020 Dec") + 0:8 + 0)
+    )
+  expect_equal(diff(window(p + coord_loop(time_loops = mixtime::months(1L)))), 1)
+})
+
+test_that("loops at time points are labelled since the start of the loop", {
+  axis <- function(p) {
+    view <- ggplot_build(p)$layout$panel_params[[1]]$x
+    keep <- !is.na(view$breaks)
+    list(at = view$breaks[keep], labels = view$get_labels()[keep])
+  }
+  troughs <- mixtime::year(c(1852L, 1861L, 1872L, 1880L, 1891L))
+  df <- data.frame(year = mixtime::year(1852:1890), y = 1:39)
+  p <- ggplot(df, aes(year, y)) + geom_line()
+  loop <- coord_loop(loops = troughs)
+  origin <- as.numeric(troughs[1])
+
+  # Ragged
+  ragged <- axis(p + loop)
+  expect_equal(ragged$at, origin + seq(0, 10, by = 2))
+  expect_equal(ragged$labels, paste(seq(0, 10, by = 2), "years"))
+  expect_no_error(ggplotGrob(p + loop))
+  expect_no_error(ggplotGrob(
+    p + coord_loop(loops = troughs, coord = coord_radial())
+  ))
+  # No breaks are added in the expansion before the loop
+  expanded <- axis(p + coord_loop(loops = troughs, expand = TRUE))
+  expect_equal(expanded$labels, ragged$labels)
+
+  # Justified
+  warp <- transform_warp(troughs)
+  justified <- p + scale_x_mixtime(transform = warp)
+  expect_equal(
+    axis(justified + loop),
+    list(at = c(0, 0.25, 0.5, 0.75), labels = c("0%", "25%", "50%", "75%"))
+  )
+  expect_no_error(ggplotGrob(
+    justified + coord_loop(loops = troughs, coord = coord_radial())
+  ))
+  # The labels are not moved to the middle of a granule
+  view <- ggplot_build(justified + loop)$layout$panel_params[[1]]$x
+  key <- GuideAxisMixtime$extract_key(view, "x")
+  expect_equal(key$.value[!is.na(key$.value)], c(0, 0.25, 0.5, 0.75))
+
+  # Loops warped to different widths have no common proportion
+  uneven <- axis(justified + coord_loop(loops = troughs[c(1, 2, 4, 5)]))
+  expect_no_match(uneven$labels, "%")
+
+  # Options of the scale take precedence
+  at <- troughs[1] + c(0L, 3L, 6L)
+  expect_equal(
+    axis(p + scale_x_mixtime(breaks = at, labels = c("a", "b", "c")) + loop),
+    list(at = origin + c(0, 3, 6), labels = c("a", "b", "c"))
+  )
+  expect_equal(
+    axis(p + scale_x_mixtime(breaks = at) + loop)$labels,
+    c("0 years", "3 years", "6 years")
+  )
+  expect_equal(
+    axis(p + scale_x_mixtime(time_breaks = mixtime::years(5L)) + loop)$labels,
+    c("0 years", "5 years", "10 years")
+  )
+  expect_equal(
+    axis(p + scale_x_mixtime(labels = \(x) rep("a", length(x))) + loop)$labels,
+    rep("a", 6)
+  )
+})
+
+test_that("elapsed labels support loop points of other granularities", {
+  axis <- function(p) {
+    view <- ggplot_build(p)$layout$panel_params[[1]]$x
+    view$get_labels()[!is.na(view$breaks)]
+  }
+  days <- data.frame(day = mixtime::date("2021-01-01") + 0:119, y = 1:120)
+  p <- ggplot(days, aes(day, y)) + geom_line()
+  months <- mixtime::yearmonth("2021 Jan") + 0:4
+  expect_equal(
+    axis(p + coord_loop(loops = months)),
+    c("0 days", "7 days", "14 days", "21 days", "28 days")
+  )
+  # Loops starting within a month
+  dates <- mixtime::date("2021-01-10") + c(0L, 60L)
+  expect_equal(
+    axis(
+      p +
+        scale_x_mixtime(time_breaks = mixtime::months(1L)) +
+        coord_loop(loops = dates)
+    ),
+    c("0 months", "1 month", "2 months")
+  )
+})
