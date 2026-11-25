@@ -21,6 +21,9 @@
   accept units of the plotted data's calendar, such as `hour(1L, tz = NA)` rather
   than `mixtime::cal_gregorian$hour(1L, tz = NA)`.
 
+* Added `vignette("time-arrangements")`, showing how scales and coordinates are
+  combined to arrange time as ragged, justified, offset, and aligned plots (#42).
+
 ## Bug fixes
 
 * `coord_loop()` now sizes its loops after time is transformed, so loops warped

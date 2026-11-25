@@ -43,6 +43,8 @@ navbar:
     menu:
     - text: Introduction to ggtime
       href: articles/ggtime.html
+    - text: Arranging time to reveal repeating patterns
+      href: articles/time-arrangements.html
   right:
   - icon: fa-github fa-lg
     href: https://github.com/mitchelloharawild/ggtime
