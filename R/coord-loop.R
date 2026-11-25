@@ -482,15 +482,20 @@ loop_division_granule <- function(time_loops, chronon, at) {
   cardinality <- function(x, y) {
     tryCatch(mixtime::chronon_cardinality(x, y, at = at), error = function(e) NA)
   }
-  for (granule in rev(units[finer])) {
+  # Units finer than the data's chronon are skipped by position in the calendar
+  # where possible, as counting them in a chronon (e.g. nanoseconds in a month)
+  # exceeds what mixtime's integer cardinalities can hold.
+  chronon_pos <- match(class(chronon)[1], classes)
+  for (i in rev(which(finer))) {
+    granule <- units[[i]]
     # Half days divide too few hours to be a useful axis division.
     if (granule_unit(granule) == "ampm") {
       next
     }
     # Finer than the data, which has no observations in most of them.
-    # Measured in chronons, since converting `at` to a much finer granule
-    # (e.g. nanoseconds) overflows.
-    if (!isTRUE(cardinality(granule, chronon) <= 1)) {
+    if (!is.na(chronon_pos)) {
+      if (i > chronon_pos) next
+    } else if (!isTRUE(cardinality(granule, chronon) <= 1)) {
       next
     }
     n <- cardinality(granule, time_loops)
