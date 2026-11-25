@@ -77,9 +77,9 @@
 #' This geometry also maintains semantically valid slopes when time values are
 #' missing (either implicitly or explicitly), or duplicated. Implicit missing
 #' values in regular time series are semantically equivalent to explicit missing
-#' values, and `geom_time_line()` since the slope between unkown values is also
-#' unknown, `geom_time_line()` will not draw lines connecting missing values of
-#' either type. Since duplicated time values are not semantically valid in
+#' values. Since the slope between unknown values is also unknown,
+#' `geom_time_line()` will not draw lines connecting missing values of either
+#' type. Since duplicated time values are not semantically valid in
 #' regular time series, `geom_time_line()` will issue a warning (or an error if
 #' systematic duplicates are detected). When drawing a line between duplicated
 #' time points, the correct slopes are drawn by connecting all lines that lead
@@ -121,19 +121,21 @@
 #' values. Unlike [ggplot2::geom_line()], `geom_time_line()` will also not connect
 #' points separated by implicit missing values, creating gaps in the line (just
 #' like when an explicit missing value is present in [ggplot2::geom_line()]).
-#' Each point's own granularity determines what counts as "the next"
-#' observation, so this also works when a group mixes granularities (e.g.
-#' daily values that switch to monthly). This is only reliable at a
-#' day-or-coarser granularity -- finer values (such as a raw `POSIXct`) don't
-#' carry a data's sampling interval, only its precision, so gaps aren't
-#' detected there.
+#' The granularity of discrete `mixtime` time points determines what counts as
+#' the next observation: monthly time points are expected every month, and
+#' hourly time points every hour. Gaps are not detected for continuous time, or
+#' for `POSIXct`, since these don't identify an interval between observations.
+#'
+#' If a group contains time points of several granularities (e.g. annual and
+#' monthly), each granularity is drawn as a separate line with its own missing
+#' and duplicated time values.
 #'
 #' @section Duplicated time values:
 #'
-#' If there are duplicated time values within a group, `geom_time_line()` will
-#' issue a warning. An error will be raised if these duplications are systematic
-#' across the geometry, specifically if more than 50% of time points contain the
-#' same number of duplicates. Systematic duplicates typically indicate a need to
+#' If there are duplicated time values of the same granularity within a group,
+#' `geom_time_line()` will issue a warning. An error will be raised if these
+#' duplications are systematic across the geometry, specifically if more than
+#' 50% of a granularity's time points contain the same number of duplicates. Systematic duplicates typically indicate a need to
 #' use grouping aesthetics ([ggplot2::group], or [ggplot2::colour]) to
 #' draw separate lines for each time series. Rather than plotting an erroneous
 #' 'sawtooth' line which misrepresents the rate of change, the geometry will
@@ -178,8 +180,7 @@
 #'   geom_time_line() +
 #'   scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = "UTC"))
 #'
-#' # Implicit missing values leave a gap in the line (day-or-coarser
-#' # granularities only -- see the "Missing time values" section below)
+#' # Implicit missing values leave a gap in the line
 #' df_monthly <- data.frame(
 #'   month = mixtime::yearmonth(as.Date("2023-01-01")) + 0:9,
 #'   value = cumsum(rnorm(10, 2))
@@ -227,16 +228,10 @@ geom_time_line <- function(
       ...
     )
   )
-  # Marks the layer for `ggplot_add.ggtime_time_line_layer()` below, which
-  # defaults `[x/y]timeoffset`/`[x/y]timeid` once the layer is added to a
-  # plot. Class is prepended, not replacing the layer's own classes, so
-  # everything else about how a layer is added is untouched.
-  class(l) <- c("ggtime_time_line_layer", class(l))
-  l
+  time_line_layer(l)
 }
 
-# Is `x` a time-valued vector that carries an offset/identifier (a timezone or
-# similar), and so is eligible for `[x/y]timeoffset`/`[x/y]timeid` defaults?
+# Is `x` a time-valued vector that can identify an instant?
 is_time_typed <- function(x) is_mixtime(x) || inherits(x, "POSIXct")
 
 #' Which axis to connect observations in order of
@@ -249,8 +244,8 @@ is_time_typed <- function(x) is_mixtime(x) || inherits(x, "POSIXct")
 #' preferred when both, or neither, axis is time-valued -- the latter matching
 #' `geom_line()`'s own default.
 #'
-#' @param data The layer's computed data, with `[x/y]timetyped` columns (see
-#'   `inject_time_aes()`).
+#' @param data The layer's computed data, with a `[x/y]timegranule` column for
+#'   each time-valued axis (see `time_line_layer()`).
 #' @param params The layer's params, consulted for an explicit `orientation`
 #'   override.
 #' @returns `TRUE` to sort by `y` (only `y` is time-valued), `FALSE` to sort
@@ -260,9 +255,7 @@ time_line_flipped_aes <- function(data, params) {
   if (!is.null(params$orientation) && !is.na(params$orientation)) {
     return(params$orientation == "y")
   }
-  x_time <- isTRUE(data$xtimetyped[1])
-  y_time <- isTRUE(data$ytimetyped[1])
-  y_time && !x_time
+  !is.null(data$ytimegranule) && is.null(data$xtimegranule)
 }
 
 #' Check a user-supplied `transitions` table
@@ -390,116 +383,67 @@ check_transition_aesthetics <- function(
   transition_aesthetics
 }
 
-#' The offset applied to a time point when it is drawn in local time
+#' Identify the granules of a layer's time points
 #'
-#' A duration, not a bare number: the offset is derived here, from the original
-#' data, but is subtracted much later from positions the scale has since placed
-#' on a *common* chronon -- one which isn't known at this point, and need not be
-#' the chronon of any of the inputs. A duration carries its own unit, so the
-#' scale can convert it onto that chronon once it knows it (see
-#' `transform_time_offset()`), rather than the two ends having to agree a unit
-#' up front.
+#' Scales place all time points on a common chronon, so the granule which each
+#' position came from is needed to restore it. The granules are stored by the
+#' scale, and each row's granule is identified with an integer code in the
+#' internal `[x/y]timegranule` column. This isn't an aesthetic, since a time
+#' point's granule can't vary independently of the time itself.
 #'
-#' [mixtime::tz_offset()] states the offset in the chronon of the data it was
-#' asked about, and gives naive time (which has no timezone to be offset from)
-#' an offset of zero, so nothing more is needed here.
+#' The column exists if the axis is time-valued, and its codes are `NA` if the
+#' scale can't restore the time.
+#'
+#' These methods need the scales, which geoms, stats and positions either can't
+#' access or may be replaced by the user. `Layer` isn't exported by ggplot2, so
+#' the layer itself is extended.
+#'
+#' @param layer A layer.
+#' @returns `layer`, with `[x/y]timegranule` and `time_cluster` columns in its
+#'   data.
 #' @noRd
-default_timeoffset <- function(x) {
-  # 0, not NA: a non-time-typed `y` (the common case -- most plots don't have
-  # a time-valued y) must default to a no-op offset, not `NA`, since it is
-  # still subtracted even when nothing about it ever triggers a transition.
-  if (!is_time_typed(x)) {
-    return(mixtime::seconds(0L))
-  }
-  mixtime::tz_offset(x)
-}
-
-default_timeid <- function(x) {
-  if (is_time_typed(x)) mixtime::tz_name(x) else NA_character_
-}
-
-#' Default `[x/y]timeoffset`/`[x/y]timeid`/`[x/y]timetyped` from the `x`/`y`
-#' mapping
-#'
-#' Reuses whatever expression is mapped to `aesthetic` (`x` or `y`) to fill in
-#' the offset/identifier/typed aesthetics, unless already mapped. This has to
-#' run on the *mapping*, not on data computed later in the layer pipeline,
-#' since scale transformation discards the original time-typed value (and, for
-#' combined multi-timezone `mixtime` data, its per-point timezone) before any
-#' `Geom`/`Stat`/`Position` method sees it.
-#'
-#' `[x/y]timetyped` in particular exists only so `GeomTimeLine$setup_data` can
-#' tell which axis to connect observations in order of: `[x/y]timeid` can't be
-#' reused for this, since it is `NA` both when an axis isn't time-valued at all
-#' and when it is a naive `mixtime` with no timezone of its own (`tz_name()`
-#' is `NA` either way), and only the former should mean "not the time axis".
-#'
-#' @param mapping The layer's own mapping, to fill in and return.
-#' @param peek The complete mapping including inheritence from the base plot
-#'   aesthetic `mapping`.
-#' @param aesthetic The position aesthetic (`"x"` or `"y"`) to derive from.
-#'
-#' @noRd
-inject_time_aes <- function(mapping, peek, aesthetic) {
-  expr <- peek[[aesthetic]]
-  if (is.null(expr) || !is_quosure(expr)) {
-    return(mapping)
-  }
-
-  offset_aes <- paste0(aesthetic, "timeoffset")
-  id_aes <- paste0(aesthetic, "timeid")
-  typed_aes <- paste0(aesthetic, "timetyped")
-  raw_aes <- paste0(aesthetic, "timeraw")
-
-  aes_env <- env(
-    quo_get_env(expr),
-    default_timeoffset = default_timeoffset,
-    default_timeid = default_timeid,
-    is_time_typed = is_time_typed
+time_line_layer <- function(layer) {
+  # `ggproto()` finds its parent lazily, so it must not be reassigned.
+  force(layer)
+  stat <- layer$stat
+  ggproto(
+    NULL,
+    layer,
+    # Stats which summarise over time can't keep these, which isn't a problem
+    # the user can act on, so ggplot2 shouldn't warn that they were dropped.
+    stat = ggproto(
+      NULL,
+      stat,
+      dropped_aes = c(
+        stat$dropped_aes,
+        GeomTimeLine$optional_aes,
+        "xtimegranule",
+        "ytimegranule"
+      )
+    ),
+    compute_aesthetics = function(self, data, plot) {
+      data <- ggproto_parent(layer, self)$compute_aesthetics(data, plot)
+      for (axis in intersect(c("x", "y"), names(data))) {
+        x <- data[[axis]]
+        scale <- plot@scales$get_scales(axis)
+        granule <- paste0(axis, "timegranule")
+        if (
+          inherits(scale, "ScaleContinuousMixtime") && !is_bare_numeric(x)
+        ) {
+          data[[granule]] <- scale$register_granules(x)
+        } else if (is_time_typed(x) || inherits(x, "Date")) {
+          data[[granule]] <- rep(NA_integer_, nrow(data))
+        }
+      }
+      data
+    },
+    compute_position = function(self, data, layout) {
+      axis <- if (isTRUE(data$flipped_aes[1])) "y" else "x"
+      scales <- layout[[paste0("panel_scales_", axis)]]
+      data <- time_clusters(data, axis, scales[[1]])
+      ggproto_parent(layer, self)$compute_position(data, layout)
+    }
   )
-
-  if (is.null(peek[[offset_aes]])) {
-    mapping[[offset_aes]] <- new_quosure(
-      expr(default_timeoffset(!!quo_get_expr(expr))),
-      env = aes_env
-    )
-  }
-  if (is.null(peek[[id_aes]])) {
-    mapping[[id_aes]] <- new_quosure(
-      expr(default_timeid(!!quo_get_expr(expr))),
-      env = aes_env
-    )
-  }
-  if (is.null(peek[[typed_aes]])) {
-    mapping[[typed_aes]] <- new_quosure(
-      expr(is_time_typed(!!quo_get_expr(expr))),
-      env = aes_env
-    )
-  }
-  # The untransformed value itself, kept for `resolve_time_sequence()` -- the
-  # scale flattens mixed granularities onto one common chronon, which is too
-  # late to tell a genuine gap/duplicate from two granularities colliding.
-  if (is.null(peek[[raw_aes]])) {
-    mapping[[raw_aes]] <- expr
-  }
-  mapping
-}
-
-# Inject the `[x/y]timeoffset`/`[x/y]timeid` default aesthetics in a way that
-# accesses the semantically-rich original time-typed input data, and passes
-# time duration offsets through `ScaleMixtime` to be converted onto the scale's
-# chosen common chronon.
-#' @exportS3Method ggplot2::ggplot_add ggtime_time_line_layer
-ggplot_add.ggtime_time_line_layer <- function(object, plot, ...) {
-  mapping <- object$mapping %||% aes()
-  inherited <- if (isTRUE(object$inherit.aes)) plot$mapping else aes()
-  peek <- c(mapping, inherited[setdiff(names(inherited), names(mapping))])
-
-  mapping <- inject_time_aes(mapping, peek, "x")
-  mapping <- inject_time_aes(mapping, peek, "y")
-  object$mapping <- mapping
-
-  NextMethod()
 }
 
 #' @keywords internal
@@ -510,9 +454,7 @@ GeomTimeLine <- ggproto(
     "xtimeoffset",
     "ytimeoffset",
     "xtimeid",
-    "ytimeid",
-    "xtimeraw",
-    "ytimeraw"
+    "ytimeid"
   ),
   extra_params = c(GeomPath$extra_params, "orientation"),
   setup_params = function(data, params) {
@@ -521,14 +463,10 @@ GeomTimeLine <- ggproto(
   },
   setup_data = function(data, params) {
     # Connects observations in order of the time variable (like `geom_line()`
-    # orders by `x`), not row order (like the `GeomPath` this otherwise is):
-    # flipping onto the time axis, sorting, then flipping back reuses
-    # `geom_line()`'s own trick to sort by whichever axis (`x` or `y`) needs
-    # it, without duplicating its `draw_panel()`.
+    # orders by `x`), not row order (like the `GeomPath` this otherwise is).
     data$flipped_aes <- params$flipped_aes
-    data <- ggplot2::flip_data(data, params$flipped_aes)
-    data <- data[order(data$PANEL, data$group, data$x), ]
-    ggplot2::flip_data(data, params$flipped_aes)
+    time <- data[[if (params$flipped_aes) "y" else "x"]]
+    data[order(data$PANEL, data$group, time), , drop = FALSE]
   },
   draw_panel = function(
     self,
@@ -546,19 +484,14 @@ GeomTimeLine <- ggproto(
   ) {
     if (!anyDuplicated(data$group)) {
       cli::cli_inform(c(
-        "{.fn {class(self[1])}}: Each group consists of only one observation.",
+        "{.fn geom_time_line}: Each group consists of only one observation.",
         i = "Do you need to adjust the {.field group} aesthetic?"
       ))
     }
 
-    # Break each group into its connecting edges, skipping genuine gaps and
-    # fanning out duplicated time values instead of a sawtoothing path -- see
-    # `resolve_time_sequence()`. Each edge becomes its own two-row `group`,
-    # which the (unchanged) segment-building below already treats as
-    # independent paths.
-    data <- resolve_time_sequence(data)
-    if (nrow(data) == 0) {
-      return(ggplot2::zeroGrob())
+    # Not found if the geom is used by another layer, e.g. `stat_summary()`
+    if (!is.null(data$time_cluster)) {
+      data <- time_paths(data)
     }
 
     # Insert transition/jumps at known time offset transitions for dashed
@@ -621,167 +554,80 @@ GeomTimeLine <- ggproto(
   },
 )
 
-#' Break a panel's data into the edges it should be drawn as
+#' Sort data by time and identify clusters of duplicated time values
 #'
-#' Decomposes each group into edges between consecutive *clusters* of rows
-#' that cover the same time span (see `time_clusters()`), rather than
-#' connecting consecutive rows directly: a cluster boundary separated by a
-#' genuine gap is left unconnected, and a cluster of duplicated time values
-#' is fanned out to every incoming/outgoing edge instead of a single
-#' (sawtoothing) path through it.
+#' Positions are restored to the granule that they came from, since they can
+#' collide for mixed granularities (the middle of a month and of a day within
+#' it) and for local time (either side of a backward transition).
 #'
-#' Comparing each row's own time span, rather than the scale positions
-#' `draw_panel()` otherwise works with, is what keeps this correct under
-#' mixed granularities: two points at different granularities can land on the
-#' same scale position (e.g. a quarter's start aligned with a day within it)
-#' without covering the same span, so they're never mistaken for duplicates,
-#' and their adjacency is judged from the spans themselves rather than a
-#' fixed step size that wouldn't fit either granularity.
+#' Duplicates and gaps are specific to each granularity within a group, so time
+#' points of different granularities are never connected.
 #'
-#' @param data One panel's data, with `[x/y]timeraw` and `[x/y]timetyped`
-#'   columns (see `inject_time_aes()`), sorted in time order (see
-#'   `GeomTimeLine$setup_data()`).
-#' @returns `data` reduced to just the rows used by each edge, with `group`
-#'   replaced by a unique id per edge (always 2 rows, at this point).
+#' @param data The layer's data.
+#' @param axis The position aesthetic (`"x"` or `"y"`) to connect in order of.
+#' @param scale The position scale of `axis`.
+#' @returns `data` in time order, with a `time_cluster` id shared by duplicated
+#'   time values. Ids are consecutive only if the clusters should be connected,
+#'   so an id is skipped at each gap and between series.
 #' @noRd
-resolve_time_sequence <- function(data) {
-  flipped <- isTRUE(data$flipped_aes[1])
-  raw <- if (flipped) data$ytimeraw else data$xtimeraw
-  timetyped <- if (flipped) data$ytimetyped else data$xtimetyped
-  # Without a time-typed connecting axis, there's no span to reason about
-  # gaps/duplicates with -- fall back to connecting every row in sequence.
-  if (!isTRUE(timetyped[1])) {
-    raw <- NULL
+time_clusters <- function(data, axis, scale) {
+  n <- nrow(data)
+  if (n == 0) {
+    return(data)
   }
+  offset <- data[[paste0(axis, "timeoffset")]]
+  granule <- data[[paste0(axis, "timegranule")]] %||% rep(NA_integer_, n)
 
-  row_groups <- split(seq_len(nrow(data)), data$group)
-  warn_time_duplicates(row_groups, raw)
+  # Time in its own granule, or its position if that isn't known
+  time <- as.numeric(data[[axis]])
+  series <- rep(0L, n)
+  regular <- rep(FALSE, n)
+  for (code in unique(granule[!is.na(granule)])) {
+    i <- which(granule == code)
+    time[i] <- scale$restore_time(time[i], code, offset[i])
+    series[i] <- scale$time_granules[[code]]$series
+    regular[i] <- scale$time_granules[[code]]$regular
+  }
+  # Discrete time is whole granules, except where shifted by user offsets
+  index <- ifelse(regular, round(time), time)
 
-  edges <- unlist(
-    lapply(row_groups, time_sequence_edges, raw = raw),
-    recursive = FALSE
+  ord <- order(data$PANEL, data$group, series, time)
+  data <- data[ord, , drop = FALSE]
+  i <- seq_len(n)[-1]
+  now <- ord[i]
+  prev <- ord[i - 1]
+
+  new_series <- data$group[i] != data$group[i - 1] |
+    data$PANEL[i] != data$PANEL[i - 1] |
+    series[now] != series[prev]
+  # `%in% TRUE` as missing times are neither duplicated nor separated by a gap
+  same <- (index[now] == index[prev]) %in% TRUE & !new_series
+  # Equal times at different offsets are not duplicates
+  if (!is.null(offset)) {
+    same <- same &
+      vctrs::vec_equal(
+        vctrs::vec_slice(offset, now),
+        vctrs::vec_slice(offset, prev),
+        na_equal = TRUE
+      )
+  }
+  gap <- (regular[now] & regular[prev] & index[now] - index[prev] > 1) %in% TRUE
+  data$time_cluster <- cumsum(
+    c(1, ifelse(same, 0, 1 + (gap | new_series)))
   )
-  if (length(edges) == 0) {
-    return(data[0, , drop = FALSE])
-  }
 
-  out <- data[unlist(edges), , drop = FALSE]
-  out$group <- rep(seq_along(edges), each = 2)
-  out
-}
-
-# The `[start, end)` instant span (plain epoch seconds) a single row's raw
-# time value covers. Comparing spans, rather than the raw value directly, is
-# what keeps gap/duplicate detection correct for two things at once:
-# * mixed granularities: a coarse point (e.g. a quarter) and a fine point
-#   (e.g. a day within it) can share a *start* without sharing an *end*, so
-#   they're never mistaken for a duplicate just because they align.
-# * local time: two different instants can share one local wall-clock
-#   reading either side of a DST transition -- `resolve_time_transitions()`
-#   already draws that as its own dashed jump, so it must not also look like
-#   a duplicate or a gap here.
-#
-# A time-zoned value's own numeric already *is* the absolute instant it
-# occurred at (like `POSIXct`'s underlying epoch seconds), so reading it in
-# any fixed zone (`"UTC"`) recovers that instant directly -- correcting it by
-# `default_timeoffset()` first, as this used to, double-counts the offset,
-# which spuriously collides adjacent points across a forward DST jump (the
-# offset changes between them, so the correction no longer cancels out) even
-# though their instants are genuinely distinct. A naive value has no instant
-# to recover this way, so it's read as itself (`tz = NA`); its
-# `default_timeoffset()` is zero anyway, since there's nothing to offset from.
-time_span_at <- function(raw, i) {
-  # `POSIXct` is handled separately, reading its own numeric directly rather
-  # than routing it through `mixtime::mixtime()`: that reconstructs the
-  # instant from its (possibly ambiguous) civil wall-clock reading, which
-  # picks the wrong one of the two instants sharing a repeated local time at
-  # a backward DST transition. `POSIXct`'s own epoch-second numeric has no
-  # such ambiguity to begin with.
-  if (inherits(raw, "POSIXct")) {
-    start <- unclass(raw[i])
-    return(c(start, start))
+  sizes <- table(data$time_cluster)
+  duplicates <- sizes[sizes > 1]
+  if (length(duplicates) == 0) {
+    return(data)
   }
-  x <- as_mt_concrete(raw[i])
-  tz <- if (is.na(mixtime::tz_name(x))) NA else "UTC"
-  start <- seconds_since_epoch(x, tz = tz)
-  if (!is.integer(vctrs::vec_data(x))) {
-    return(c(start, start))
-  }
-  # Discrete: spans to the start of the next granule.
-  c(start, seconds_since_epoch(x + 1L, tz = tz))
-}
-
-# One group's row indices, split into runs of exactly-equal spans in order --
-# each run is a "duplicate cluster" (size 1 if unique). Compared row-by-row
-# (not vectorised) since a mixed-granularity slice can't be collapsed to one
-# concrete type all at once.
-time_clusters <- function(rows, raw) {
-  if (length(rows) < 2 || is.null(raw)) {
-    return(as.list(rows))
-  }
-  spans <- lapply(rows, function(i) time_span_at(raw, i))
-  n <- length(rows)
-  eq <- vapply(seq_len(n - 1), function(i) {
-    isTRUE(all(spans[[i]] == spans[[i + 1]]))
+  # Most time points of a granularity sharing the same number of duplicates
+  # suggests a forgotten grouping variable, rather than incidental duplicates.
+  cluster_series <- series[ord][!duplicated(data$time_cluster)]
+  systematic <- vapply(split(as.integer(sizes), cluster_series), function(n) {
+    any(n > 1) && max(table(n[n > 1])) / length(n) > 0.5
   }, logical(1))
-  unname(split(rows, cumsum(c(TRUE, !eq))))
-}
-
-# A day-or-coarser chronon (date, week, month, quarter, year, ...) is a
-# deliberate calendar granularity, so its own width reliably means "the next
-# expected observation". A finer chronon (raw `POSIXct`'s default is a bare
-# second) is just timestamp precision, not the data's sampling interval, so
-# treating every step as "gapped" would be wrong -- e.g. hourly readings
-# would never touch, since each only spans one second of its hour.
-day_seconds <- 86400
-
-# Edges to draw within one group: every combination of rows between two
-# adjacent clusters, unless a genuine (and reliably-detectable) gap
-# separates them -- the first cluster's span ends before the second's
-# begins.
-time_sequence_edges <- function(rows, raw) {
-  cluster <- time_clusters(rows, raw)
-  if (length(cluster) < 2) {
-    return(list())
-  }
-  edges <- list()
-  for (i in seq_len(length(cluster) - 1)) {
-    a <- cluster[[i]]
-    b <- cluster[[i + 1]]
-    if (!is.null(raw)) {
-      span_a <- time_span_at(raw, a[1])
-      span_b <- time_span_at(raw, b[1])
-      reliable <- (span_a[2] - span_a[1]) >= day_seconds
-      if (reliable && span_a[2] < span_b[1]) {
-        next # a genuine gap
-      }
-    }
-    combos <- expand.grid(a = a, b = b)
-    edges <- c(edges, Map(c, combos$a, combos$b))
-  }
-  edges
-}
-
-# Warn about duplicated time values found across all of a panel's groups, or
-# error if they look systematic (a forgotten grouping variable) rather than
-# incidental -- see the "Duplicated time values" section of `geom_time_line()`.
-warn_time_duplicates <- function(row_groups, raw) {
-  if (is.null(raw)) {
-    return(invisible())
-  }
-  clusters <- unlist(
-    lapply(row_groups, time_clusters, raw = raw),
-    recursive = FALSE
-  )
-  sizes <- lengths(clusters)
-  if (!any(sizes > 1)) {
-    return(invisible())
-  }
-
-  # Systematic: most time points share the same duplicate count, suggesting
-  # a forgotten grouping variable rather than incidental duplicate timestamps.
-  dup_sizes <- sizes[sizes > 1]
-  if (max(table(dup_sizes)) / length(sizes) > 0.5) {
+  if (any(systematic)) {
     cli::cli_abort(c(
       "{.fn geom_time_line}: Time values are systematically duplicated.",
       i = "Do you need to use a grouping aesthetic ({.field group} or \\
@@ -792,6 +638,33 @@ warn_time_duplicates <- function(row_groups, raw) {
     "{.fn geom_time_line}: Duplicated time values were found within a group.",
     i = "Drawing all lines that connect to and from the duplicated values."
   ))
+  data
+}
+
+#' Split groups into the paths they should be drawn as
+#'
+#' Paths are broken at gaps, and around duplicated time values. All combinations
+#' of rows are connected to and from duplicates, each as their own two-row path.
+#'
+#' @param data One panel's data, from `time_clusters()`.
+#' @returns `data` with its rows arranged into paths identified by `group`.
+#' @noRd
+time_paths <- function(data) {
+  rows <- split(seq_len(nrow(data)), data$time_cluster)
+  unique <- lengths(rows) == 1
+  i <- seq_along(rows)[-1]
+  linked <- diff(as.numeric(names(rows))) == 1
+  continues <- linked & unique[i] & unique[i - 1]
+
+  path <- cumsum(c(TRUE, !continues))
+  fans <- lapply(i[linked & !continues], function(j) {
+    t(expand.grid(rows[[j - 1]], rows[[j]]))
+  })
+  fans <- as.integer(unlist(fans))
+
+  out <- data[c(unlist(rows[unique]), fans), , drop = FALSE]
+  out$group <- c(path[unique], max(path) + rep(seq_len(length(fans) / 2), each = 2))
+  out
 }
 
 #' Insert rows at known time offset transitions
@@ -799,8 +672,8 @@ warn_time_duplicates <- function(row_groups, raw) {
 #' Uses the `transitions` data frame to insert two rows at each transition
 #' instant, one on either side, to draw a 'jump' segment between them.
 #'
-#' @param data One group's post-scale data, with `x`, `y`, `[x/y]timeoffset` and
-#'   `[x/y]timeid` columns.
+#' @param data One group's post-scale data, with `x` and `y`, and optionally
+#'   `[x/y]timeoffset`, `[x/y]timeid` and `[x/y]timegranule` columns.
 #' @param transitions Either `waiver()` (the default), which automatically
 #'   looks up transitions with [mixtime::tz_transitions()], or a data frame of
 #'   equivalent shape (with an optional `id` column that is matched against
@@ -827,57 +700,52 @@ resolve_time_transitions <- function(
   offset_col <- paste0(axis, "timeoffset")
 
   # Return early if the scale is not time-aware, or the data has no timezone
-  if (is.null(scale) || is.null(data[[id_col]]) || all(is.na(data[[id_col]]))) {
+  if (is.null(scale) || !scale_places_local_time(scale)) {
     return(data)
   }
-  if (!scale_places_local_time(scale)) {
+  # The timezone of each time point's granule is its default identifier
+  if (is.null(data[[id_col]])) {
+    granule <- data[[paste0(axis, "timegranule")]]
+    if (is.null(granule)) {
+      return(data)
+    }
+    tzs <- vapply(scale$time_granules, function(g) g$tz, character(1))
+    data[[id_col]] <- tzs[granule]
+  }
+  tzdb <- is_waiver(transitions)
+  # Without offsets (dropped by a stat), local time can't identify instants
+  if (tzdb && (all(is.na(data[[id_col]])) || is.null(data[[offset_col]]))) {
     return(data)
   }
 
   # Everything below compares against `transitions$time`, which is an instant,
-  # so the plotted positions have to be read back as instants too: `pos_col`
-  # is a local wall clock reading, sitting `offset_col` away from the instant
-  # itself. Undoing the placement by asking the scale to invert it -- rather
-  # than subtracting the offset directly -- keeps this correct however the
-  # positions were arrived at: the inverse also undoes any further `transform`
-  # (e.g. [transform_warp()], under which positions aren't even linear in
-  # time, and the offset would be meaningless in the warped space). The
-  # offset is rebuilt into a duration on the chronon the inverted position
-  # carries (the scale's own, which it already converted the offset onto --
-  # see `transform_time_offset()`), so the subtraction is native `mt_linear`
-  # - `mt_duration` arithmetic rather than raw subtraction on the chronon's
-  # bare integer, and only the result is converted to seconds -- a conversion
-  # between chronons, so it stays right for chronons of uneven length.
-  local_time <- as_mt_concrete(scale$get_transformation()$inverse(data[[
-    pos_col
-  ]]))
-  offset <- as_mt_concrete(mixtime::duration(
-    data[[offset_col]] %||% 0,
-    chronon = attr(local_time, "chronon"),
-    discrete = FALSE
-  ))
-  data$time_instant <- seconds_since_epoch(local_time - offset, tz = NA)
-  if (all(is.na(data$time_instant))) {
-    data$time_instant <- NULL
+  # so the local positions have to be read back as instants too.
+  instant <- rep(NA_real_, nrow(data))
+  known <- !is.na(data[[pos_col]])
+  # Rounded so that an observation at a transition is exactly at its instant,
+  # despite the precision lost by coarse chronons.
+  instant[known] <- round(
+    seconds_since_epoch(
+      scale$restore_instant(data[[pos_col]][known], data[[offset_col]][known]),
+      tz = "UTC"
+    ),
+    4
+  )
+  if (all(is.na(instant))) {
     return(data)
   }
 
   # `waiver()`: lookup DST transitions with mixtime::tz_transitions()
-  tzdb <- is_waiver(transitions)
   if (tzdb) {
     # Get unique timezones for transitions table
     ids <- unique(data[[id_col]][!is.na(data[[id_col]])])
     transitions <- do.call(
       rbind,
       lapply(ids, function(id) {
-        rng <- range(data$time_instant[data[[id_col]] == id], na.rm = TRUE)
-        # Padded by a second: `resolve_time_sequence()` now hands this a
-        # minimal (often 2-row) edge, so a transition can sit exactly at one
-        # of its endpoints (e.g. the row right after a jump reads the
-        # transition instant itself), and `tz_transitions()` excludes exact
-        # endpoints.
+        rng <- range(instant[data[[id_col]] %in% id], na.rm = TRUE)
         tr <- mixtime::tz_transitions(
-          as.POSIXct(rng[1] - 1, origin = "1970-01-01", tz = id),
+          as.POSIXct(rng[1], origin = "1970-01-01", tz = id),
+          # One second later, as `tz_transitions()` excludes its `end`
           as.POSIXct(rng[2] + 1, origin = "1970-01-01", tz = id)
         )
         tr$id <- rep(id, nrow(tr))
@@ -887,7 +755,6 @@ resolve_time_transitions <- function(
   }
 
   if (is.null(transitions) || nrow(transitions) == 0) {
-    data$time_instant <- NULL
     return(data)
   }
   # Collapsed to their concrete `<mt_time>` subtype:
@@ -911,17 +778,14 @@ resolve_time_transitions <- function(
   }
   # An observation at the instant of a transition is already at the new offset,
   # so a transition at the last observation is needed to reach it, but one at
-  # the first observation isn't. This matters for minimal edges, where the row
-  # right after a jump reads the transition instant itself, and excluding the
-  # start avoids matching the same transition again for the following edge.
-  rng <- range(data$time_instant, na.rm = TRUE)
+  # the first observation isn't.
+  rng <- range(instant, na.rm = TRUE)
   transitions <- transitions[
     transitions$time_num > rng[1] & transitions$time_num <= rng[2],
     ,
     drop = FALSE
   ]
   if (nrow(transitions) == 0) {
-    data$time_instant <- NULL
     return(data)
   }
   transitions <- transitions[order(transitions$time_num), , drop = FALSE]
@@ -929,6 +793,7 @@ resolve_time_transitions <- function(
   # Constant (non-position) aesthetics for the inserted rows are copied from
   # an existing row in the group (e.g. colour, group, PANEL).
   template <- data[1, , drop = FALSE]
+  known <- !is.na(instant)
 
   new_rows <- lapply(seq_len(nrow(transitions)), function(i) {
     tr <- transitions[i, ]
@@ -950,8 +815,7 @@ resolve_time_transitions <- function(
 
     # `[axis]timeoffset` is deliberately left as the template's: the offsets
     # either side of the transition are already spent, in
-    # `before_time`/`after_time` above, and `time_instant` below records
-    # where these rows sit. Writing `tr`'s seconds back into the column would
+    # `before_time`/`after_time` above. Writing `tr`'s seconds back into the column would
     # mix units, since by this point the column holds either the scale's
     # chronon or a duration.
     pair <- template[c(1, 1), , drop = FALSE]
@@ -961,14 +825,15 @@ resolve_time_transitions <- function(
     # (interpolated at a single instant), so if that value also lands as this
     # axis's grid point, `approx()` sees a duplicate. Averaging it away is
     # harmless -- both duplicate rows agree on the value already.
+    # Missing values are kept, as nothing is drawn to or from them.
     pair[[other_col]] <- suppressWarnings(
       stats::approx(
-        data$time_instant,
-        data[[other_col]],
-        xout = tr$time_num
+        instant[known],
+        data[[other_col]][known],
+        xout = tr$time_num,
+        na.rm = FALSE
       )$y
     )
-    pair$time_instant <- tr$time_num
     # Only the first (before) row is styled: segments are drawn from each
     # row to the next (see `draw_panel()`), so styling it is what makes the
     # segment spanning the jump -- from `before_time` to `after_time` --
@@ -979,14 +844,12 @@ resolve_time_transitions <- function(
     pair
   })
 
-  # `order()` is stable, so ties in `time_instant` are left in insertion order.
+  # `order()` is stable, so ties in the instants are left in insertion order.
   # This keeps a pair's `before` row ahead of its `after` row, and both ahead of
   # an observation at the instant of the transition (which is already at the new
   # offset).
   out <- rbind(do.call(rbind, new_rows), data)
-  out <- out[order(out$time_instant), , drop = FALSE]
-  out$time_instant <- NULL
-  out
+  out[order(c(rep(transitions$time_num, each = 2), instant)), , drop = FALSE]
 }
 
 #' Does `scale` place time points by local (wall-clock) reading?
@@ -1005,7 +868,15 @@ scale_places_local_time <- function(scale) {
 # Epoch seconds of a time point, read in `tz` (`NA` for the naive/wall clock
 # reading). Note this is a conversion between chronons rather than arithmetic
 # on the underlying numbers, so it holds for chronons of uneven length.
+# Discrete time is read at its start, since it can't be directly converted to a
+# finer chronon.
 seconds_since_epoch <- function(time, tz) {
+  if (is.integer(vctrs::vec_data(time))) {
+    time <- mixtime::mt_linear(
+      as.numeric(vctrs::vec_data(time)),
+      chronon = attr(time, "chronon")
+    )
+  }
   as.numeric(mixtime::mixtime(
     time,
     chronon = mixtime::cal_time_civil$second(1L, tz = tz),

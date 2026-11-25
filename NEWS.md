@@ -20,7 +20,13 @@
 ## Bug fixes
 
 * `geom_time_line()` now draws correct slopes when an observation is at the
-  exact instant of a time zone transition.
+  exact instant of a time zone transition, or when `align_discrete` places it
+  across one.
+
+* `geom_time_line()` now identifies missing and duplicated time values
+  separately for each granularity, and no longer errors when granularities
+  without a fixed ratio (e.g. months and days) are used together. All discrete
+  mixtime granularities are regular, including those finer than a day.
 
 # ggtime 1.1.1
 

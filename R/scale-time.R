@@ -831,6 +831,40 @@ transform_time_offset <- function(x, chronon, aes, call = NULL) {
   as.numeric(x)
 }
 
+#' The offset of time points from UTC on a scale's common chronon
+#'
+#' The difference between the positions of local and absolute time, so it's also
+#' correct for chronons of uneven length. It is found where the time point is
+#' drawn, as a transition may occur within its granule.
+#'
+#' @param v An `<mt_time>` vector.
+#' @inheritParams transform_time_offset
+#' @returns A number of `chronon` units, which is 0 for naive time.
+#' @noRd
+default_time_offset <- function(v, chronon) {
+  if (
+    S7::S7_inherits(v, mixtime::mt_duration) ||
+      is.na(mixtime::tz_name(attr(v, "chronon")))
+  ) {
+    return(rep(0, vctrs::vec_size(v)))
+  }
+  position <- function(tz) {
+    as.numeric(mixtime::mixtime(
+      wrap_mixtime(v),
+      chronon = chronon_in_tz(chronon, tz),
+      discrete = FALSE
+    ))
+  }
+  position(NA) - position("UTC")
+}
+
+chronon_in_tz <- function(chronon, tz) {
+  if (is.na(tz)) {
+    tz <- NA_character_
+  }
+  S7::set_props(chronon, tz = tz)
+}
+
 #' @keywords internal
 ScaleContinuousMixtime <- ggproto(
   "ScaleContinuousMixtime",
@@ -843,6 +877,109 @@ ScaleContinuousMixtime <- ggproto(
 
   # The granule the breaks step by, allows control by coord_calendar's cells
   time_breaks = waiver(),
+
+  # The granules of the layers' time points, from `register_granules()`
+  time_granules = list(),
+
+  # Stores the granules of `x`, returning the code of each time point's granule
+  # in `time_granules`. This is `NA` for time that isn't a point in time.
+  register_granules = function(self, x) {
+    # `mixtime()` infers the chronon of POSIXct from its precision, which isn't
+    # the interval expected between observations.
+    inferred <- inherits(x, "POSIXct")
+    if (!is_mixtime(x)) {
+      x <- mixtime::mixtime(x)
+    }
+    codes <- vecvec::vecvec_apply(x, function(v) {
+      chronon <- attr(v, "chronon")
+      discrete <- is.integer(vctrs::vec_data(v))
+      size <- vctrs::vec_size(v)
+      if (S7::S7_inherits(v, mixtime::mt_duration)) {
+        return(rep(NA_integer_, size))
+      }
+      key <- list(
+        chronon = chronon,
+        discrete = discrete,
+        regular = discrete && !inferred
+      )
+      code <- Position(
+        function(g) identical(g[names(key)], key),
+        self$time_granules
+      )
+      if (is.na(code)) {
+        # Time zones of the same granularity are part of the same series
+        unit <- list(chronon_in_tz(chronon, "UTC"), discrete)
+        series <- Position(
+          function(g) identical(g$unit, unit),
+          self$time_granules
+        )
+        code <- length(self$time_granules) + 1L
+        key$unit <- unit
+        key$tz <- as.character(mixtime::tz_name(chronon))
+        key$series <- if (is.na(series)) {
+          code
+        } else {
+          self$time_granules[[series]]$series
+        }
+        self$time_granules <- c(self$time_granules, list(key))
+      }
+      rep(code, size)
+    })
+    as.integer(codes)
+  },
+
+  # Restores the instants of positions, as continuous time in UTC. Positions of
+  # local time need an `offset` (in units of the scale's chronon) to do so, and
+  # their local reading is used without one.
+  restore_instant = function(self, x, offset = NULL) {
+    time <- self$get_transformation()$inverse(x)
+    local <- scale_places_local_time(self)
+    # The transformation may have changed the chronon, e.g. `transform_warp()`
+    time <- as.numeric(mixtime::mixtime(
+      wrap_mixtime(time),
+      chronon = if (local) {
+        self$time_chronon
+      } else {
+        chronon_in_tz(self$time_chronon, "UTC")
+      },
+      discrete = FALSE
+    ))
+    if (local && !is.null(offset)) {
+      time <- time - offset
+    }
+    mixtime::mt_linear(time, chronon = chronon_in_tz(self$time_chronon, "UTC"))
+  },
+
+  # Restores positions to time in the granule identified by `code`. This is the
+  # number of granules since the epoch, without the `align_discrete` nudge. It
+  # is whole for discrete time (apart from user-supplied offsets).
+  restore_time = function(self, x, code, offset = NULL) {
+    out <- rep(NA_real_, length(x))
+    known <- is.finite(x)
+    if (!any(known)) {
+      return(out)
+    }
+    granule <- self$time_granules[[code]]
+    chronon <- granule$chronon
+    # Naive time and local readings have no timezone to be converted to
+    if (is.na(granule$tz) || (scale_places_local_time(self) && is.null(offset))) {
+      chronon <- chronon_in_tz(chronon, "UTC")
+    }
+    time <- as.numeric(mixtime::mixtime(
+      wrap_mixtime(self$restore_instant(x[known], offset[known])),
+      chronon = chronon,
+      discrete = FALSE
+    ))
+    if (granule$discrete) {
+      align <- self$align_discrete
+      if (is.function(align)) {
+        align <- align(self$aesthetics[1])
+      }
+      time <- time - align
+    }
+    out[known] <- time
+    out
+  },
 
   # The granule that labels name, `NULL` for the scale's common chronon.
   label_granule = function(self, breaks = self$get_breaks()) {
@@ -927,6 +1064,18 @@ ScaleContinuousMixtime <- ggproto(
         self$call
       )
     }
+    # Default offsets for `geom_time_line()`, aligned like the positions
+    axis <- if ("x" %in% self$aesthetics) "x" else "y"
+    if (
+      length(offsets) == 0 &&
+        axis %in% names(df) &&
+        !is.null(df[[paste0(axis, "timegranule")]])
+    ) {
+      out[[time_offset_aes(self$aesthetics)]] <- self$time_offset(
+        df[[axis]],
+        axis
+      )
+    }
     df <- out
 
     # Add gap filling for implicit missing values
@@ -938,6 +1087,21 @@ ScaleContinuousMixtime <- ggproto(
     # )))
 
     df
+  },
+  time_offset = function(self, x, aes) {
+    if (!is_mixtime(x)) {
+      x <- mixtime::mixtime(x)
+    }
+    align <- self$align_discrete
+    if (is.function(align)) {
+      align <- align(aes)
+    }
+    as.numeric(vecvec::vecvec_apply(x, function(v) {
+      if (is.integer(v) && !S7::S7_inherits(v, mixtime::mt_duration)) {
+        v <- v + align
+      }
+      default_time_offset(v, self$time_chronon)
+    }))
   },
   transform = function(self, x, aes = NULL) {
     if (is_bare_numeric(x)) {

@@ -178,9 +178,9 @@ markets, server load balancing, etc).
 This geometry also maintains semantically valid slopes when time values are
 missing (either implicitly or explicitly), or duplicated. Implicit missing
 values in regular time series are semantically equivalent to explicit missing
-values, and \code{geom_time_line()} since the slope between unkown values is also
-unknown, \code{geom_time_line()} will not draw lines connecting missing values of
-either type. Since duplicated time values are not semantically valid in
+values. Since the slope between unknown values is also unknown,
+\code{geom_time_line()} will not draw lines connecting missing values of either
+type. Since duplicated time values are not semantically valid in
 regular time series, \code{geom_time_line()} will issue a warning (or an error if
 systematic duplicates are detected). When drawing a line between duplicated
 time points, the correct slopes are drawn by connecting all lines that lead
@@ -226,21 +226,23 @@ for regular time series it is also possible to identify implicit missing time
 values. Unlike \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}, \code{geom_time_line()} will also not connect
 points separated by implicit missing values, creating gaps in the line (just
 like when an explicit missing value is present in \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}).
-Each point's own granularity determines what counts as "the next"
-observation, so this also works when a group mixes granularities (e.g.
-daily values that switch to monthly). This is only reliable at a
-day-or-coarser granularity -- finer values (such as a raw \code{POSIXct}) don't
-carry a data's sampling interval, only its precision, so gaps aren't
-detected there.
+The granularity of discrete \code{mixtime} time points determines what counts as
+the next observation: monthly time points are expected every month, and
+hourly time points every hour. Gaps are not detected for continuous time, or
+for \code{POSIXct}, since these don't identify an interval between observations.
+
+If a group contains time points of several granularities (e.g. annual and
+monthly), each granularity is drawn as a separate line with its own missing
+and duplicated time values.
 }
 
 \section{Duplicated time values}{
 
 
-If there are duplicated time values within a group, \code{geom_time_line()} will
-issue a warning. An error will be raised if these duplications are systematic
-across the geometry, specifically if more than 50\% of time points contain the
-same number of duplicates. Systematic duplicates typically indicate a need to
+If there are duplicated time values of the same granularity within a group,
+\code{geom_time_line()} will issue a warning. An error will be raised if these
+duplications are systematic across the geometry, specifically if more than
+50\% of a granularity's time points contain the same number of duplicates. Systematic duplicates typically indicate a need to
 use grouping aesthetics (\link[ggplot2:group]{ggplot2::group}, or \link[ggplot2:colour]{ggplot2::colour}) to
 draw separate lines for each time series. Rather than plotting an erroneous
 'sawtooth' line which misrepresents the rate of change, the geometry will
@@ -286,8 +288,7 @@ ggplot(df_tz_forward, aes(time, value)) +
   geom_time_line() +
   scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = "UTC"))
 
-# Implicit missing values leave a gap in the line (day-or-coarser
-# granularities only -- see the "Missing time values" section below)
+# Implicit missing values leave a gap in the line
 df_monthly <- data.frame(
   month = mixtime::yearmonth(as.Date("2023-01-01")) + 0:9,
   value = cumsum(rnorm(10, 2))
@@ -322,10 +323,8 @@ ggplot(df_duplicated, aes(month, value)) +
  • \tab \code{\link[ggplot2:aes_linetype_size_shape]{linewidth}} \tab → via \code{theme()} \cr
  • \tab \code{xtimeid} \tab   \cr
  • \tab \code{xtimeoffset} \tab   \cr
- • \tab \code{xtimeraw} \tab   \cr
  • \tab \code{ytimeid} \tab   \cr
  • \tab \code{ytimeoffset} \tab   \cr
- • \tab \code{ytimeraw} \tab   \cr
 }
 
 Learn more about setting these aesthetics in \code{vignette("ggplot2-specs")}.

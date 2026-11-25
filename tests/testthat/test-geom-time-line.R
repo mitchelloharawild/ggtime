@@ -59,7 +59,10 @@ test_that("the scale converts offsets without them reaching the axis", {
   hourly <- built(mixtime::cal_gregorian$hour(1L, tz = NA))
   expect_equal(unique(hourly$data[[1]]$xtimeoffset), c(11, 10))
   daily <- built(mixtime::cal_gregorian$day(1L, tz = NA))
-  expect_equal(unique(daily$data[[1]]$xtimeoffset), c(11, 10) / 24)
+  expect_equal(
+    unique(round(daily$data[[1]]$xtimeoffset, 6)),
+    round(c(11, 10) / 24, 6)
+  )
 
   # An offset is not a position: it must not train the axis, which would drag
   # the range towards the epoch, nor be censored against the axis limits.
@@ -95,7 +98,8 @@ test_that("offsets given at several granularities are each converted", {
 })
 
 test_that("a bare number is not accepted as an offset", {
-  time <- melbourne()
+  # Not at the transition, where a constant offset duplicates instants
+  time <- melbourne() + 86400
   df <- data.frame(value = seq_along(time), offset = 45)
   df$time <- time
 
@@ -360,4 +364,264 @@ test_that("transitions at the instant of an observation keep correct slopes", {
   # The first observation is at the transition
   first <- segments(melbourne_hours("2025-10-05 03:00:00", 3))
   expect_false(any(first$dashed))
+})
+
+# The number of segments drawn, and the values that they start and end at
+drawn <- function(p) {
+  grob <- layer_grob(p)[[1]]
+  built <- ggplot_build(p)
+  rng <- built$layout$panel_params[[1]]$y.range
+  value <- function(y) round(rng[1] + as.numeric(y) * diff(rng), 3)
+  out <- data.frame(from = value(grob$y0), to = value(grob$y1))
+  out <- out[stats::complete.cases(out), ]
+  out <- out[order(out$from, out$to), ]
+  rownames(out) <- NULL
+  out
+}
+months_from <- function(i) mixtime::yearmonth(as.Date("2023-01-01")) + i
+time_line <- function(time, value = seq_along(time), ...) {
+  df <- data.frame(value = value)
+  df$time <- time
+  ggplot(df, aes(time, value)) + geom_time_line(...)
+}
+
+test_that("implicit missing values leave gaps", {
+  expect_equal(
+    drawn(time_line(months_from(c(0L, 1L, 3L, 4L)))),
+    data.frame(from = c(1, 3), to = c(2, 4))
+  )
+
+  # Days are regular even when a transition makes them 23 or 25 hours long
+  days <- function(x) {
+    tz <- "Australia/Melbourne"
+    mixtime::mixtime(
+      as.POSIXct(x, tz = tz),
+      chronon = mixtime::cal_gregorian$day(1L, tz = tz)
+    )
+  }
+  expect_equal(
+    drawn(time_line(days(c("2023-09-30", "2023-10-01", "2023-10-03", "2023-10-04")))),
+    data.frame(from = c(1, 3), to = c(2, 4))
+  )
+  expect_equal(
+    nrow(drawn(time_line(days(c("2023-04-01", "2023-04-02", "2023-04-03"))))),
+    2
+  )
+
+  # Sub-daily chronons are regular too
+  hours <- mixtime::mixtime(
+    melbourne(),
+    chronon = mixtime::cal_gregorian$hour(1L, tz = "Australia/Melbourne")
+  )
+  expect_equal(nrow(drawn(time_line(hours[-3]))), length(hours) - 3)
+
+  # Continuous time and POSIXct don't identify a sampling interval
+  hours <- mixtime::mixtime(
+    melbourne(),
+    chronon = mixtime::cal_gregorian$hour(1L, tz = "Australia/Melbourne"),
+    discrete = FALSE
+  )
+  expect_equal(nrow(drawn(time_line(hours[-3]))), length(hours) - 2)
+  expect_equal(nrow(drawn(time_line(melbourne()[-3]))), length(melbourne()) - 2)
+  p <- time_line(melbourne()[-3]) + scale_x_mixtime()
+  expect_equal(nrow(drawn(p)), length(melbourne()) - 2)
+
+  # Dates are regular on a mixtime scale
+  p <- time_line(as.Date("2023-01-01") + c(0, 1, 3, 4)) + scale_x_mixtime()
+  expect_equal(nrow(drawn(p)), 2)
+
+  # Positions which aren't linear in time
+  p <- time_line(mixtime::mixtime(as.Date("2021-01-10")) + c(0:29, 32:61)) +
+    scale_x_mixtime(
+      transform = transform_warp(mixtime::yearmonth("2020 Dec") + 0:5 + 0)
+    )
+  expect_equal(nrow(drawn(p)), 58)
+})
+
+test_that("each series has its own gaps", {
+  df <- data.frame(value = 1:6, id = rep(c("a", "b"), each = 3))
+  df$time <- months_from(c(0L, 1L, 2L, 0L, 1L, 3L))
+  p <- ggplot(df, aes(time, value, group = id)) + geom_time_line()
+  expect_equal(
+    drawn(p),
+    data.frame(from = c(1, 2, 4), to = c(2, 3, 5))
+  )
+  p <- ggplot(df, aes(time, value)) + geom_time_line() + facet_wrap(vars(id))
+  grobs <- layer_grob(p)
+  expect_equal(unname(vapply(grobs, function(x) length(x$x0), 1L)), c(2L, 1L))
+})
+
+test_that("duplicated time values fan out with a warning", {
+  p <- time_line(months_from(c(0L, 1L, 1L, 2L, 3L)))
+  expect_warning(out <- drawn(p), "Duplicated time values") |>
+    suppressWarnings()
+  expect_equal(
+    out,
+    data.frame(from = c(1, 1, 2, 3, 4), to = c(2, 3, 4, 4, 5))
+  )
+})
+
+test_that("systematic duplicates are an error", {
+  p <- time_line(months_from(rep(0:3, 2)))
+  expect_error(ggplot_build(p), "systematically duplicated")
+})
+
+test_that("gaps and duplicates are found when time is on the y axis", {
+  df <- data.frame(value = 1:4)
+  df$time <- months_from(c(0L, 1L, 3L, 4L))
+  grob <- layer_grob(ggplot(df, aes(value, time)) + geom_time_line())[[1]]
+  expect_length(grob$x0, 2)
+})
+
+test_that("gaps and duplicates are specific to each granularity", {
+  years <- mixtime::year(as.Date("2020-01-01")) + c(0L, 1L, 3L)
+  months <- mixtime::yearmonth("2020 Jan") + c(0L, 1L, 2L, 4L, 5L)
+  df <- data.frame(value = 1:8, unit = rep(c("year", "month"), c(3, 5)))
+  df$time <- c(years, months)
+  expected <- data.frame(from = c(1, 4, 5, 7), to = c(2, 5, 6, 8))
+
+  p <- ggplot(df, aes(time, value, colour = unit)) + geom_time_line()
+  expect_equal(drawn(p), expected)
+  # Separate lines, even within the same group
+  p <- ggplot(df, aes(time, value)) + geom_time_line()
+  expect_equal(drawn(p), expected)
+  expect_equal(unique(layer_data(p)$group), -1L, ignore_attr = TRUE)
+
+  # The middle of a 31 day month is also the middle of its 16th day
+  months <- mixtime::yearmonth("2020 Jan") + 0:1
+  days <- mixtime::mixtime(as.Date("2020-01-15")) + 0:2
+  df <- data.frame(value = 1:5)
+  df$time <- c(months, days)
+  for (align in c(0, 0.5, 1)) {
+    p <- ggplot(df, aes(time, value)) +
+      geom_time_line() +
+      scale_x_mixtime(align_discrete = align)
+    expect_no_warning(out <- drawn(p))
+    expect_equal(out, data.frame(from = c(1, 3, 4), to = c(2, 4, 5)))
+  }
+
+  # Systematic duplicates of one granularity
+  df <- data.frame(value = 1:13)
+  df$time <- c(
+    mixtime::yearmonth("2020 Jan") + 0:8,
+    mixtime::mixtime(as.Date("2020-01-15")) + c(0L, 0L, 1L, 1L)
+  )
+  p <- ggplot(df, aes(time, value)) + geom_time_line()
+  expect_error(ggplot_build(p), "systematically duplicated")
+})
+
+test_that("granules are shared between layers", {
+  df <- data.frame(value = 1:3)
+  df$time <- mixtime::yearmonth("2020 Jan") + c(0L, 1L, 3L)
+  daily <- data.frame(value = 1:3)
+  daily$time <- mixtime::mixtime(as.Date("2020-01-15")) + 0:2
+  # Aesthetics can be added after the layers
+  p <- ggplot(df) +
+    geom_time_line() +
+    geom_time_line(data = daily) +
+    aes(time, value)
+  for (i in 1:2) {
+    b <- ggplot_build(p)
+    expect_equal(b$data[[1]]$time_cluster, c(1, 2, 4))
+    expect_equal(b$data[[2]]$time_cluster, c(1, 2, 3))
+  }
+})
+
+test_that("time offsets are aligned with the positions", {
+  mel <- "Australia/Melbourne"
+  for (start in c("2023-04-02", "2023-10-01")) {
+    time <- as.POSIXct(start, tz = mel) + 0:11 * 1800
+    for (chronon in list(
+      mixtime::cal_gregorian$hour(1L, tz = NA),
+      mixtime::cal_gregorian$month(1L, tz = NA)
+    )) {
+      for (align in c(0, 0.5, 1)) {
+        p <- time_line(time) +
+          scale_x_mixtime(time_chronon = chronon, align_discrete = align)
+        expect_no_warning(data <- layer_data(p))
+        expect_equal(data$y, 1:12)
+        expect_equal(data$time_cluster, 1:12)
+        # Transitions after the last position aren't reached
+        expect_equal(sum(layer_grob(p)[[1]]$gp$lty == 2), 1)
+      }
+    }
+  }
+})
+
+test_that("the geom can be used by other layers", {
+  df <- data.frame(value = 1:4)
+  df$time <- months_from(0:3)
+  p <- ggplot(df, aes(time, value)) +
+    stat_summary(geom = GeomTimeLine, fun = mean)
+  expect_length(layer_grob(p)[[1]]$x0, 3)
+})
+
+test_that("a transitions table doesn't need an identifier", {
+  df <- data.frame(value = 1:4)
+  df$time <- mixtime::linear_time(
+    as.POSIXct("2023-06-01 12:00", tz = "UTC") + 60 * c(2, 3, 2, 3),
+    chronon = mixtime::cal_time_civil$minute(1L, tz = NA)
+  )
+  df$offset <- mixtime::minutes(c(2L, 2L, 0L, 0L))
+  p <- ggplot(df, aes(time, value, xtimeoffset = offset)) +
+    geom_time_line(
+      transitions = data.frame(
+        time = as.POSIXct("2023-06-01 12:01:30", tz = "UTC"),
+        offset_before = mixtime::minutes(2L),
+        offset_after = mixtime::minutes(0L)
+      )
+    ) +
+    scale_x_mixtime(
+      time_chronon = mixtime::cal_time_civil$second(1L, tz = NA),
+      align_discrete = 0
+    )
+  expect_equal(layer_data(p)$y, 1:4)
+  expect_equal(sum(layer_grob(p)[[1]]$gp$lty == 2), 1)
+})
+
+test_that("sub-hourly observations keep their order when time is repeated", {
+  time <- as.POSIXct("2023-04-01 14:00", tz = "UTC") + 0:7 * 1800
+  attr(time, "tzone") <- "Australia/Melbourne"
+  p <- time_line(time) +
+    scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = NA))
+  expect_equal(layer_data(p)$y, 1:8)
+  expect_equal(sum(layer_grob(p)[[1]]$gp$lty == 2), 1)
+})
+
+test_that("missing values beside a transition are not connected", {
+  time <- as.POSIXct("2023-04-02", tz = "Australia/Melbourne") + 0:7 * 3600
+  for (i in 3:4) {
+    p <- time_line(time, replace(1:8, i, NA)) +
+      scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = NA))
+    expect_equal(nrow(drawn(p)), 5)
+  }
+})
+
+test_that("stats that drop the time aesthetics don't warn", {
+  df <- data.frame(time = melbourne())
+  p <- ggplot(df, aes(time, after_stat(count))) +
+    geom_time_line(stat = "bin", bins = 4)
+  expect_no_warning(ggplot_build(p))
+})
+
+test_that("user offsets order repeated local times", {
+  # A clock put back by two minutes
+  df <- data.frame(value = 1:6)
+  df$time <- mixtime::linear_time(
+    as.POSIXct("2023-06-01 12:00", tz = "UTC") + 60 * c(0, 1, 2, 1, 2, 3),
+    chronon = mixtime::cal_time_civil$minute(1L, tz = NA)
+  )
+  df$offset <- mixtime::minutes(c(2L, 2L, 2L, 0L, 0L, 0L))
+  p <- ggplot(df, aes(time, value, xtimeoffset = offset)) +
+    geom_time_line() +
+    scale_x_mixtime()
+  expect_equal(layer_data(p)$y, 1:6)
+  expect_no_warning(drawn(p))
+})
+
+test_that("groups with a single observation are explained", {
+  expect_message(
+    layer_grob(time_line(months_from(0L))),
+    "only one observation"
+  )
 })
