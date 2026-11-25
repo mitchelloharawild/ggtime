@@ -9,6 +9,12 @@
 
 0 errors | 0 warnings | 0 notes
 
+The 'version contains large components' note seen on the development version
+is resolved by the release version bump.
+
+This release fixes the test failures on the CRAN check results for 1.1.1
+(`tidyr::gather()` on mixtime columns, now `tidyr::pivot_longer()`).
+
 ## Revdep checks
 
 All reverse dependencies have been checked, none have changed to worse.
