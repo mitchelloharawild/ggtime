@@ -15,6 +15,8 @@ series patterns. These functions use calendar structures implemented in
 the mixtime package to help explore common time series patterns
 including trend, seasonality, cycles, and holidays.
 
+<img src="man/figures/teaser.svg" alt="Overview of the ggtime grammar of temporal graphics. Temporal semantics (granularity, calendar, time zone, and cyclical time) feed the time column of the data, which passes through composable scale, geom, and coord layers. This gives semantic validity for DST transitions, cycle contiguity, and granularity alignment, and interoperability with uncertainty, facets, and other geometries." width="100%" />
+
 The plot helper functions make use of the tsibble data format in order
 to quickly and easily produce common time series plots. These plots can
 also be constructed with the underlying grammar elements, which allows
