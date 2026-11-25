@@ -270,11 +270,11 @@ df_tz_back <- data.frame(
 # Naive/local time (`tz = NA`) shows the DST transition as a dashed jump
 ggplot(df_tz_back, aes(time, value)) +
   geom_time_line() +
-  scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = NA))
+  scale_x_mixtime(time_chronon = hour(1L, tz = NA))
 # Absolute time aligns to a single fixed timezone, removing the jump
 ggplot(df_tz_back, aes(time, value)) +
   geom_time_line() +
-  scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = "UTC"))
+  scale_x_mixtime(time_chronon = hour(1L, tz = "UTC"))
 
 # Random walk with a forward timezone change (DST starts)
 df_tz_forward <- data.frame(
@@ -283,10 +283,10 @@ df_tz_forward <- data.frame(
 )
 ggplot(df_tz_forward, aes(time, value)) +
   geom_time_line() +
-  scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = NA))
+  scale_x_mixtime(time_chronon = hour(1L, tz = NA))
 ggplot(df_tz_forward, aes(time, value)) +
   geom_time_line() +
-  scale_x_mixtime(time_chronon = mixtime::cal_gregorian$hour(1L, tz = "UTC"))
+  scale_x_mixtime(time_chronon = hour(1L, tz = "UTC"))
 
 # Implicit missing values leave a gap in the line
 df_monthly <- data.frame(

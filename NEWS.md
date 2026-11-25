@@ -17,6 +17,10 @@
   when this is simpler (e.g. `2020` and `2022` rather than `2020 Jan` and
   `2022 Jan`).
 
+* `scale_x_mixtime(time_chronon = )` and `scale_y_mixtime(time_chronon = )` now
+  accept units of the plotted data's calendar, such as `hour(1L, tz = NA)` rather
+  than `mixtime::cal_gregorian$hour(1L, tz = NA)`.
+
 ## Bug fixes
 
 * `coord_loop()` now sizes its loops after time is transformed, so loops warped

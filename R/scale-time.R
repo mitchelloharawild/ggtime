@@ -21,8 +21,11 @@
 #' `minor_breaks` and `time_minor_breaks` are specified, `time_minor_breaks`
 #' wins.
 #' @param time_chronon A time granule that defines the common chronon to use for
-#' mixed granularity (e.g. `mixtime::tu_day(1L)`). The default automatically
-#' selects it as the finest chronon that all time points can be represented in.
+#' mixed granularity (e.g. `day(1L)`, or `hour(1L, tz = NA)` for hours of local
+#' time). Units are found in the calendar of the plotted data, use a specific
+#' calendar's units with `mixtime::cal_gregorian$day(1L)`. The default
+#' automatically selects it as the finest chronon that all time points can be
+#' represented in.
 #' @param align_discrete Either a single number between 0 and 1, or a
 #'   `aes_nudge()` object, defining how to align coarser granularities
 #'   onto the common time scale.
@@ -103,7 +106,7 @@
 #' will be daily, with the monthly points aligned according to the `align_discrete`
 #' argument. If multiple time zones are present, the common time zone will
 #' default to UTC. The common time scale can be manually specified using the
-#' `time_chronon` argument, which accepts a `mixtime::time_unit`.
+#' `time_chronon` argument, which accepts a time granule (e.g. `day(1L)`).
 #'
 #' @examples
 #' library(ggplot2)
@@ -158,7 +161,7 @@ scale_x_mixtime <- function(
     time_minor_breaks = time_minor_breaks,
     labels = labels,
     time_labels = time_labels,
-    time_chronon = time_chronon,
+    time_chronon = enquo(time_chronon),
     align_discrete = align_discrete,
     transform = transform,
     guide = guide,
@@ -200,7 +203,7 @@ scale_y_mixtime <- function(
     time_minor_breaks = time_minor_breaks,
     labels = labels,
     time_labels = time_labels,
-    time_chronon = time_chronon,
+    time_chronon = enquo(time_chronon),
     align_discrete = align_discrete,
     transform = transform,
     guide = guide,
@@ -711,9 +714,10 @@ mixtime_scale <- function(
   time_minor_breaks = waiver(),
   labels = waiver(),
   time_labels = waiver(),
-  time_chronon = waiver(),
+  time_chronon = quo(waiver()),
   align_discrete = aes_nudge(),
   transform = "identity",
+  limits = NULL,
   guide = waiver(),
   call = caller_call(),
   ...
@@ -763,12 +767,17 @@ mixtime_scale <- function(
     labels = labels,
     guide = guide,
     transform = transform_mixtime(transform),
+    limits = limits,
     call = call,
     ...,
     super = ggproto(
       NULL,
       scale_class,
-      time_chronon = time_chronon,
+      time_chronon_quo = time_chronon,
+      # Limits are already positions of the transformation's own time type
+      new_transformation = if (is.null(limits) || is.function(limits)) {
+        function() transform_mixtime(transform)
+      },
       align_discrete = align_discrete,
       time_breaks = time_breaks,
     )
@@ -877,6 +886,36 @@ ScaleContinuousMixtime <- ggproto(
 
   # The granule the breaks step by, allows control by coord_calendar's cells
   time_breaks = waiver(),
+
+  # The common chronon, a waiver until it is resolved from the data by
+  # evaluating the user's expression with its calendar.
+  time_chronon = waiver(),
+  time_chronon_quo = quo(waiver()),
+
+  # Creates a transformation which hasn't seen any time points, `NULL` if the
+  # transformation's time type is set by the scale's limits.
+  new_transformation = NULL,
+
+  # Sets the common chronon from the data's time points. This is called on the
+  # plot's clone of the scale, so a scale can be reused across plots. The
+  # transformation remembers the data's time type, so it's also the plot's own.
+  resolve_chronon = function(self, x) {
+    # Numbers have no calendar, and are an error in `$transform()`
+    if (is_bare_numeric(x)) {
+      return()
+    }
+    default <- mixtime::chronon_glb(x)
+    chronon <- eval_granule(
+      self$time_chronon_quo,
+      mixtime::time_calendar(default),
+      arg = "time_chronon",
+      call = self$call
+    )
+    self$time_chronon <- if (is_waiver(chronon)) default else chronon %||% default
+    if (!is.null(self$new_transformation)) {
+      self$trans <- self$new_transformation()
+    }
+  },
 
   # The granules of the layers' time points, from `register_granules()`
   time_granules = list(),
@@ -1033,7 +1072,7 @@ ScaleContinuousMixtime <- ggproto(
     # Store common time type for default backtransformation, labels, and more.
     # Maybe other attributes are needed (e.g. cycle for cyclical time)
     if (is_waiver(self$time_chronon)) {
-      self$time_chronon <- mixtime::chronon_glb(do.call(c, df[aesthetics]))
+      self$resolve_chronon(do.call(c, df[aesthetics]))
     }
 
     # A granule spans an interval of time, so a discrete scale is labelled

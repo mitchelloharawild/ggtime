@@ -396,3 +396,156 @@ test_that("chronons measured from a non-zero epoch keep their own time", {
   p <- ggplot(df, aes(x, y)) + geom_line()
   expect_equal(ggplot_build(p)$data[[1]]$x, 200:207 + 0.5)
 })
+
+test_that("time_chronon units are found in the calendar of the data", {
+  df <- data.frame(
+    time = as.POSIXct("2023-04-01", tz = "Australia/Melbourne") + 0:47 * 3600,
+    y = 1:48
+  )
+  built <- function(scale) {
+    b <- ggplot_build(ggplot(df, aes(time, y)) + geom_time_line() + scale)
+    list(
+      data = b$data[[1]],
+      chronon = b$layout$panel_scales_x[[1]]$time_chronon,
+      labels = b$layout$panel_params[[1]]$x$get_labels()
+    )
+  }
+  cal <- mixtime::cal_gregorian
+
+  expect_equal(
+    built(scale_x_mixtime(time_chronon = hour(1L, tz = NA))),
+    built(scale_x_mixtime(time_chronon = cal$hour(1L, tz = NA)))
+  )
+  brisbane <- "Australia/Brisbane"
+  expect_equal(
+    built(scale_x_mixtime(time_chronon = hour(1L, tz = brisbane))),
+    built(scale_x_mixtime(time_chronon = cal$hour(1L, tz = brisbane)))
+  )
+})
+
+test_that("time_chronon units are found for y scales", {
+  df <- data.frame(x = 1:3, y = mixtime::yearmonth(600:602))
+  built <- function(scale) {
+    ggplot_build(ggplot(df, aes(x, y)) + geom_point() + scale)$data[[1]]
+  }
+  expect_equal(
+    built(scale_y_mixtime(time_chronon = day(1L))),
+    built(scale_y_mixtime(time_chronon = mixtime::cal_gregorian$day(1L)))
+  )
+})
+
+scale_chronon <- function(x, scale) {
+  p <- ggplot(data.frame(x = x, y = seq_along(x)), aes(x, y)) + geom_point()
+  layer_scales(p + scale)$x$time_chronon
+}
+
+test_that("time_chronon uses the units of non-Gregorian calendars", {
+  week <- mixtime::yearweek(as.Date("2024-01-01") + 7 * 0:9)
+  iso <- mixtime::cal_isoweek
+  expect_equal(
+    scale_chronon(week, scale_x_mixtime(time_chronon = week(1L))),
+    iso$week(1L)
+  )
+  expect_equal(
+    scale_chronon(week, scale_x_mixtime(time_chronon = day(1L))),
+    iso$day(1L)
+  )
+})
+
+test_that("time_chronon can be given by variables and wrappers", {
+  x <- as.Date("2024-01-01") + 0:9
+  chronon <- mixtime::cal_gregorian$month(1L)
+  make_chronon <- function() chronon
+  default <- scale_chronon(x, scale_x_mixtime())
+
+  expect_equal(scale_chronon(x, scale_x_mixtime(time_chronon = chronon)), chronon)
+  expect_equal(
+    scale_chronon(x, scale_x_mixtime(time_chronon = make_chronon())),
+    chronon
+  )
+  expect_equal(
+    scale_chronon(x, scale_x_mixtime(time_chronon = mixtime::months(1L))),
+    chronon
+  )
+  expect_equal(scale_chronon(x, scale_x_mixtime(time_chronon = waiver())), default)
+  expect_equal(scale_chronon(x, scale_x_mixtime(time_chronon = NULL)), default)
+
+  wrap_variable <- function(time_chronon) {
+    scale_x_mixtime(time_chronon = time_chronon)
+  }
+  wrap_embrace <- function(arg) scale_x_mixtime(time_chronon = {{ arg }})
+  wrap_dots <- function(...) scale_x_mixtime(...)
+  expect_equal(scale_chronon(x, wrap_variable(chronon)), chronon)
+  expect_equal(
+    scale_chronon(x, do.call(scale_x_mixtime, list(time_chronon = chronon))),
+    chronon
+  )
+  expect_equal(scale_chronon(x, wrap_embrace(month(1L))), chronon)
+  expect_equal(scale_chronon(x, wrap_dots(time_chronon = month(1L))), chronon)
+})
+
+test_that("calendar units take precedence over functions for time_chronon", {
+  day <- function(...) stop("not a unit")
+  expect_equal(
+    scale_chronon(as.Date("2024-01-01") + 0:9, scale_x_mixtime(time_chronon = day(7L))),
+    mixtime::cal_gregorian$day(7L)
+  )
+})
+
+test_that("scales resolve time_chronon separately in each plot", {
+  month <- mixtime::yearmonth(600:609)
+  week <- mixtime::yearweek(as.Date("2024-01-01") + 7 * 0:9)
+  built <- function(x, scale) {
+    p <- ggplot(data.frame(x = x, y = seq_along(x)), aes(x, y)) + geom_point()
+    b <- ggplot_build(p + scale)
+    list(b$data[[1]], b$layout$panel_params[[1]]$x$get_labels())
+  }
+
+  for (new_scale in list(
+    function() scale_x_mixtime(),
+    function() scale_x_mixtime(time_chronon = year(1L))
+  )) {
+    scale <- new_scale()
+    for (x in list(month, week, month)) {
+      expect_equal(built(x, scale), built(x, new_scale()))
+    }
+    expect_s3_class(scale$time_chronon, "waiver")
+  }
+})
+
+test_that("unresolved time_chronon are waivers", {
+  scale <- scale_x_mixtime(
+    time_chronon = day(1L),
+    limits = mixtime::yearmonth(c(600, 610))
+  )
+  expect_s3_class(scale$time_chronon, "waiver")
+  expect_no_error(ggplot_build(ggplot() + scale))
+
+  empty <- data.frame(x = mixtime::yearmonth(integer()), y = integer())
+  p <- ggplot(empty, aes(x, y)) + geom_point()
+  expect_no_error(ggplot_build(p + scale_x_mixtime(time_chronon = day(1L))))
+})
+
+test_that("invalid time_chronon are informative errors", {
+  x <- as.Date("2024-01-01") + 0:9
+  expect_error(
+    scale_chronon(x, scale_x_mixtime(time_chronon = "1 day")),
+    "must be a duration or a granule"
+  )
+  expect_error(
+    scale_chronon(x, scale_x_mixtime(time_chronon = not_found)),
+    "not_found"
+  )
+  expect_error(
+    scale_chronon(x, scale_x_mixtime(time_chronon = week(1L))),
+    "no \"week\" granule"
+  )
+  expect_error(
+    scale_chronon(x, scale_x_mixtime(time_chronon = c(1L))),
+    "must be a duration or a granule"
+  )
+  expect_error(
+    scale_chronon(1:3, scale_x_mixtime(time_chronon = day(1L))),
+    "value was passed to a"
+  )
+})
