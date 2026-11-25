@@ -19,6 +19,11 @@
 
 ## Bug fixes
 
+* `gg_lag()`, `gg_arma()`, `gg_acf()` and friends, and `autoplot()` of
+  multiple variables no longer use the retired `tidyr::gather()`, which
+  stripped the vecvec base vector of mixtime columns ("`x` is not a vecvec
+  base vector"). They now use `tidyr::pivot_longer()`.
+
 * `geom_time_line()` now draws correct slopes when an observation is at the
   exact instant of a time zone transition, or when `align_discrete` places it
   across one.

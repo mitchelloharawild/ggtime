@@ -307,3 +307,24 @@ wrap_mixtime <- function(x) {
   }
   x
 }
+
+# Equivalent of the retired `tidyr::gather()`, built on `pivot_longer()`.
+# `gather()` copies columns in compiled code, which strips the ALTREP base of
+# mixtime columns. Rows are kept key-major (all rows of the first gathered
+# column, then the next), as `gather()` returned them.
+gather_longer <- function(data, key, value, cols, factor_key = FALSE) {
+  n <- nrow(data)
+  k <- length(cols)
+  out <- pivot_longer(
+    data,
+    cols = dplyr::all_of(cols),
+    names_to = key,
+    values_to = value
+  )
+  if (factor_key) {
+    out[[key]] <- factor(out[[key]], levels = cols)
+  }
+  # pivot_longer() is row-major, so reorder to key-major
+  idx <- as.vector(outer((seq_len(n) - 1L) * k, seq_len(k), "+"))
+  dplyr::slice(out, idx)
+}

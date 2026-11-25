@@ -42,11 +42,11 @@ autoplot.tbl_ts <- function(object, .vars = NULL, ...) {
     .vars <- as_quosures(list(y), env = empty_env())
   } else if (possibly(compose(is_quosures, eval_tidy), FALSE)(.vars)) {
     .vars <- eval_tidy(.vars)
-    object <- gather(
+    object <- gather_longer(
       mutate(object, !!!.vars),
       ".response",
       "value",
-      !!!map(.vars, quo_name),
+      map_chr(.vars, quo_name),
       factor_key = TRUE
     )
     y <- sym("value")
@@ -115,11 +115,11 @@ autolayer.tbl_ts <- function(object, .vars = NULL, ...) {
     .vars <- as_quosures(list(y), env = empty_env())
   } else if (possibly(compose(is_quosures, eval_tidy), FALSE)(.vars)) {
     .vars <- eval_tidy(.vars)
-    object <- gather(
+    object <- gather_longer(
       mutate(object, !!!.vars),
       ".response",
       "value",
-      !!!map(.vars, quo_name),
+      map_chr(.vars, quo_name),
       factor_key = TRUE
     )
     y <- sym("value")

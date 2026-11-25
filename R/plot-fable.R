@@ -67,11 +67,11 @@ autoplot.fbl_ts <- function(
     }
 
     if (length(fc_resp) > 1) {
-      data <- gather(
+      data <- gather_longer(
         data,
         ".response",
         "value",
-        !!!syms(fc_resp),
+        fc_resp,
         factor_key = TRUE
       )
     }

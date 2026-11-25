@@ -412,7 +412,7 @@ subseries_break_step <- function(n_seasons, max_breaks = 3) {
 #'   gg_lag(Turnover)
 #'
 #' @importFrom ggplot2 ggplot aes geom_path geom_abline facet_wrap
-#' @importFrom tidyr gather
+#' @importFrom tidyr pivot_longer
 #' @export
 gg_lag <- function(
   data,
@@ -483,7 +483,7 @@ gg_lag <- function(
   }
 
   data <- data %>%
-    gather(".lag", ".value", !!names(lag_exprs)) %>%
+    gather_longer(".lag", ".value", names(lag_exprs)) %>%
     mutate(
       .lag = factor(
         !!sym(".lag"),
@@ -788,7 +788,7 @@ gg_arma <- function(data) {
 
   data <- data %>%
     fabletools::glance() %>%
-    gather("type", "root", !!sym("ar_roots"), !!sym("ma_roots")) %>%
+    gather_longer("type", "root", c("ar_roots", "ma_roots")) %>%
     unnest_tbl("root") %>%
     filter(!is.na(!!sym("root"))) %>%
     mutate(
@@ -914,7 +914,7 @@ autoplot.tbl_cf <- function(object, level = 95, ...) {
         upper = qnorm((1 + (level / 100)) / 2) / sqrt(!!sym(".len")),
         lower = !!parse_expr("-upper")
       ) %>%
-      gather("type", ".ci", !!!syms(c("upper", "lower")))
+      gather_longer("type", ".ci", c("upper", "lower"))
     p <- p +
       geom_hline(
         aes(yintercept = !!sym(".ci"), group = !!sym("type")),
