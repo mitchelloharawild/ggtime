@@ -1,4 +1,4 @@
-# ggtime (development version)
+# ggtime 1.2.0
 
 ## New features
 
