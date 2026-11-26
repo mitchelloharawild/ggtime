@@ -131,9 +131,10 @@ GuideAxisMixtime <- ggproto(
     major$.value <- middle[visible]
     major[[aesthetic]] <- scale$map(major$.value)
 
+    # No `.label`, so that binding fills it with the missing value of whatever
+    # type the labels are.
     boundary <- vctrs::data_frame(
       .value = bounds,
-      .label = NA_character_,
       .type = "boundary"
     )
     boundary[[aesthetic]] <- scale$map(bounds)

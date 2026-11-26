@@ -186,3 +186,27 @@ test_that("angular axes are drawn like guide_axis_theta()", {
   expect_equal(key$.label, expected$.label)
   expect_no_error(ggplotGrob(p))
 })
+
+test_that("labels of any type can be drawn", {
+  df <- tibble::tibble(y = 1:12)
+  df$x <- mixtime::yearmonth(600:611)
+  p <- ggplot(df, aes(x, y)) + geom_line()
+  breaks <- mixtime::yearmonth(c(600, 606))
+
+  labels <- list(
+    c("a", "b"),
+    factor(c("a", "b")),
+    c(1.5, 2),
+    1:2,
+    function(x) seq_along(x),
+    expression(alpha, beta),
+    list("a", quote(beta)),
+    NULL
+  )
+  for (label in labels) {
+    q <- p + scale_x_mixtime(breaks = breaks, labels = label)
+    expect_no_error(ggplotGrob(q))
+    # Boundaries are ticked however the granules are labelled
+    expect_equal(axis_ticks(q), 600:612)
+  }
+})
