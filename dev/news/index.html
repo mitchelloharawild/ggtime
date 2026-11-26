@@ -31,16 +31,6 @@
 <li>
   <a href="../news/index.html">Changelog</a>
 </li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-    Vignettes
-
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu"><li>
-      <a href="../articles/time-arrangements.html">Arranging time to reveal repeating patterns</a>
-    </li>
-  </ul></li>
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="https://github.com/mitchelloharawild/ggtime" class="external-link">
     <span class="fa fa-github fa-lg"></span>
@@ -68,7 +58,6 @@
 <li><p>Added <code><a href="../reference/guide_axis_mixtime.html">guide_axis_mixtime()</a></code>, the new default axis guide for <code><a href="../reference/scale_mixtime.html">scale_x_mixtime()</a></code>. Discrete time points span a granule rather than sit at an instant, so the axis now places ticks at the granule boundaries with the label between them, much like a discrete axis in {ggplot2}. Every granule is ticked when only some are labelled. Continuous time and durations are unaffected, and <code>guide = guide_axis()</code> restores the previous appearance.</p></li>
 <li><p>The default breaks of discrete time are labelled by the granule they step by when this is simpler (e.g. <code>2020</code> and <code>2022</code> rather than <code>2020 Jan</code> and <code>2022 Jan</code>).</p></li>
 <li><p><code>scale_x_mixtime(time_chronon = )</code> and <code>scale_y_mixtime(time_chronon = )</code> now accept units of the plotted data’s calendar, such as <code>hour(1L, tz = NA)</code> rather than <code>mixtime::cal_gregorian$hour(1L, tz = NA)</code>.</p></li>
-<li><p>Added <code><a href="../articles/time-arrangements.html">vignette("time-arrangements")</a></code>, showing how scales and coordinates are combined to arrange time as ragged, justified, offset, and aligned plots (<a href="https://github.com/mitchelloharawild/ggtime/issues/42" class="external-link">#42</a>).</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
@@ -89,7 +78,7 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-1-1-1">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-1-1"></a></h3>
-<ul><li><p>Time point <code>breaks</code> coarser than the data (e.g. <code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">yearmonth()</a></code> breaks on a daily axis) are now placed at the start of each time point, for compatibility with mixtime refusing temporally indeterminate conversions of discrete time.</p></li>
+<ul><li><p>Time point <code>breaks</code> coarser than the data (e.g. <code><a href="https://tsibble.tidyverts.org/reference/year-month.html" class="external-link">yearmonth()</a></code> breaks on a daily axis) are now placed at the start of each time point, for compatibility with mixtime refusing temporally indeterminate conversions of discrete time.</p></li>
 <li><p><code><a href="../reference/gg_season.html">gg_season()</a></code> and <code><a href="../reference/gg_subseries.html">gg_subseries()</a></code> evaluate <code>y</code> before converting the index, so <code>y</code> can use the original index.</p></li>
 <li><p><code><a href="../reference/coord_loop.html">coord_loop()</a></code> no longer warns about integer overflow when comparing the cardinality of looped time.</p></li>
 </ul></div>
@@ -103,7 +92,7 @@
 </ul></div>
 <div class="section level3">
 <h3 id="improvements-1-1-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-1-1-0"></a></h3>
-<ul><li><p>The plot helpers (<code><a href="../reference/gg_season.html">gg_season()</a></code>, <code><a href="../reference/gg_subseries.html">gg_subseries()</a></code>, <code><a href="../reference/gg_lag.html">gg_lag()</a></code>, <code><a href="../reference/gg_tsdisplay.html">gg_tsdisplay()</a></code>, and <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code> of ACF/PACF/CCF results) are now all built from mixtime. Legacy <code>Date</code>, <code>POSIXct</code>, and tsibble <code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">yearweek()</a></code>/<code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">yearmonth()</a></code>/<code><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">yearquarter()</a></code> indices are converted to mixtime for plotting, so existing code continues to work. Labels for cyclical displays of time (e.g. time-of-day) have been improved as a result.</p></li>
+<ul><li><p>The plot helpers (<code><a href="../reference/gg_season.html">gg_season()</a></code>, <code><a href="../reference/gg_subseries.html">gg_subseries()</a></code>, <code><a href="../reference/gg_lag.html">gg_lag()</a></code>, <code><a href="../reference/gg_tsdisplay.html">gg_tsdisplay()</a></code>, and <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code> of ACF/PACF/CCF results) are now all built from mixtime. Legacy <code>Date</code>, <code>POSIXct</code>, and tsibble <code><a href="https://tsibble.tidyverts.org/reference/year-week.html" class="external-link">yearweek()</a></code>/<code><a href="https://tsibble.tidyverts.org/reference/year-month.html" class="external-link">yearmonth()</a></code>/<code><a href="https://tsibble.tidyverts.org/reference/year-quarter.html" class="external-link">yearquarter()</a></code> indices are converted to mixtime for plotting, so existing code continues to work. Labels for cyclical displays of time (e.g. time-of-day) have been improved as a result.</p></li>
 <li><p><code><a href="../reference/gg_season.html">gg_season()</a></code> is now drawn with <code><a href="../reference/coord_loop.html">coord_loop()</a></code>, keeping time continuous rather than offsetting it into a single season. The lines connecting consecutive seasons (e.g. December to January) are now drawn, split across the left and right margins of the plot.</p></li>
 <li><p>The <code>period</code> of <code><a href="../reference/gg_season.html">gg_season()</a></code>, <code><a href="../reference/gg_subseries.html">gg_subseries()</a></code>, and <code><a href="../reference/gg_lag.html">gg_lag()</a></code> can now be a mixtime duration (e.g. <code>mixtime::weeks(2L)</code>) or a string of a whole number of a single unit (e.g. <code>"year"</code> or <code>"2 weeks"</code>), and is no longer converted to a lubridate period.</p></li>
 <li><p><code><a href="../reference/gg_subseries.html">gg_subseries()</a></code> now facets by the smallest seasonal period of the data by default (e.g. a week for daily data, a day for hourly data).</p></li>
