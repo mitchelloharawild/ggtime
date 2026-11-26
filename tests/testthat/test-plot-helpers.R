@@ -551,8 +551,12 @@ test_that("lag_to_duration() converts lags to mixtime durations", {
 
 test_that("autoplot.tbl_cf() plots lags as mixtime durations", {
   skip_if_no_mixtime_tsibble()
-  skip_if_not_installed("feasts")
-  loadNamespace("feasts")
+  # feasts <= 0.5.0 returned `cf_lag` lags and registered them as a valid
+  # tsibble index; later feasts versions return mixtime durations instead.
+  # Register those methods here so this test of the legacy class does not
+  # depend on the installed feasts version.
+  local_mocked_s3_method("index_valid", "cf_lag", function(x) TRUE)
+  local_mocked_s3_method("interval_pull", "cf_lag", function(x) attr(x, "interval"))
   monthly <- mixtime_tsbl(mixtime::yearmonth(as.Date("2020-01-01") + c(0, 31)))
   cf <- tibble::tibble(
     lag = vctrs::new_vctr(

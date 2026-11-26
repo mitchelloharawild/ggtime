@@ -60,7 +60,7 @@ Imports:
     S7,
     utils
 Suggests:
-    testthat (>= 3.0.0),
+    testthat (>= 3.2.0),
     tibble,
     tsibbledata,
     lubridate,
