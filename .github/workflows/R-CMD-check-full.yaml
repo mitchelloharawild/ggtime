@@ -54,6 +54,14 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
+      # TEMPORARY: binaries of mixtime 0.5.0 (PPM, and CRAN's own) were built
+      # against vecvec 1.4.0 and fail with vecvec 1.5.0 ("`x` is not a vecvec
+      # base vector"). Rebuild mixtime from source until a new mixtime release
+      # replaces those binaries, then remove this step.
+      - name: Rebuild mixtime from source
+        run: install.packages("mixtime", type = "source", repos = "https://cloud.r-project.org")
+        shell: Rscript {0}
+
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
