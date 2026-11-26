@@ -12,3 +12,4 @@
 ^[.]?air[.]toml$
 ^hex$
 ^_dev$
+^tests/testthat/_problems$

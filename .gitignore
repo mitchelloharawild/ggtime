@@ -14,3 +14,4 @@ revdep
 .lintr
 
 /.quarto/
+tests/testthat/_problems/
