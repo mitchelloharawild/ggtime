@@ -39,10 +39,6 @@ navbar:
     href: reference/index.html
   - text: Changelog
     href: news/index.html
-  - text: Vignettes
-    menu:
-    - text: Arranging time to reveal repeating patterns
-      href: articles/time-arrangements.html
   right:
   - icon: fa-github fa-lg
     href: https://github.com/mitchelloharawild/ggtime
