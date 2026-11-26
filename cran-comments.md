@@ -13,8 +13,13 @@ The 'version contains large components' note seen on the development version
 is resolved by the release version bump.
 
 This release fixes the test failures on the CRAN check results for 1.1.1
-(`tidyr::gather()` on mixtime columns, now `tidyr::pivot_longer()`).
+(`tidyr::gather()` on mixtime columns, now `tidyr::pivot_longer()`). It also
+requires mixtime (>= 0.5.1), since binaries of mixtime 0.5.0 fail with
+vecvec 1.5.0.
 
 ## Revdep checks
 
-All reverse dependencies have been checked, none have changed to worse.
+All 8 reverse dependencies (fable.bayesRecon, fable.intermittent, fabletools,
+feasts, fpp3, icomb, iNZightTS, mixtime) were checked against the CRAN and
+development versions of ggtime. All pass R CMD check with both, so none have
+changed to worse.
