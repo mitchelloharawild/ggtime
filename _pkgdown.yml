@@ -41,8 +41,6 @@ navbar:
     href: news/index.html
   - text: Vignettes
     menu:
-    - text: Introduction to ggtime
-      href: articles/ggtime.html
     - text: Arranging time to reveal repeating patterns
       href: articles/time-arrangements.html
   right:
