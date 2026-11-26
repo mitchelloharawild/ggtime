@@ -23,7 +23,7 @@ patterns can be more easily seen when superimposed on top of each other."><meta 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">ggtime</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.2.0</span>
       </span>
     </div>
 
@@ -34,16 +34,6 @@ patterns can be more easily seen when superimposed on top of each other."><meta 
 <li>
   <a href="../news/index.html">Changelog</a>
 </li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-    Vignettes
-
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu"><li>
-      <a href="../articles/ggtime.html">Introduction to ggtime</a>
-    </li>
-  </ul></li>
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="https://github.com/mitchelloharawild/ggtime" class="external-link">
     <span class="fa fa-github fa-lg"></span>
@@ -172,6 +162,13 @@ of the data and the loop's cycle, and is determined by the calendar being
 used. Labels given with the <code>labels</code> or <code>time_labels</code> options of
 <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code> are used unchanged, since they say how the user wants
 time written.</p>
+<p>Loops given as time points (<code>loops</code>) have no cycle to name positions within, so
+a <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code> axis is labelled with the time since the start of the
+loop instead ("0 years", "2 years", ...). If the scale is warped so that every
+loop has the same width (see <code><a href="transform_warp.html">transform_warp()</a></code>), it is labelled with the
+proportion of the loop ("0%", "25%", ...). The scale's <code>breaks</code>,
+<code>labels</code> and <code>time_labels</code> replace these defaults, and <code>time_breaks</code> step from
+the start of the loop (unless the scale is warped).</p>
 <p>The justification of looping can be controlled using the <code>align_discrete</code> option
 of <code><a href="scale_mixtime.html">scale_x_mixtime()</a></code>, where values from 0 to 1 specify the alignment.
 Left alignment (<code>align_discrete = 0</code>) places inter-seasonal connections on the
@@ -242,18 +239,17 @@ cut correctly.</p>
 <span class="r-in"><span><span class="va">uad</span> <span class="op">&lt;-</span> <span class="fu">tsibble</span><span class="fu">::</span><span class="fu"><a href="https://tsibble.tidyverts.org/reference/as-tsibble.html" class="external-link">as_tsibble</a></span><span class="op">(</span><span class="va">USAccDeaths</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># Requires mixtime, POSIXct, or Date time types</span></span></span>
 <span class="r-in"><span><span class="va">uad</span><span class="op">$</span><span class="va">index</span> <span class="op">&lt;-</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">yearmonth</a></span><span class="op">(</span><span class="va">uad</span><span class="op">$</span><span class="va">index</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in vv_index(x):</span> `x` is not a vecvec base vector.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">uad</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">index</span>, y <span class="op">=</span> <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Original plot</span></span></span>
 <span class="r-in"><span><span class="va">p</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in transformation$transform(x):</span> `transform_date()` works with objects of class <span style="color: #0000BB;">&lt;Date&gt;</span> only</span>
+<span class="r-plt img"><img src="coord_loop-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With yearly looping to show seasonal patterns</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">+</span> <span class="fu">coord_loop</span><span class="op">(</span>time_loops <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/duration_helpers.html" class="external-link">years</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in vv_index(x):</span> `x` is not a vecvec base vector.</span>
+<span class="r-plt img"><img src="coord_loop-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

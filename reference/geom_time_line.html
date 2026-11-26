@@ -31,7 +31,7 @@ The ggplot2::group aesthetic determines which cases are connected together."><me
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">ggtime</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.2.0</span>
       </span>
     </div>
 
@@ -42,16 +42,6 @@ The ggplot2::group aesthetic determines which cases are connected together."><me
 <li>
   <a href="../news/index.html">Changelog</a>
 </li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-    Vignettes
-
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu"><li>
-      <a href="../articles/ggtime.html">Introduction to ggtime</a>
-    </li>
-  </ul></li>
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="https://github.com/mitchelloharawild/ggtime" class="external-link">
     <span class="fa fa-github fa-lg"></span>
@@ -261,9 +251,9 @@ markets, server load balancing, etc).</p>
 <p>This geometry also maintains semantically valid slopes when time values are
 missing (either implicitly or explicitly), or duplicated. Implicit missing
 values in regular time series are semantically equivalent to explicit missing
-values, and <code>geom_time_line()</code> since the slope between unkown values is also
-unknown, <code>geom_time_line()</code> will not draw lines connecting missing values of
-either type. Since duplicated time values are not semantically valid in
+values. Since the slope between unknown values is also unknown,
+<code>geom_time_line()</code> will not draw lines connecting missing values of either
+type. Since duplicated time values are not semantically valid in
 regular time series, <code>geom_time_line()</code> will issue a warning (or an error if
 systematic duplicates are detected). When drawing a line between duplicated
 time points, the correct slopes are drawn by connecting all lines that lead
@@ -307,17 +297,24 @@ aesthetic).</p>
 for regular time series it is also possible to identify implicit missing time
 values. Unlike <code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_line()</a></code>, <code>geom_time_line()</code> will also not connect
 points separated by implicit missing values, creating gaps in the line (just
-like when an explicit missing value is present in <code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_line()</a></code>).</p>
+like when an explicit missing value is present in <code><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">ggplot2::geom_line()</a></code>).
+The granularity of discrete <code>mixtime</code> time points determines what counts as
+the next observation: monthly time points are expected every month, and
+hourly time points every hour. Gaps are not detected for continuous time, or
+for <code>POSIXct</code>, since these don't identify an interval between observations.</p>
+<p>If a group contains time points of several granularities (e.g. annual and
+monthly), each granularity is drawn as a separate line with its own missing
+and duplicated time values.</p>
     </div>
     <div id="duplicated-time-values">
     <h2>Duplicated time values</h2>
 
 
 
-<p>If there are duplicated time values within a group, <code>geom_time_line()</code> will
-issue a warning. An error will be raised if these duplications are systematic
-across the geometry, specifically if more than 50% of time points contain the
-same number of duplicates. Systematic duplicates typically indicate a need to
+<p>If there are duplicated time values of the same granularity within a group,
+<code>geom_time_line()</code> will issue a warning. An error will be raised if these
+duplications are systematic across the geometry, specifically if more than
+50% of a granularity's time points contain the same number of duplicates. Systematic duplicates typically indicate a need to
 use grouping aesthetics (<a href="https://ggplot2.tidyverse.org/reference/aes_group_order.html" class="external-link">ggplot2::group</a>, or <a href="https://ggplot2.tidyverse.org/reference/aes_colour_fill_alpha.html" class="external-link">ggplot2::colour</a>) to
 draw separate lines for each time series. Rather than plotting an erroneous
 'sawtooth' line which misrepresents the rate of change, the geometry will
@@ -348,10 +345,7 @@ draw all lines that connect to and from each of the duplicated time values.</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_ts</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `vv_index()`:</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> `x` is not a vecvec base vector.</span>
+<span class="r-plt img"><img src="geom_time_line-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Random walk with a backward timezone change (DST ends)</span></span></span>
 <span class="r-in"><span><span class="va">df_tz_back</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
@@ -361,19 +355,13 @@ draw all lines that connect to and from each of the duplicated time values.</p>
 <span class="r-in"><span><span class="co"># Naive/local time (`tz = NA`) shows the DST transition as a dashed jump</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_back</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/calendar_gregorian.html" class="external-link">cal_gregorian</a></span><span class="op">$</span><span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `vv_index()`:</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> `x` is not a vecvec base vector.</span>
+<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_time_line-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="co"># Absolute time aligns to a single fixed timezone, removing the jump</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_back</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/calendar_gregorian.html" class="external-link">cal_gregorian</a></span><span class="op">$</span><span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `vv_index()`:</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> `x` is not a vecvec base vector.</span>
+<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_time_line-3.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Random walk with a forward timezone change (DST starts)</span></span></span>
 <span class="r-in"><span><span class="va">df_tz_forward</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
@@ -382,19 +370,32 @@ draw all lines that connect to and from each of the duplicated time values.</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_forward</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/calendar_gregorian.html" class="external-link">cal_gregorian</a></span><span class="op">$</span><span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `vv_index()`:</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> `x` is not a vecvec base vector.</span>
+<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_time_line-4.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tz_forward</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="va"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/calendar_gregorian.html" class="external-link">cal_gregorian</a></span><span class="op">$</span><span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in geom_time_line():</span> Problem while computing aesthetics.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Error occurred in the 1st layer.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error in `vv_index()`:</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> `x` is not a vecvec base vector.</span>
+<span class="r-in"><span>  <span class="fu"><a href="scale_mixtime.html">scale_x_mixtime</a></span><span class="op">(</span>time_chronon <span class="op">=</span> <span class="fu">hour</span><span class="op">(</span><span class="fl">1L</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_time_line-5.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Implicit missing values leave a gap in the line</span></span></span>
+<span class="r-in"><span><span class="va">df_monthly</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  month <span class="op">=</span> <span class="fu">mixtime</span><span class="fu">::</span><span class="fu"><a href="https://pkg.mitchelloharawild.com/mixtime/reference/linear_time_helpers.html" class="external-link">yearmonth</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2023-01-01"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fl">0</span><span class="op">:</span><span class="fl">9</span>,</span></span>
+<span class="r-in"><span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_monthly</span><span class="op">[</span><span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">7</span><span class="op">)</span>, <span class="op">]</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">month</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="geom_time_line-6.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Duplicate time values fan out rather than drawing a sawtooth line</span></span></span>
+<span class="r-in"><span><span class="va">df_duplicated</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">df_monthly</span>, <span class="va">df_monthly</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">8</span><span class="op">)</span>, <span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dup_rows</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">8</span>, <span class="fl">11</span>, <span class="fl">12</span><span class="op">)</span> <span class="co"># both entries of each duplicated month</span></span></span>
+<span class="r-in"><span><span class="va">df_duplicated</span><span class="op">[</span><span class="va">dup_rows</span>, <span class="st">"value"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">df_duplicated</span><span class="op">[</span><span class="va">dup_rows</span>, <span class="st">"value"</span><span class="op">]</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">4</span>, sd <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_duplicated</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">month</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu">geom_time_line</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>`geom_time_line()`: Duplicated time values were found within a group.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Drawing all lines that connect to and from the duplicated values.</span>
+<span class="r-plt img"><img src="geom_time_line-7.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

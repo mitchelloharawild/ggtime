@@ -40,7 +40,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">ggtime</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.2.0</span>
       </span>
     </div>
 
@@ -51,18 +51,6 @@
 </li>
 <li>
   <a href="news/index.html">Changelog</a>
-</li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-    Vignettes
-
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
-<li>
-      <a href="articles/ggtime.html">Introduction to ggtime</a>
-    </li>
-  </ul>
 </li>
       </ul>
 <ul class="nav navbar-nav navbar-right">
@@ -91,6 +79,7 @@
 <!-- badges: start -->
 
 <p>The ggtime package extends the capabilities of ‘ggplot2’ by providing grammatical elements and plot helpers designed for visualizing time series patterns. These functions use calendar structures implemented in the mixtime package to help explore common time series patterns including trend, seasonality, cycles, and holidays.</p>
+<p><img src="reference/figures/teaser.svg" alt="Overview of the ggtime grammar of temporal graphics. Temporal semantics (granularity, calendar, time zone, and cyclical time) feed the time column of the data, which passes through composable scale, geom, and coord layers. This gives semantic validity for DST transitions, cycle contiguity, and granularity alignment, and interoperability with uncertainty, facets, and other geometries." width="100%"></p>
 <p>The plot helper functions make use of the tsibble data format in order to quickly and easily produce common time series plots. These plots can also be constructed with the underlying grammar elements, which allows greater flexibility in producing custom time series visualisations. The examples below cover both: plot helpers first, then the grammar elements they’re built from.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
