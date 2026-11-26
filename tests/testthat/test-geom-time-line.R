@@ -73,6 +73,7 @@ test_that("the scale converts offsets without them reaching the axis", {
 })
 
 test_that("offsets given at several granularities are each converted", {
+  skip_on_cran()
   mel <- "Australia/Melbourne"
   hours <- mixtime::mixtime(
     as.POSIXct("2023-04-01 20:00", tz = mel) + 0:5 * 3600,
@@ -168,6 +169,7 @@ test_that("a transitions table says what its columns are", {
 })
 
 test_that("a timezone transition is drawn as a dashed jump in local time", {
+  skip_on_cran()
   time <- melbourne()
   df <- data.frame(value = seq_along(time))
   df$time <- time
@@ -252,6 +254,7 @@ test_that("transitions on x and y are both resolved, without interfering", {
 })
 
 test_that("transition_aesthetics overrides the transition segment's style", {
+  skip_on_cran()
   time <- melbourne()
   df <- data.frame(value = seq_along(time))
   df$time <- time
@@ -308,6 +311,7 @@ test_that("transitions are not resolved when the scale has no naive chronon", {
 })
 
 test_that("transitions at the instant of an observation keep correct slopes", {
+  skip_on_cran()
   # Hours since the first observation that each segment starts and ends at
   segments <- function(time) {
     df <- data.frame(value = seq_along(time))
@@ -386,6 +390,7 @@ time_line <- function(time, value = seq_along(time), ...) {
 }
 
 test_that("implicit missing values leave gaps", {
+  skip_on_cran()
   expect_equal(
     drawn(time_line(months_from(c(0L, 1L, 3L, 4L)))),
     data.frame(from = c(1, 3), to = c(2, 4))
@@ -474,6 +479,7 @@ test_that("gaps and duplicates are found when time is on the y axis", {
 })
 
 test_that("gaps and duplicates are specific to each granularity", {
+  skip_on_cran()
   years <- mixtime::year(as.Date("2020-01-01")) + c(0L, 1L, 3L)
   months <- mixtime::yearmonth("2020 Jan") + c(0L, 1L, 2L, 4L, 5L)
   df <- data.frame(value = 1:8, unit = rep(c("year", "month"), c(3, 5)))
@@ -528,6 +534,7 @@ test_that("granules are shared between layers", {
 })
 
 test_that("time offsets are aligned with the positions", {
+  skip_on_cran()
   mel <- "Australia/Melbourne"
   for (start in c("2023-04-02", "2023-10-01")) {
     time <- as.POSIXct(start, tz = mel) + 0:11 * 1800
@@ -589,6 +596,7 @@ test_that("sub-hourly observations keep their order when time is repeated", {
 })
 
 test_that("missing values beside a transition are not connected", {
+  skip_on_cran()
   time <- as.POSIXct("2023-04-02", tz = "Australia/Melbourne") + 0:7 * 3600
   for (i in 3:4) {
     p <- time_line(time, replace(1:8, i, NA)) +

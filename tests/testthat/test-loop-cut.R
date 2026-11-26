@@ -362,6 +362,7 @@ test_granules <- list(
 )
 
 test_that("skipping the snap leaves the cuts it would have made", {
+  skip_on_cran()
   # Snapping and filling cost about a third of a cutting call and correct
   # daylight saving drift and nothing else, so `loop_cuts_by_duration()` steps
   # around them where the axis cannot drift. Whether it does or not, the cuts

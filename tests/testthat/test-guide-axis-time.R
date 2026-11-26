@@ -188,6 +188,7 @@ test_that("angular axes are drawn like guide_axis_theta()", {
 })
 
 test_that("labels of any type can be drawn", {
+  skip_on_cran()
   df <- tibble::tibble(y = 1:12)
   df$x <- mixtime::yearmonth(600:611)
   p <- ggplot(df, aes(x, y)) + geom_line()

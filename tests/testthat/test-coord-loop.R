@@ -158,6 +158,7 @@ test_that("coord_loop rejects unsupported coords", {
 })
 
 test_that("looped axes are labelled cyclically", {
+  skip_on_cran()
   loop_labels <- function(p, aes = "x") {
     params <- ggplot_build(p)$layout$panel_params[[1]][[aes]]
     labels <- params$get_labels()
@@ -479,6 +480,7 @@ test_that("looped windows are as wide as the longest warped loop", {
 })
 
 test_that("loops at time points are labelled since the start of the loop", {
+  skip_on_cran()
   axis <- function(p) {
     view <- ggplot_build(p)$layout$panel_params[[1]]$x
     keep <- !is.na(view$breaks)

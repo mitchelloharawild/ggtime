@@ -2571,6 +2571,7 @@ test_that("each panel's cyclical scale labels its own granule", {
 })
 
 test_that("the time axis is broken at every cell of a row", {
+  skip_on_cran()
   axis_labels <- function(p) {
     labels <- ggplot_build(p)$layout$panel_params[[1]]$x$get_labels()
     labels[!is.na(labels)]
@@ -2614,6 +2615,7 @@ test_that("the time axis is broken at every cell of a row", {
 })
 
 test_that("the calendar's breaks give way to the scale's own", {
+  skip_on_cran()
   axis_labels <- function(p) {
     labels <- ggplot_build(p)$layout$panel_params[[1]]$x$get_labels()
     labels[!is.na(labels)]

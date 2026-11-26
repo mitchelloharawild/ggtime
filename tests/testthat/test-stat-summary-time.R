@@ -112,6 +112,7 @@ test_that("chronon defaults to the interval of POSIXct and Date", {
 })
 
 test_that("chronon of mixtime is used, and can be specified", {
+  skip_on_cran()
   df <- data.frame(
     time = mixtime::datetime(as.POSIXct("2024-01-01", tz = "UTC") + 0:47 * 3600),
     value = 1
@@ -149,6 +150,7 @@ test_that("granules of other calendars, and time on y", {
 })
 
 test_that("time zones are respected", {
+  skip_on_cran()
   tz <- "Australia/Melbourne"
   df <- data.frame(
     time = as.POSIXct("2024-06-01", tz = tz) + 0:47 * 3600, value = 1

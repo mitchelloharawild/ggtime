@@ -201,6 +201,7 @@ test_that("`change` records close minus open", {
 })
 
 test_that("orientation follows whichever axis measures time", {
+  skip_on_cran()
   df <- hourly(2)
 
   expect_false(layer_data1(

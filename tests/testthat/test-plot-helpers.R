@@ -6,6 +6,7 @@ tsbl_ped <- dplyr::filter(
 )
 
 test_that("gg_season() plots", {
+  skip_on_cran()
   p <- gg_season(tsbl_co2, value)
 
   expect_equal(
@@ -69,6 +70,7 @@ test_that("gg_season() plot labels", {
 })
 
 test_that("gg_season() facets", {
+  skip_on_cran()
   p <- gg_season(tsbl_co2, value, facet_period = "10 year", labels = "both")
 
   # expect_equal(
@@ -119,6 +121,7 @@ test_that("gg_season() loops time, drawing seasonal connections in the margins",
 })
 
 test_that("gg_season() supports legacy Date and POSIXct indices", {
+  skip_on_cran()
   daily <- tsibble::tsibble(
     date = as.Date("2020-01-06") + 0:27,
     y = rep(1:7, 4),
@@ -157,6 +160,7 @@ test_that("gg_season() loops weekly data over ISO week-years", {
 })
 
 test_that("gg_subseries() plots", {
+  skip_on_cran()
   p <- gg_subseries(tsbl_co2, value)
 
   expect_equal(
@@ -320,6 +324,7 @@ test_that("gg_tsdisplay() plots", {
 })
 
 test_that("gg_arma() plots", {
+  skip_on_cran()
   skip_if_not_installed("fable")
   mdl <- tsbl_co2 %>%
     fabletools::model(fable::ARIMA(value ~ 0 + pdq(1, 1, 1) + PDQ(1, 1, 2)))
@@ -399,6 +404,7 @@ skip_if_no_mixtime_tsibble <- function() {
 }
 
 test_that("gg_season() and gg_subseries() support mixtime indices", {
+  skip_on_cran()
   skip_if_no_mixtime_tsibble()
   monthly <- mixtime_tsbl(
     mixtime::yearmonth(seq(as.Date("2018-01-01"), by = "month", length.out = 36))
@@ -611,6 +617,7 @@ test_that("autoplot.tbl_cf() accepts a mixtime duration lag index", {
 })
 
 test_that("ACF-based plots support mixtime indices", {
+  skip_on_cran()
   skip_if_no_mixtime_tsibble()
   skip_if_not_installed("feasts")
   skip_if_not_installed("fable")

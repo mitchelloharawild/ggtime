@@ -1,3 +1,9 @@
+## Resubmission
+
+This is a resubmission. The previous submission had an overall check time
+of 14 min on win-builder (r-devel-windows). The slowest tests are now skipped
+on CRAN, which cuts the test time by about two thirds.
+
 ## Test environments
 * local ubuntu 24.04 install, R 4.6.2
 * ubuntu-latest (on GitHub actions), R-devel (4.7.0), R 4.6.2, R 4.5.3
@@ -8,9 +14,6 @@
 ## R CMD check results
 
 0 errors | 0 warnings | 0 notes
-
-The 'version contains large components' note seen on the development version
-is resolved by the release version bump.
 
 This release fixes the test failures on the CRAN check results for 1.1.1
 (`tidyr::gather()` on mixtime columns, now `tidyr::pivot_longer()`). It also

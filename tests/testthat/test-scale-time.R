@@ -27,6 +27,7 @@ test_that("time_breaks on durations are labelled as durations", {
 })
 
 test_that("default breaks step by how the chronon nests in coarser granules", {
+  skip_on_cran()
   breaks_of <- function(x) {
     p <- ggplot(data.frame(x = x, y = 1), aes(x, y)) + geom_point()
     scale_labels(p)
@@ -249,6 +250,7 @@ test_that("time_labels formats timezone-aware breaks", {
 })
 
 test_that("default labels leave the axis's timezone out", {
+  skip_on_cran()
   # Every break of an axis shares its timezone, so naming it on each label
   # repeats what the axis as a whole says once.
   tz <- "Australia/Melbourne"
@@ -398,6 +400,7 @@ test_that("chronons measured from a non-zero epoch keep their own time", {
 })
 
 test_that("time_chronon units are found in the calendar of the data", {
+  skip_on_cran()
   df <- data.frame(
     time = as.POSIXct("2023-04-01", tz = "Australia/Melbourne") + 0:47 * 3600,
     y = 1:48
@@ -453,6 +456,7 @@ test_that("time_chronon uses the units of non-Gregorian calendars", {
 })
 
 test_that("time_chronon can be given by variables and wrappers", {
+  skip_on_cran()
   x <- as.Date("2024-01-01") + 0:9
   chronon <- mixtime::cal_gregorian$month(1L)
   make_chronon <- function() chronon
@@ -493,6 +497,7 @@ test_that("calendar units take precedence over functions for time_chronon", {
 })
 
 test_that("scales resolve time_chronon separately in each plot", {
+  skip_on_cran()
   month <- mixtime::yearmonth(600:609)
   week <- mixtime::yearweek(as.Date("2024-01-01") + 7 * 0:9)
   built <- function(x, scale) {
