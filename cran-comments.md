@@ -4,6 +4,10 @@ This is a resubmission. The previous submission had an overall check time
 of 14 min on win-builder (r-devel-windows). The slowest tests are now skipped
 on CRAN, which cuts the test time by about two thirds.
 
+The second submission had a NOTE on r-devel-linux-x86_64-debian-gcc for the
+`geom_time_line` examples taking 5.0s. Some of its examples are now wrapped in
+`\donttest{}` to reduce the run time.
+
 ## Test environments
 * local ubuntu 24.04 install, R 4.6.2
 * ubuntu-latest (on GitHub actions), R-devel (4.7.0), R 4.6.2, R 4.5.3

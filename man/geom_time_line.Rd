@@ -276,6 +276,7 @@ ggplot(df_tz_back, aes(time, value)) +
   geom_time_line() +
   scale_x_mixtime(time_chronon = hour(1L, tz = "UTC"))
 
+\donttest{
 # Random walk with a forward timezone change (DST starts)
 df_tz_forward <- data.frame(
   time = as.POSIXct("2023-10-01", tz = "Australia/Melbourne") + 0:11 * 3600,
@@ -287,6 +288,7 @@ ggplot(df_tz_forward, aes(time, value)) +
 ggplot(df_tz_forward, aes(time, value)) +
   geom_time_line() +
   scale_x_mixtime(time_chronon = hour(1L, tz = "UTC"))
+}
 
 # Implicit missing values leave a gap in the line
 df_monthly <- data.frame(
@@ -301,8 +303,10 @@ df_duplicated <- rbind(df_monthly, df_monthly[c(5, 8), ])
 dup_rows <- c(5, 8, 11, 12) # both entries of each duplicated month
 df_duplicated[dup_rows, "value"] <- df_duplicated[dup_rows, "value"] +
   rnorm(4, sd = 5)
+\donttest{
 ggplot(df_duplicated, aes(month, value)) +
   geom_time_line()
+}
 
 }
 \seealso{
